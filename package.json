@@ -1,0 +1,16 @@
+{
+  "name": "myappo",
+  "version": "1.0.0",
+  "description": "واجهة أمامية متكاملة (بدون خطوة بناء - CDN) مرتبطة مباشرة بقاعدة بيانات **Supabase (PostgreSQL)**، مع مصادقة آمنة وحجز مباشر عبر دوال الـ **RPC** وحماية كاملة عبر **RLS**.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@dietrichgebert/ponytail": "^5.2.0"
+  }
+}

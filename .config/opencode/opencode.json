@@ -1,0 +1,85 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "plugins": [
+        "@dietrichgebert/ponytail"
+    ],
+    "mcp": {
+        "supabase": {
+            "type": "remote",
+            "url": "https://mcp.supabase.com/mcp?project_ref=zneqnijqjwkpcjetgwfe&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching",
+            "enabled": true
+        }
+    },
+    "provider": {
+        "AgentRouter-openai-gateway": {
+            "npm": "@ai-sdk/openai-compatible",
+            "name": "AgentRouter-openai-gateway",
+            "options": {
+                "baseURL": "https://agentrouter.org/v1"
+            },
+            "models": {
+                "deepseek-v4-flash": {
+                    "name": "DeepSeek V4 Flash"
+                },
+                "glm-5.3": {
+                    "name": "GLM 5.3"
+                }
+            }
+        },
+        "AgentRouter-anthropic-gateway": {
+            "npm": "@ai-sdk/anthropic",
+            "name": "AgentRouter-anthropic-gateway",
+            "options": {
+                "baseURL": "https://agentrouter.org"
+            },
+            "models": {
+                "claude-opus-5": {
+                    "name": "Claude Opus 5"
+                },
+                "claude-opus-4-8": {
+                    "name": "Claude Opus 4-8"
+                }
+            }
+        },
+        "Dahi": {
+            "name": "Dahi",
+            "options": {
+                "baseURL": "https://inference.dahl.global/v1"
+            },
+            "models": {
+                "deepseek-ai/DeepSeek-V4-Flash-0731": {
+                    "name": "deepseek-ai/DeepSeek-V4-Flash-07315"
+                },
+                "zai-org/GLM-5.3-Flash": {
+                    "name": "zai-org/GLM-5.3-Flash"
+                }
+            }
+        },
+        "radoxai": {
+            "name": "Radox",
+            "npm": "@ai-sdk/openai-compatible",
+            "options": {
+                "baseURL": "https://radoxai.com/v1",
+                "apiKey": "{env:RADOX_API_KEY}"
+            },
+            "models": {
+                "gemini-3.6-flash": {
+                    "name": "gemini-3.6-flash"
+                },
+                "claude-opus-4.6": {
+                    "name": "claude-opus-4.6"
+                },
+                "deepseek-v4-flash-0731": {
+                    "name": "deepseek-v4-flash-0731"
+                },
+                "claude-sonnet-5": {
+                    "name": "claude-sonnet-5"
+                },
+                "glm-5.2": {
+                    "name": "glm-5.2"
+                }
+            }
+        }
+    },
+    "model": "AgentRouter-openai-gateway/deepseek-v4-flash"
+}
