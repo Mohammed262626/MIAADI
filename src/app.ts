@@ -1,5 +1,5 @@
 import "./styles/tailwind.css";
-import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, findDoctorByUser, listDoctorSchedules, createDoctorSchedule, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule } from "./lib/supabase";
+import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, findDoctorByUser, listDoctorSchedules, createDoctorSchedule, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates } from "./lib/supabase";
 import { localDateISO, escapeHtml, translateAuthError, formatTime, formatArabicDate } from "./lib/format";
 import { showToast } from "./components/Toast";
 import { renderHeader } from "./components/Header";
@@ -274,45 +274,152 @@ async function renderAdminManagement(main: HTMLElement, tab: "management"|"accou
 async function renderSchedules(root: HTMLElement, doctorId: string) {
   root.classList.remove("hidden");
   root.innerHTML = `<p class="text-sm text-zinc-500 py-4">جاري تحميل المواعيد…</p>`;
+  type AvRule = { day_of_week:number; start_time:string; end_time:string; is_enabled:boolean };
+  type Blocked = { id:string; start_date:string; end_date:string; reason:string|null };
   try {
-    const schedules = await listDoctorSchedules(doctorId);
+    const [schedules, availability, blocked] = await Promise.all([
+      listDoctorSchedules(doctorId),
+      getDoctorAvailability(doctorId).catch(()=>[]) as Promise<AvRule[]>,
+      listBlockedDates(doctorId).catch(()=>[]) as Promise<Blocked[]>,
+    ]);
     const doc = state.adminDoctorsCache.find(d=>d.id===doctorId);
-    const availability = (await getDoctorAvailability(doctorId).catch(()=>[])) as { day_of_week:number; start_time:string; end_time:string; is_enabled:boolean }[];
     const DAYS = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+    const enabled = availability.filter(r=>r.is_enabled);
+    const selected = new Set<number>(enabled.map(r=>r.day_of_week));
+    const byDay = new Map(enabled.map(r=>[r.day_of_week, r]));
+    const sharedStart = (enabled[0]?.start_time || "09:00").slice(0,5);
+    const sharedEnd = (enabled[0]?.end_time || "14:00").slice(0,5);
+
     root.innerHTML = `
       <h3 class="font-bold mb-3">مواعيد ${escapeHtml(doc?.name || "الطبيب")}</h3>
-      <form id="add-schedule" class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end rounded-2xl border border-line bg-paper-soft p-4">
-        <label class="text-xs">التاريخ <input id="sch-date" type="date" min="${escapeHtml(localDateISO())}" required class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-        <label class="text-xs">من <input id="sch-start" type="time" required class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-        <label class="text-xs">إلى <input id="sch-end" type="time" required class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-        <button type="submit" class="py-2.5 rounded-xl bg-teal text-white text-sm font-semibold">إضافة</button>
-      </form>
-      <details class="mt-4 rounded-2xl border border-line bg-paper-soft p-4">
-        <summary class="cursor-pointer text-xs font-bold">التوافر الأسبوعي (قواعد التوليد) وإجازات مغلقة</summary>
-        <div class="mt-3 space-y-2">
-          ${DAYS.map((day,i)=>{ const rule = availability.find(r=>r.day_of_week===i); return `
-            <div class="grid grid-cols-4 gap-2 items-center text-xs">
-              <span class="font-semibold">${day}</span>
-              <input type="time" data-av-start="${i}" value="${escapeHtml(rule?.start_time || "")}" class="px-2 py-1.5 rounded-xl border border-line bg-white" />
-              <input type="time" data-av-end="${i}" value="${escapeHtml(rule?.end_time || "")}" class="px-2 py-1.5 rounded-xl border border-line bg-white" />
-              <label class="flex items-center gap-1.5"><input type="checkbox" data-av-en="${i}" ${rule?.is_enabled ? "checked" : (rule ? "" : "checked")} /> مفعّل</label>
-            </div>`; }).join("")}
-          <button id="save-availability" class="px-4 py-2.5 rounded-xl bg-ink text-white text-sm font-semibold">حفظ التوافر</button>
+
+      <section class="rounded-2xl border border-line bg-paper-soft p-4">
+        <h4 class="text-sm font-bold mb-3">أوقات العمل الأسبوعية</h4>
+        <div id="day-chips" class="flex flex-wrap gap-2">
+          ${DAYS.map((d,i)=>`<button type="button" data-day="${i}" class="px-3 py-1.5 rounded-full border text-xs font-semibold ${selected.has(i)?"bg-teal text-white border-teal":"bg-white border-line text-zinc-600"}">${d}</button>`).join("")}
         </div>
-        <hr class="my-3 border-line" />
+        <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
+          <label class="text-xs">من <input id="wk-start" type="time" value="${escapeHtml(sharedStart)}" class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
+          <label class="text-xs">إلى <input id="wk-end" type="time" value="${escapeHtml(sharedEnd)}" class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
+          <p id="av-preview" class="text-xs text-zinc-500 sm:col-span-2 self-center"></p>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button id="save-availability" class="px-4 py-2.5 rounded-xl bg-ink text-white text-sm font-semibold">حفظ الأوقات</button>
+          <button id="generate-schedule" class="px-4 py-2.5 rounded-xl bg-teal text-white text-sm font-semibold">توليد المواعيد (90 يوماً)</button>
+        </div>
+        <details class="mt-3">
+          <summary class="cursor-pointer text-xs text-zinc-600">تخصيص ساعات مختلفة لبعض الأيام</summary>
+          <p class="mt-2 text-xs text-zinc-500">اترك الحقل فارغاً لاستخدام الوقت المشترك بالأعلى.</p>
+          <div class="mt-2 space-y-2">
+            ${DAYS.map((d,i)=>{ const r=byDay.get(i); return `
+              <div class="grid grid-cols-3 gap-2 items-center text-xs">
+                <span class="font-semibold">${d}</span>
+                <input type="time" data-av-start="${i}" value="${r?escapeHtml(r.start_time.slice(0,5)):""}" class="px-2 py-1.5 rounded-xl border border-line bg-white" />
+                <input type="time" data-av-end="${i}" value="${r?escapeHtml(r.end_time.slice(0,5)):""}" class="px-2 py-1.5 rounded-xl border border-line bg-white" />
+              </div>`; }).join("")}
+          </div>
+        </details>
+      </section>
+
+      <section class="mt-4 rounded-2xl border border-line bg-paper-soft p-4">
+        <h4 class="text-sm font-bold mb-1">إجازات وأيام مغلقة</h4>
+        <p class="text-xs text-zinc-500 mb-3">إغلاق نطاق يحذف المواعيد الفارغة غير المحجوزة فيه ويمنع توليدها لاحقاً.</p>
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end text-xs">
-          <label>من <input id="block-start" type="date" required class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white" /></label>
-          <label>إلى <input id="block-end" type="date" required class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white" /></label>
+          <label>من <input id="block-start" type="date" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white" /></label>
+          <label>إلى <input id="block-end" type="date" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white" /></label>
           <label>السبب <input id="block-reason" placeholder="إجازة" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white" /></label>
           <button id="add-blocked" class="py-2.5 rounded-xl bg-danger text-white font-semibold">إغلاق التواريخ</button>
         </div>
-        <button id="generate-schedule" class="mt-3 px-4 py-2.5 rounded-xl bg-teal text-white text-sm font-semibold">توليد الجدول (90 يوماً)</button>
+        <div class="mt-3 grid gap-2">${blocked.length ? blocked.map(b=>`
+          <div class="flex items-center justify-between gap-3 rounded-xl border border-line bg-white p-3 text-sm">
+            <span>${escapeHtml(formatArabicDate(b.start_date))}${b.start_date!==b.end_date ? " – "+escapeHtml(formatArabicDate(b.end_date)) : ""} · ${escapeHtml(b.reason || "إجازة")}</span>
+            <button data-unblock="${escapeHtml(b.id)}" class="px-3 py-1.5 rounded-xl border border-line text-xs">إلغاء الإغلاق</button>
+          </div>`).join("") : `<p class="text-xs text-zinc-500">لا توجد إجازات مسجّلة</p>`}</div>
+      </section>
+
+      <details class="mt-4 rounded-2xl border border-line bg-paper p-4">
+        <summary class="cursor-pointer text-sm font-bold">إضافة موعد ليوم واحد</summary>
+        <form id="add-schedule" class="mt-3 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+          <label class="text-xs">التاريخ <input id="sch-date" type="date" min="${escapeHtml(localDateISO())}" required class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
+          <label class="text-xs">من <input id="sch-start" type="time" required class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
+          <label class="text-xs">إلى <input id="sch-end" type="time" required class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
+          <button type="submit" class="py-2.5 rounded-xl bg-teal text-white text-sm font-semibold">إضافة</button>
+        </form>
       </details>
-      <div class="mt-4 grid gap-2">${schedules.length ? schedules.map((s: {id:string;available_date:string;start_time:string;end_time:string;is_booked:boolean})=>`
+
+      <h4 class="mt-6 mb-2 text-sm font-bold">المواعيد المتاحة (${schedules.length})</h4>
+      <div class="grid gap-2">${schedules.length ? schedules.map((s: {id:string;available_date:string;start_time:string;end_time:string;is_booked:boolean})=>`
         <div class="flex items-center justify-between gap-3 rounded-xl border ${s.is_booked?"border-amber-200 bg-amber-50":"border-line bg-paper"} p-3 text-sm">
           <span>${escapeHtml(formatArabicDate(s.available_date))} · ${escapeHtml(formatTime(s.start_time))}–${escapeHtml(formatTime(s.end_time))} ${s.is_booked?'<span class="text-amber-700">(محجوز)</span>':""}</span>
           ${s.is_booked ? "" : `<button data-del-sch="${escapeHtml(s.id)}" class="px-3 py-1.5 rounded-xl bg-danger text-white text-xs">حذف</button>`}
         </div>`).join("") : `<p class="text-sm text-zinc-500">لا مواعيد</p>`}</div>`;
+
+    const startOf = (i:number)=> (root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement).value;
+    const endOf = (i:number)=> (root.querySelector(`[data-av-end="${i}"]`) as HTMLInputElement).value;
+    const shared = ()=> [(root.querySelector("#wk-start") as HTMLInputElement).value, (root.querySelector("#wk-end") as HTMLInputElement).value] as const;
+    const preview = ()=>{
+      const [ss,se] = shared(); const hours = (ss&&se) ? " ("+ss+"–"+se+")" : "";
+      (root.querySelector("#av-preview") as HTMLElement).textContent = selected.size
+        ? `${selected.size} أيام أسبوعياً${hours} · سيُولَّد ~${Math.round(selected.size*90/7)} موعداً`
+        : "لم يتم اختيار أي يوم — حدّد الأيام التي يعمل فيها الطبيب";
+    };
+    const paintChips = ()=>{
+      root.querySelectorAll<HTMLButtonElement>("#day-chips [data-day]").forEach(b=>{
+        const on = selected.has(Number(b.dataset.day));
+        b.className = `px-3 py-1.5 rounded-full border text-xs font-semibold ${on?"bg-teal text-white border-teal":"bg-white border-line text-zinc-600"}`;
+        const i = Number(b.dataset.day);
+        const st = root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement|null;
+        const en = root.querySelector(`[data-av-end="${i}"]`) as HTMLInputElement|null;
+        if (st) st.disabled = !on; if (en) en.disabled = !on;
+      });
+      preview();
+    };
+    root.querySelectorAll<HTMLButtonElement>("#day-chips [data-day]").forEach(b=> b.addEventListener("click", ()=>{
+      const i = Number(b.dataset.day);
+      if (selected.has(i)) selected.delete(i); else selected.add(i);
+      paintChips();
+    }));
+    (root.querySelector("#wk-start") as HTMLInputElement).addEventListener("input", preview);
+    (root.querySelector("#wk-end") as HTMLInputElement).addEventListener("input", preview);
+    paintChips();
+
+    (root.querySelector("#save-availability") as HTMLButtonElement).addEventListener("click", async ()=>{
+      const [ss,se] = shared();
+      if (selected.size && (!ss || !se)) { showToast("حدّد وقت البداية والنهاية","warning"); return; }
+      const rules: Record<string, unknown>[] = [];
+      selected.forEach(i=>{
+        const st = startOf(i) || ss; const en = endOf(i) || se;
+        if (st && en) rules.push({ doctor_id: doctorId, day_of_week: i, start_time: st, end_time: en, is_enabled: true });
+      });
+      try { await saveDoctorAvailability(doctorId, rules); showToast(rules.length ? `تم حفظ ${rules.length} أيام` : "تم مسح الأوقات","success"); paintChips(); }
+      catch(err){ showToast(translateAuthError(err),"error"); }
+    });
+
+    (root.querySelector("#generate-schedule") as HTMLButtonElement).addEventListener("click", async ()=>{
+      try {
+        const { created } = await generateDoctorSchedule(doctorId);
+        showToast(created ? `أُضيف ${created} موعداً` : "لا مواعيد جديدة — تحقق من الأوقات المحفوظة","success");
+        await renderSchedules(root, doctorId); await refreshDoctors();
+      } catch(err){ showToast(translateAuthError(err),"error"); }
+    });
+
+    (root.querySelector("#add-blocked") as HTMLButtonElement).addEventListener("click", async ()=>{
+      const start = (root.querySelector("#block-start") as HTMLInputElement).value;
+      const end = (root.querySelector("#block-end") as HTMLInputElement).value || start;
+      const reason = (root.querySelector("#block-reason") as HTMLInputElement).value || "إجازة";
+      if (!start) { showToast("حدّد تاريخ البداية","warning"); return; }
+      try {
+        const { deleted } = await blockDoctorDates(doctorId, start, end, reason);
+        showToast(deleted ? `أُغلق النطاق وحُذف ${deleted} موعداً فارغاً` : "أُغلق النطاق","success");
+        await renderSchedules(root, doctorId); await refreshDoctors();
+      } catch(err){ showToast(translateAuthError(err),"error"); }
+    });
+    root.querySelectorAll<HTMLButtonElement>("[data-unblock]").forEach(b=> b.addEventListener("click", async ()=>{
+      if (!confirm("إلغاء إغلاق هذا النطاق؟ لن تعود المواعيد المحذوفة تلقائياً — استخدم زر التوليد.")) return;
+      try { await unblockDoctorDates(b.dataset.unblock!); showToast("تم إلغاء الإغلاق","success"); await renderSchedules(root, doctorId); }
+      catch(e){ showToast(translateAuthError(e),"error"); }
+    }));
+
     (root.querySelector("#add-schedule") as HTMLFormElement).addEventListener("submit", async (e)=>{
       e.preventDefault();
       const availableDate=(root.querySelector("#sch-date") as HTMLInputElement).value;
@@ -324,26 +431,6 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
       if (!confirm("حذف هذا الموعد؟")) return;
       try { await deleteDoctorSchedule(b.dataset.delSch!); showToast("تم الحذف","success"); await renderSchedules(root, doctorId); await refreshDoctors(); } catch(e){ showToast(translateAuthError(e),"error"); }
     }));
-    (root.querySelector("#save-availability") as HTMLButtonElement)?.addEventListener("click", async ()=>{
-      const rules: Record<string, unknown>[] = [];
-      for (let i=0;i<7;i++){
-        const st=(root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement).value;
-        const en=(root.querySelector(`[data-av-end="${i}"]`) as HTMLInputElement).value;
-        const en2=(root.querySelector(`[data-av-en="${i}"]`) as HTMLInputElement).checked;
-        if (st && en) rules.push({ doctor_id: doctorId, day_of_week:i, start_time: st.length===5?st+":00":st, end_time: en.length===5?en+":00":en, is_enabled: en2 });
-      }
-      try { await saveDoctorAvailability(doctorId, rules); showToast("تم حفظ التوافر","success"); } catch(err){ showToast(translateAuthError(err),"error"); }
-    });
-    (root.querySelector("#add-blocked") as HTMLButtonElement)?.addEventListener("click", async ()=>{
-      const start=(root.querySelector("#block-start") as HTMLInputElement).value;
-      const end=(root.querySelector("#block-end") as HTMLInputElement).value;
-      const reason=(root.querySelector("#block-reason") as HTMLInputElement).value || "إجازة مُعلنة";
-      if (!start || !end) { showToast("حدد تاريخي البداية والنهاية","warning"); return; }
-      try { await blockDoctorDates(doctorId, start, end, reason); showToast("تم إغلاق التواريخ","success"); } catch(err){ showToast(translateAuthError(err),"error"); }
-    });
-    (root.querySelector("#generate-schedule") as HTMLButtonElement)?.addEventListener("click", async ()=>{
-      try { await generateDoctorSchedule(doctorId); showToast("تم توليد الجدول","success"); await renderSchedules(root, doctorId); await refreshDoctors(); } catch(err){ showToast(translateAuthError(err),"error"); }
-    });
   } catch (e) { root.innerHTML = `<p class="text-sm text-red-600">تعذر التحميل: ${escapeHtml(translateAuthError(e))}</p>`; }
 }
 

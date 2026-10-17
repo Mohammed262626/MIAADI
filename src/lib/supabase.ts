@@ -162,17 +162,33 @@ export async function getDoctorAvailability(doctorId: string) {
   const { data, error } = await getClient().from("doctor_availability").select("*").eq("doctor_id", doctorId).order("day_of_week");
   if (error) throw error; return data || [];
 }
+// Replace semantics: wipe the doctor's rules then insert the current set.
 export async function saveDoctorAvailability(doctorId: string, rules: Record<string,unknown>[]) {
-  const { data, error } = await getClient().from("doctor_availability").upsert(rules, { onConflict: "doctor_id, day_of_week, start_time" } as unknown as undefined);
+  const c = getClient();
+  const { error: delErr } = await c.from("doctor_availability").delete().eq("doctor_id", doctorId);
+  if (delErr) throw delErr;
+  if (!rules.length) return [];
+  const { data, error } = await c.from("doctor_availability").insert(rules);
   if (error) throw error; return data;
 }
+export async function listBlockedDates(doctorId: string) {
+  const { data, error } = await getClient().from("doctor_unavailable").select("id,start_date,end_date,reason").eq("doctor_id", doctorId).order("start_date", { ascending: false });
+  if (error) throw error; return data || [];
+}
+export async function unblockDoctorDates(id: string) {
+  const { error } = await getClient().from("doctor_unavailable").delete().eq("id", id);
+  if (error) throw error;
+}
+// Records the leave and clears future, unbooked slots inside the range; returns how many were freed.
 export async function blockDoctorDates(doctorId: string, startDate: string, endDate: string, reason?: string) {
-  const { data, error } = await getClient().from("doctor_unavailable").insert({ doctor_id: doctorId, start_date: startDate, end_date: endDate, reason });
-  if (error) throw error; return data;
+  const { data, error } = await getClient().rpc("block_doctor_dates", { p_doctor_id: doctorId, p_start_date: startDate, p_end_date: endDate, p_reason: reason ?? null });
+  if (error) throw error; return { deleted: typeof data === "number" ? data : 0 } as { deleted: number };
 }
-export async function generateDoctorSchedule(doctorId: string, daysAhead = 90) {
+export async function generateDoctorSchedule(doctorId: string, daysAhead = 90): Promise<{ created: number }> {
   const { data, error } = await getClient().rpc("generate_schedule_from_availability", { p_doctor_id: doctorId, p_start_date: new Date().toISOString().split("T")[0], p_end_date: new Date(Date.now()+daysAhead*86400000).toISOString().split("T")[0] });
-  if (error) throw error; return data;
+  if (error) throw error;
+  const row = Array.isArray(data) ? (data[0] as { created_slots?: number } | undefined) : (data as { created_slots?: number } | null);
+  return { created: row?.created_slots ?? 0 };
 }
 export async function getAvailableSlots(doctorId: string, startDate: string, endDate: string) {
   const { data, error } = await getClient().from("doctor_schedules").select("id,available_date,start_time,end_time,is_booked").eq("doctor_id", doctorId).gte("available_date", startDate).lte("available_date", endDate).eq("is_booked", false).order("available_date, start_time");
