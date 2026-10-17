@@ -23,3 +23,9 @@ Thumbs.db
 # Misc
 coverage/
 dist/
+
+# Agent tooling (session-local)
+.agents/
+.codex/
+.impeccable/
+skills-lock.json

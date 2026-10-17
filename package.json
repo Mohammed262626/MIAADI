@@ -2,15 +2,24 @@
   "name": "myappo",
   "version": "1.0.0",
   "description": "واجهة أمامية متكاملة (بدون خطوة بناء - CDN) مرتبطة مباشرة بقاعدة بيانات **Supabase (PostgreSQL)**، مع مصادقة آمنة وحجز مباشر عبر دوال الـ **RPC** وحماية كاملة عبر **RLS**.",
-  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "@dietrichgebert/ponytail": "^5.2.0"
+    "@dietrichgebert/ponytail": "^5.2.0",
+    "@supabase/supabase-js": "^2.117.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
   }
 }
