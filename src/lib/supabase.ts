@@ -42,13 +42,23 @@ export async function updatePatientProfile(p: { fullName: string; phone: string 
 }
 
 // --- doctors & schedules
-export async function getDoctorsWithSchedules() {
+// Loads doctors plus their free slots inside a rolling window (default 14 days).
+// Filtering happens server-side so the catalog stays light as data grows; any
+// date outside the window is fetched on demand via getAvailableSlots().
+export async function getDoctorsWithSchedules(daysWindow = 14) {
   const c = getClient();
-  const { data, error } = await c.from("doctors").select(`id,name,specialization,consultation_fee,doctor_schedules(id,available_date,start_time,end_time,is_booked)`).order("name");
-  if (error) throw error;
   const todayStr = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().split("T")[0];
+  const untilStr = new Date(Date.now() - new Date().getTimezoneOffset()*60000 + daysWindow*86400000).toISOString().split("T")[0];
+  const { data, error } = await c.from("doctors")
+    .select(`id,name,specialization,consultation_fee,doctor_schedules(id,available_date,start_time,end_time,is_booked)`)
+    .gte("doctor_schedules.available_date", todayStr)
+    .lte("doctor_schedules.available_date", untilStr)
+    .eq("doctor_schedules.is_booked", false)
+    .order("name");
+  if (error) throw error;
   return (data || []).map((d: Record<string, unknown>) => {
-    const schedules = ((d.doctor_schedules as unknown[]) || []).filter((s: unknown) => !(s as {is_booked:boolean}).is_booked && (s as {available_date:string}).available_date >= todayStr)
+    const schedules = ((d.doctor_schedules as unknown[]) || [])
+      .filter((s: unknown) => !(s as {is_booked:boolean}).is_booked)
       .sort((a: unknown,b: unknown) => { const A=a as {available_date:string;start_time:string}, B=b as {available_date:string;start_time:string}; return A.available_date===B.available_date ? A.start_time.localeCompare(B.start_time) : A.available_date.localeCompare(B.available_date); });
     return { ...d, available_schedules: schedules };
   });
@@ -184,8 +194,8 @@ export async function blockDoctorDates(doctorId: string, startDate: string, endD
   const { data, error } = await getClient().rpc("block_doctor_dates", { p_doctor_id: doctorId, p_start_date: startDate, p_end_date: endDate, p_reason: reason ?? null });
   if (error) throw error; return { deleted: typeof data === "number" ? data : 0 } as { deleted: number };
 }
-export async function generateDoctorSchedule(doctorId: string, daysAhead = 90): Promise<{ created: number }> {
-  const { data, error } = await getClient().rpc("generate_schedule_from_availability", { p_doctor_id: doctorId, p_start_date: new Date().toISOString().split("T")[0], p_end_date: new Date(Date.now()+daysAhead*86400000).toISOString().split("T")[0] });
+export async function generateDoctorSchedule(doctorId: string, daysAhead = 90, replace = false): Promise<{ created: number }> {
+  const { data, error } = await getClient().rpc("generate_schedule_from_availability", { p_doctor_id: doctorId, p_start_date: new Date().toISOString().split("T")[0], p_end_date: new Date(Date.now()+daysAhead*86400000).toISOString().split("T")[0], p_replace: replace });
   if (error) throw error;
   const row = Array.isArray(data) ? (data[0] as { created_slots?: number } | undefined) : (data as { created_slots?: number } | null);
   return { created: row?.created_slots ?? 0 };

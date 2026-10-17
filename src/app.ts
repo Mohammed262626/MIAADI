@@ -105,7 +105,8 @@ function renderDoctorsTab(main: HTMLElement) {
     },
     (q)=> { state.searchQuery=q; const upd = filteredDoctors(); doctorsViewApi?.update(upd); },
     (v)=> { state.selectedSpec=v; doctorsViewApi?.update(filteredDoctors()); },
-    (v)=> { state.sortBy=v as typeof state.sortBy; doctorsViewApi?.update(filteredDoctors()); }
+    (v)=> { state.sortBy=v as typeof state.sortBy; doctorsViewApi?.update(filteredDoctors()); },
+    (doctorId, date)=> getAvailableSlots(doctorId, date, date) as Promise<{ id:string; available_date:string; start_time:string; end_time:string; is_booked?:boolean }[]>
   );
 }
 
@@ -274,7 +275,7 @@ async function renderAdminManagement(main: HTMLElement, tab: "management"|"accou
 async function renderSchedules(root: HTMLElement, doctorId: string) {
   root.classList.remove("hidden");
   root.innerHTML = `<p class="text-sm text-zinc-500 py-4">جاري تحميل المواعيد…</p>`;
-  type AvRule = { day_of_week:number; start_time:string; end_time:string; is_enabled:boolean };
+  type AvRule = { day_of_week:number; start_time:string; end_time:string; is_enabled:boolean; slot_minutes:number|null; break_start_1:string|null; break_end_1:string|null; break_start_2:string|null; break_end_2:string|null };
   type Blocked = { id:string; start_date:string; end_date:string; reason:string|null };
   try {
     const [schedules, availability, blocked] = await Promise.all([
@@ -285,10 +286,16 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
     const doc = state.adminDoctorsCache.find(d=>d.id===doctorId);
     const DAYS = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
     const enabled = availability.filter(r=>r.is_enabled);
+    const hasRules = enabled.length > 0;
     const selected = new Set<number>(enabled.map(r=>r.day_of_week));
     const byDay = new Map(enabled.map(r=>[r.day_of_week, r]));
-    const sharedStart = (enabled[0]?.start_time || "09:00").slice(0,5);
-    const sharedEnd = (enabled[0]?.end_time || "14:00").slice(0,5);
+    const first = enabled[0];
+    const sharedStart = (first?.start_time || "09:00").slice(0,5);
+    const sharedEnd = (first?.end_time || "14:00").slice(0,5);
+    const slotMinutes = String(first?.slot_minutes ?? 30);
+    const pick = (v: string|null|undefined, dflt: string)=> (hasRules ? (v || "") : dflt).slice(0,5);
+    const b1s = pick(first?.break_start_1, "13:00"), b1e = pick(first?.break_end_1, "14:00");
+    const b2s = pick(first?.break_start_2, "15:00"), b2e = pick(first?.break_end_2, "16:00");
 
     root.innerHTML = `
       <h3 class="font-bold mb-3">مواعيد ${escapeHtml(doc?.name || "الطبيب")}</h3>
@@ -301,11 +308,24 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
         <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
           <label class="text-xs">من <input id="wk-start" type="time" value="${escapeHtml(sharedStart)}" class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
           <label class="text-xs">إلى <input id="wk-end" type="time" value="${escapeHtml(sharedEnd)}" class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-          <p id="av-preview" class="text-xs text-zinc-500 sm:col-span-2 self-center"></p>
+          <label class="text-xs">مدة الموعد
+            <select id="wk-slot" class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm">
+              ${[15,20,30,45,60].map(m=>`<option value="${m}"${String(m)===slotMinutes?" selected":""}>${m} دقيقة</option>`).join("")}
+            </select>
+          </label>
+          <p id="av-preview" class="text-xs text-zinc-500 self-center"></p>
         </div>
-        <div class="mt-3 flex flex-wrap gap-2">
+        <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
+          <label class="text-xs">استراحة 1 من <input id="brk1-start" type="time" value="${escapeHtml(b1s)}" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white text-sm" /></label>
+          <label class="text-xs">استراحة 1 إلى <input id="brk1-end" type="time" value="${escapeHtml(b1e)}" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white text-sm" /></label>
+          <label class="text-xs">استراحة 2 من <input id="brk2-start" type="time" value="${escapeHtml(b2s)}" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white text-sm" /></label>
+          <label class="text-xs">استراحة 2 إلى <input id="brk2-end" type="time" value="${escapeHtml(b2e)}" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white text-sm" /></label>
+        </div>
+        <p class="mt-1 text-xs text-zinc-500">اترك حقول أي استراحة فارغة لإلغائها.</p>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
           <button id="save-availability" class="px-4 py-2.5 rounded-xl bg-ink text-white text-sm font-semibold">حفظ الأوقات</button>
           <button id="generate-schedule" class="px-4 py-2.5 rounded-xl bg-teal text-white text-sm font-semibold">توليد المواعيد (90 يوماً)</button>
+          <label class="flex items-center gap-1.5 text-xs text-zinc-600 ms-auto"><input id="gen-replace" type="checkbox" /> استبدال المواعيد الفارغة القادمة</label>
         </div>
         <details class="mt-3">
           <summary class="cursor-pointer text-xs text-zinc-600">تخصيص ساعات مختلفة لبعض الأيام</summary>
@@ -356,11 +376,30 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
 
     const startOf = (i:number)=> (root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement).value;
     const endOf = (i:number)=> (root.querySelector(`[data-av-end="${i}"]`) as HTMLInputElement).value;
-    const shared = ()=> [(root.querySelector("#wk-start") as HTMLInputElement).value, (root.querySelector("#wk-end") as HTMLInputElement).value] as const;
+    const val = (sel: string)=> (root.querySelector(sel) as HTMLInputElement).value;
+    const toMin = (t: string)=> { const [h,m]=t.split(":").map(Number); return h*60+(m||0); };
+    const shared = ()=> [val("#wk-start"), val("#wk-end")] as const;
+    const breaks = (): [number,number][] => {
+      const out: [number,number][] = [];
+      const pairs: [string,string][] = [["#brk1-start","#brk1-end"],["#brk2-start","#brk2-end"]];
+      pairs.forEach(([a,b])=>{ const s=val(a), e=val(b); if (s && e && toMin(e)>toMin(s)) out.push([toMin(s), toMin(e)]); });
+      return out;
+    };
+    const cellsInDay = (i:number): number => {
+      const [ss,se] = [startOf(i) || shared()[0], endOf(i) || shared()[1]];
+      if (!ss || !se) return 0;
+      const slot = Number(val("#wk-slot")) || 30; const bs = breaks();
+      let n = 0;
+      for (let t = toMin(ss); t + slot <= toMin(se); t += slot) {
+        const e = t + slot;
+        if (!bs.some(([a,b])=> e > a && t < b)) n++;
+      }
+      return n;
+    };
     const preview = ()=>{
-      const [ss,se] = shared(); const hours = (ss&&se) ? " ("+ss+"–"+se+")" : "";
+      const perWeek = [...selected].reduce((sum,i)=> sum + cellsInDay(i), 0);
       (root.querySelector("#av-preview") as HTMLElement).textContent = selected.size
-        ? `${selected.size} أيام أسبوعياً${hours} · سيُولَّد ~${Math.round(selected.size*90/7)} موعداً`
+        ? `${selected.size} أيام أسبوعياً · ${perWeek} موعداً/أسبوع · ~${Math.round(perWeek*90/7)} لـ90 يوماً`
         : "لم يتم اختيار أي يوم — حدّد الأيام التي يعمل فيها الطبيب";
     };
     const paintChips = ()=>{
@@ -379,28 +418,34 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
       if (selected.has(i)) selected.delete(i); else selected.add(i);
       paintChips();
     }));
-    (root.querySelector("#wk-start") as HTMLInputElement).addEventListener("input", preview);
-    (root.querySelector("#wk-end") as HTMLInputElement).addEventListener("input", preview);
+    ["#wk-start","#wk-end","#brk1-start","#brk1-end","#brk2-start","#brk2-end"].forEach(s=> (root.querySelector(s) as HTMLInputElement).addEventListener("input", preview));
+    (root.querySelector("#wk-slot") as HTMLSelectElement).addEventListener("change", preview);
     paintChips();
 
     (root.querySelector("#save-availability") as HTMLButtonElement).addEventListener("click", async ()=>{
       const [ss,se] = shared();
       if (selected.size && (!ss || !se)) { showToast("حدّد وقت البداية والنهاية","warning"); return; }
+      const mins = Number(val("#wk-slot")) || 30;
       const rules: Record<string, unknown>[] = [];
       selected.forEach(i=>{
         const st = startOf(i) || ss; const en = endOf(i) || se;
-        if (st && en) rules.push({ doctor_id: doctorId, day_of_week: i, start_time: st, end_time: en, is_enabled: true });
+        if (st && en) rules.push({ doctor_id: doctorId, day_of_week: i, start_time: st, end_time: en, is_enabled: true, slot_minutes: mins,
+          break_start_1: val("#brk1-start") || null, break_end_1: val("#brk1-end") || null,
+          break_start_2: val("#brk2-start") || null, break_end_2: val("#brk2-end") || null });
       });
-      try { await saveDoctorAvailability(doctorId, rules); showToast(rules.length ? `تم حفظ ${rules.length} أيام` : "تم مسح الأوقات","success"); paintChips(); }
+      try { await saveDoctorAvailability(doctorId, rules); showToast(rules.length ? `تم حفظ ${rules.length} أيام · ${mins} دقيقة للموعد` : "تم مسح الأوقات","success"); paintChips(); }
       catch(err){ showToast(translateAuthError(err),"error"); }
     });
 
     (root.querySelector("#generate-schedule") as HTMLButtonElement).addEventListener("click", async ()=>{
+      const replace = (root.querySelector("#gen-replace") as HTMLInputElement).checked;
+      if (replace && !confirm("سيُحذف كل موعد فارغ غير محجوز في الـ90 يوماً القادمة ثم يُعاد التوليد — نعم؟")) return;
       try {
-        const { created } = await generateDoctorSchedule(doctorId);
-        showToast(created ? `أُضيف ${created} موعداً` : "لا مواعيد جديدة — تحقق من الأوقات المحفوظة","success");
+        (root.querySelector("#generate-schedule") as HTMLButtonElement).disabled = true;
+        const { created } = await generateDoctorSchedule(doctorId, 90, replace);
+        showToast(created ? `أُضيف ${created} موعداً` : "لا مواعيد جديدة — تأكد من حفظ الأوقات أولاً","success");
         await renderSchedules(root, doctorId); await refreshDoctors();
-      } catch(err){ showToast(translateAuthError(err),"error"); }
+      } catch(err){ showToast(translateAuthError(err),"error"); (root.querySelector("#generate-schedule") as HTMLButtonElement).disabled = false; }
     });
 
     (root.querySelector("#add-blocked") as HTMLButtonElement).addEventListener("click", async ()=>{

@@ -1,7 +1,8 @@
-import { escapeHtml, formatTime, formatArabicDate } from "../lib/format";
+import { escapeHtml, formatTime, formatArabicDate, localDateISO } from "../lib/format";
 import { showToast } from "../components/Toast";
 
-type Doc = { id:string; name:string; specialization:string; consultation_fee:number; available_schedules: { id:string; available_date:string; start_time:string; end_time:string }[] };
+type Slot = { id:string; available_date:string; start_time:string; end_time:string; is_booked?:boolean };
+type Doc = { id:string; name:string; specialization:string; consultation_fee:number; available_schedules: Slot[] };
 
 export function renderDoctorsView(
   root: HTMLElement,
@@ -10,6 +11,7 @@ export function renderDoctorsView(
   onSearch: (q:string)=>void,
   onSpec: (v:string)=>void,
   onSort: (v:string)=>void,
+  loadDateSlots?: (doctorId: string, date: string) => Promise<Slot[]>,
 ) {
   const specs = [...new Set(doctors.map(d=>d.specialization))].sort();
   root.innerHTML = `
@@ -59,29 +61,62 @@ export function renderDoctorsView(
   let pending: { scheduleId:string; doctor:Doc; slot: Doc["available_schedules"][number] } | null = null;
 
   const renderGrid = (list: Doc[]) => {
+    lastList = list;
     if (!list.length) { grid.innerHTML = `<div class="col-span-full py-12 text-center text-sm text-zinc-500">لا نتائج</div>`; return; }
-    grid.innerHTML = list.map(d => `
+    // Fetch any explicitly chosen date that is outside the initial window.
+    list.forEach(d => {
+      const df = dateFilter.get(d.id);
+      if (!df || !loadDateSlots) return;
+      const k = `${d.id}|${df}`;
+      if (extra.has(k) || fetching.has(k)) return;
+      fetching.add(k);
+      loadDateSlots(d.id, df)
+        .then(slots => extra.set(k, slots))
+        .catch(() => extra.set(k, []))
+        .finally(() => { fetching.delete(k); renderGrid(lastList); });
+    });
+    grid.innerHTML = list.map(d => {
+      const df = dateFilter.get(d.id) || "";
+      const pf = periodFilter.get(d.id) || "all";
+      const key = `${d.id}|${df}`;
+      const loading = !!df && !extra.has(key);
+      const free = df ? (extra.get(key) || []) : d.available_schedules.filter(s => !s.is_booked);
+      const hasToday = free.some(s => s.available_date === TODAY);
+      const viewDate = df || (hasToday ? TODAY : (free[0]?.available_date || TODAY));
+      const daySlots = free.filter(s => s.available_date === viewDate);
+      const shown = daySlots.filter(s => pf === "all" || (pf === "am") === isMorning(s.start_time));
+      const next = df ? undefined : free.find(s => s.available_date > viewDate);
+      const emptyMsg = loading ? "جاري تحميل المواعيد…"
+        : daySlots.length ? "لا مواعيد في هذه الفترة"
+        : `لا مواعيد ${viewDate === TODAY ? "اليوم" : "في هذا اليوم"}${next ? ` — أقرب موعد ${escapeHtml(formatArabicDate(next.available_date))}` : ""}`;
+      const seg = (val: "all"|"am"|"pm", label: string) =>
+        `<button type="button" data-period="${val}" data-doc="${escapeHtml(d.id)}" class="px-2.5 py-1 ${pf===val?"bg-teal text-white":"text-zinc-600"}">${label}</button>`;
+      return `
       <div class="rounded-2xl border border-line bg-paper card p-4 flex flex-col gap-3">
         <div>
           <h3 class="font-bold">${escapeHtml(d.name)}</h3>
           <p class="text-xs text-teal font-semibold">${escapeHtml(d.specialization)} · ${escapeHtml(String(d.consultation_fee))} ر.س</p>
         </div>
-        ${d.available_schedules.length ? `
-          <div class="space-y-2">
-            <p class="text-xs font-semibold text-zinc-600">مواعيد متاحة</p>
-            <div class="flex flex-wrap gap-2">
-              ${d.available_schedules.slice(0,8).map(s => `
-                <button data-book="${escapeHtml(d.id)}:${escapeHtml(s.id)}" class="px-3 py-1.5 rounded-xl border border-line text-xs hover:border-teal hover:text-teal">
-                  ${escapeHtml(formatArabicDate(s.available_date))} · ${escapeHtml(formatTime(s.start_time))}–${escapeHtml(formatTime(s.end_time))}
-                </button>`).join("")}
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-semibold text-zinc-600">${viewDate === TODAY ? "مواعيد اليوم" : `مواعيد ${escapeHtml(formatArabicDate(viewDate))}`}</p>
+            <div class="inline-flex rounded-xl border border-line overflow-hidden text-xs" role="group">
+              ${seg("all","الكل")}${seg("am","صباحاً")}${seg("pm","بعد الظهر")}
             </div>
-            ${d.available_schedules.length > 8 ? `<p class="text-xs text-zinc-500">+${d.available_schedules.length - 8} أخرى — استخدم التاريخ أدناه</p>` : ""}
-            <div class="flex gap-2 items-center">
-              <input type="date" data-date-for="${escapeHtml(d.id)}" class="flex-1 px-3 py-2 rounded-xl border border-line bg-white text-sm outline-none focus:border-teal" />
-              <span class="text-xs text-zinc-500">(اختر يوماً لعرض مواعيده)</span>
-            </div>
-          </div>` : `<p class="text-xs text-zinc-500">لا مواعيد متاحة حالياً</p>`}
-      </div>`).join("");
+          </div>
+          <div class="flex flex-wrap gap-2">
+            ${shown.length ? shown.map(s => `
+              <button data-book="${escapeHtml(d.id)}:${escapeHtml(s.id)}" class="px-3 py-1.5 rounded-xl border border-line text-xs hover:border-teal hover:text-teal">
+                ${escapeHtml(formatTime(s.start_time))}
+              </button>`).join("")
+              : `<span class="text-xs text-zinc-500">${emptyMsg}</span>`}
+          </div>
+          <div class="flex gap-2 items-center">
+            <input type="date" data-date-for="${escapeHtml(d.id)}" value="${escapeHtml(df)}" class="flex-1 px-3 py-2 rounded-xl border border-line bg-white text-sm outline-none focus:border-teal" />
+            ${df ? `<button type="button" data-date-clear="${escapeHtml(d.id)}" class="px-2 py-2 rounded-xl border border-line text-xs">أقرب يوم</button>` : `<span class="text-xs text-zinc-500">(اختر يوماً لعرض مواعيده)</span>`}
+          </div>
+        </div>
+      </div>`; }).join("");
     grid.querySelectorAll<HTMLButtonElement>("[data-book]").forEach(btn => {
       btn.addEventListener("click", () => {
         const [docId, schId] = (btn.dataset.book || "").split(":");
@@ -98,7 +133,31 @@ export function renderDoctorsView(
         bookDlg.showModal();
       });
     });
+    grid.querySelectorAll<HTMLButtonElement>("[data-period]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.doc!; const val = btn.dataset.period as "all"|"am"|"pm";
+        if (val === "all") periodFilter.delete(id); else periodFilter.set(id, val);
+        renderGrid(lastList);
+      });
+    });
+    grid.querySelectorAll<HTMLInputElement>("[data-date-for]").forEach(inp => {
+      inp.addEventListener("change", () => {
+        const id = inp.dataset.dateFor!;
+        if (inp.value) dateFilter.set(id, inp.value); else dateFilter.delete(id);
+        renderGrid(lastList);
+      });
+    });
+    grid.querySelectorAll<HTMLButtonElement>("[data-date-clear]").forEach(btn => {
+      btn.addEventListener("click", () => { dateFilter.delete(btn.dataset.dateClear!); renderGrid(lastList); });
+    });
   };
+  let lastList: Doc[] = doctors;
+  const dateFilter = new Map<string, string>();
+  const periodFilter = new Map<string, "all"|"am"|"pm">();
+  const extra = new Map<string, Slot[]>();
+  const fetching = new Set<string>();
+  const TODAY = localDateISO();
+  const isMorning = (t: string)=> Number(t.slice(0,2)) < 12;
   renderGrid(doctors);
 
   root.querySelector("[data-close-book]")?.addEventListener("click", ()=> bookDlg.close());
