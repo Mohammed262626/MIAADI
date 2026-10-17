@@ -742,6 +742,14 @@ REVOKE EXECUTE ON FUNCTION public.is_admin() FROM anon, PUBLIC;
 GRANT EXECUTE ON FUNCTION public.book_appointment(uuid, text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.cancel_appointment(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.reschedule_appointment(uuid, uuid) TO authenticated;
+
+-- ملاحظة (قرار موثّق): يبقى is_admin() متاحاً لـ authenticated رغم تحذير linter 0029.
+-- سبب إلزامي: أكثر من 15 سياسة RLS تستدعي public.is_admin() داخل USING/WITH CHECK،
+-- وتُنفَّذ بصلاحيات الدور المُنِفِّذ (authenticated)، فسحب EXECUTE منه يُفشلها
+-- بـ "permission denied for function is_admin" (أُثبت باختبار SET ROLE داخل معاملة).
+-- لا يستدعيها العميل إطلاقاً؛ خطرها محدود (تكشف فقط هل المستخدم مشرف بنفسه).
+-- الحل الجذري المقترح مستقبلاً: نقلها إلى schema خاص غير مُعرَّض عبر PostgREST وإعادة
+-- كتابة السياسات لتشير إليه. مرفوض حالياً لكلفته.
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.cancel_appointment_clinic(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_update_appointment_state(uuid, text) TO authenticated;
