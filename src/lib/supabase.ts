@@ -204,3 +204,11 @@ export async function getAvailableSlots(doctorId: string, startDate: string, end
   const { data, error } = await getClient().from("doctor_schedules").select("id,available_date,start_time,end_time,is_booked").eq("doctor_id", doctorId).gte("available_date", startDate).lte("available_date", endDate).eq("is_booked", false).order("available_date, start_time");
   if (error) throw error; return data || [];
 }
+// Housekeeping: drop unbooked slots whose date has already passed.
+// Booked rows are never touched (is_booked=false guard), so no appointment can
+// reference a deleted row. Admin-only by RLS; safe to call opportunistically.
+export async function purgeExpiredSlots(): Promise<number> {
+  const today = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().split("T")[0];
+  const { data, error } = await getClient().from("doctor_schedules").delete().lt("available_date", today).eq("is_booked", false).select("id");
+  if (error) throw error; return (data || []).length;
+}

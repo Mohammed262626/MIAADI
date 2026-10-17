@@ -1,5 +1,5 @@
 import "./styles/tailwind.css";
-import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, findDoctorByUser, listDoctorSchedules, createDoctorSchedule, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates } from "./lib/supabase";
+import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, findDoctorByUser, listDoctorSchedules, createDoctorSchedule, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots } from "./lib/supabase";
 import { localDateISO, escapeHtml, translateAuthError, formatTime, formatArabicDate } from "./lib/format";
 import { showToast } from "./components/Toast";
 import { renderHeader } from "./components/Header";
@@ -489,12 +489,19 @@ async function refreshAdminRows(){
 }
 async function refreshAll(){ await Promise.all([refreshDoctors(), refreshAppointments()]); }
 
+async function runHousekeeping() {
+  const role = (state.currentUser as { profile?: { role?: string } } | null)?.profile?.role;
+  if (role !== "admin") return;
+  try { await purgeExpiredSlots(); } catch {}
+}
+
 async function init() {
   state.currentUser = await getCurrentUser().catch(()=>null);
   state.activeTab = getTabFromHash();
   window.addEventListener("hashchange", ()=> { const t=getTabFromHash(); if(t!==state.activeTab){ state.activeTab=t; render(); } });
-  try { onAuthChange(async (_e, session)=> { if ((session as {user?:unknown})?.user) state.currentUser = await getCurrentUser(); else state.currentUser=null; await refreshAll(); render(); }); } catch {}
+  try { onAuthChange(async (_e, session)=> { if ((session as {user?:unknown})?.user) state.currentUser = await getCurrentUser(); else state.currentUser=null; await refreshAll(); void runHousekeeping(); render(); }); } catch {}
   await refreshAll();
+  void runHousekeeping();
   render();
   try { subscribeToRealtimeUpdates(()=> refreshDoctors().then(render), ()=> refreshAll().then(render)); } catch {}
 }
