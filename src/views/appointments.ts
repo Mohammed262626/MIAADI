@@ -10,7 +10,11 @@ function badge(status:string): string {
 
 export function renderAppointmentsView(root: HTMLElement, list: Appt[], onCancel:(id:string)=>void, onReschedule:(id:string)=>void, onShare:(a:Appt)=>void) {
   if (!list.length) {
-    root.innerHTML = `<div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-12 text-center"><p class="text-sm text-zinc-500">لا حجوزات</p><a href="#doctors" class="inline-block mt-3 px-4 py-2 rounded-xl bg-ink text-white text-sm">تصفح الأطباء</a></div>`;
+    root.innerHTML = `<div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-16 text-center">
+      <h2 class="font-bold text-lg">لا حجوزات بعد</h2>
+      <p class="text-sm text-zinc-500 mt-2">عند حجز موعد سيظهر هنا، مع إمكانية تعديله أو إلغائه أو مشاركته.</p>
+      <a href="#doctors" class="inline-block mt-4 px-5 py-2.5 rounded-xl bg-ink text-white text-sm font-semibold">احجز الآن</a>
+    </div>`;
     return;
   }
   root.innerHTML = `<div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-8"><h2 class="font-bold text-lg mb-4">حجوزاتي</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${list.map(a => {

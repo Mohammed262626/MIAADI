@@ -34,13 +34,13 @@ export function renderDoctorsView(
     <dialog id="book-dialog" class="p-0 bg-transparent backdrop:bg-ink/60 open:grid place-items-center min-h-dvh w-full max-w-none">
       <div class="bg-paper rounded-2xl border border-line card w-full max-w-[480px] p-6 mx-4">
         <h3 class="font-bold">تأكيد الحجز</h3>
-        <p id="book-summary" class="text-sm text-zinc-600 mt-2"></p>
+        <div id="book-summary" class="mt-3 space-y-1.5 text-sm"></div>
         <form id="book-form" class="mt-4 space-y-3">
           <input id="book-name" required placeholder="اسم المريض" class="w-full px-3 py-2.5 rounded-xl border border-line bg-white outline-none focus:border-teal text-sm" />
           <input id="book-phone" required placeholder="رقم الهاتف" dir="ltr" class="w-full px-3 py-2.5 rounded-xl border border-line bg-white outline-none focus:border-teal text-sm" />
           <div class="flex gap-2">
-            <button type="button" data-close-book class="flex-1 py-2.5 rounded-xl border border-line">إلغاء</button>
-            <button type="submit" class="flex-1 py-2.5 rounded-xl bg-teal text-white font-semibold hover:bg-teal-hover">تأكيد</button>
+            <button type="button" data-close-book class="flex-1 py-2.5 rounded-xl border border-line">تعديل</button>
+            <button type="submit" class="flex-1 py-2.5 rounded-xl bg-teal text-white font-semibold hover:bg-teal-hover">تأكيد الحجز</button>
           </div>
         </form>
       </div>
@@ -77,43 +77,39 @@ export function renderDoctorsView(
     });
     grid.innerHTML = list.map(d => {
       const df = dateFilter.get(d.id) || "";
-      const pf = periodFilter.get(d.id) || "all";
       const key = `${d.id}|${df}`;
       const loading = !!df && !extra.has(key);
       const free = df ? (extra.get(key) || []) : d.available_schedules.filter(s => !s.is_booked);
       const hasToday = free.some(s => s.available_date === TODAY);
       const viewDate = df || (hasToday ? TODAY : (free[0]?.available_date || TODAY));
       const daySlots = free.filter(s => s.available_date === viewDate);
-      const shown = daySlots.filter(s => pf === "all" || (pf === "am") === isMorning(s.start_time));
       const next = df ? undefined : free.find(s => s.available_date > viewDate);
-      const emptyMsg = loading ? "جاري تحميل المواعيد…"
-        : daySlots.length ? "لا مواعيد في هذه الفترة"
-        : `لا مواعيد ${viewDate === TODAY ? "اليوم" : "في هذا اليوم"}${next ? ` — أقرب موعد ${escapeHtml(formatArabicDate(next.available_date))}` : ""}`;
-      const seg = (val: "all"|"am"|"pm", label: string) =>
-        `<button type="button" data-period="${val}" data-doc="${escapeHtml(d.id)}" class="px-2.5 py-1 ${pf===val?"bg-teal text-white":"text-zinc-600"}">${label}</button>`;
+      const morning = daySlots.filter(s => isMorning(s.start_time));
+      const afternoon = daySlots.filter(s => !isMorning(s.start_time));
+      const chip = (s: Slot) => `<button data-book="${escapeHtml(d.id)}:${escapeHtml(s.id)}" class="px-3 py-1.5 rounded-xl border border-line text-xs hover:border-teal hover:text-teal">${escapeHtml(formatTime(s.start_time))}</button>`;
+      const group = (title: string, slots: Slot[], hidden: boolean) => hidden ? "" : `
+        <div>
+          <p class="text-xs font-semibold text-zinc-600 mb-1">${title} <span class="text-zinc-400 font-normal">(${slots.length})</span></p>
+          ${slots.length ? `<div class="flex flex-wrap gap-2">${slots.map(chip).join("")}</div>` : `<span class="text-xs text-zinc-400">لا مواعيد</span>`}
+        </div>`;
       return `
       <div class="rounded-2xl border border-line bg-paper card p-4 flex flex-col gap-3">
         <div>
           <h3 class="font-bold">${escapeHtml(d.name)}</h3>
           <p class="text-xs text-teal font-semibold">${escapeHtml(d.specialization)} · ${escapeHtml(String(d.consultation_fee))} ر.س</p>
         </div>
-        <div class="space-y-2">
+        <div class="space-y-3">
           <div class="flex items-center justify-between gap-2">
             <p class="text-xs font-semibold text-zinc-600">${viewDate === TODAY ? "مواعيد اليوم" : `مواعيد ${escapeHtml(formatArabicDate(viewDate))}`}</p>
-            <div class="inline-flex rounded-xl border border-line overflow-hidden text-xs" role="group">
-              ${seg("all","الكل")}${seg("am","صباحاً")}${seg("pm","بعد الظهر")}
-            </div>
+            ${df ? `<button type="button" data-date-clear="${escapeHtml(d.id)}" class="px-2 py-1 rounded-xl border border-line text-xs">أقرب يوم</button>` : ""}
           </div>
-          <div class="flex flex-wrap gap-2">
-            ${shown.length ? shown.map(s => `
-              <button data-book="${escapeHtml(d.id)}:${escapeHtml(s.id)}" class="px-3 py-1.5 rounded-xl border border-line text-xs hover:border-teal hover:text-teal">
-                ${escapeHtml(formatTime(s.start_time))}
-              </button>`).join("")
-              : `<span class="text-xs text-zinc-500">${emptyMsg}</span>`}
-          </div>
+          ${loading ? `<p class="text-sm text-zinc-500">جاري تحميل المواعيد…</p>`
+            : daySlots.length
+              ? group("أوقات الصباح", morning, false) + group("أوقات بعد الظهر", afternoon, false)
+              : `<p class="text-xs text-zinc-500">لا مواعيد ${viewDate === TODAY ? "اليوم" : "في هذا اليوم"}${next ? ` — أقرب موعد ${escapeHtml(formatArabicDate(next.available_date))}` : ""}</p>`}
           <div class="flex gap-2 items-center">
             <input type="date" data-date-for="${escapeHtml(d.id)}" value="${escapeHtml(df)}" class="flex-1 px-3 py-2 rounded-xl border border-line bg-white text-sm outline-none focus:border-teal" />
-            ${df ? `<button type="button" data-date-clear="${escapeHtml(d.id)}" class="px-2 py-2 rounded-xl border border-line text-xs">أقرب يوم</button>` : `<span class="text-xs text-zinc-500">(اختر يوماً لعرض مواعيده)</span>`}
+            <span class="text-xs text-zinc-500">(اختر يوماً آخر)</span>
           </div>
         </div>
       </div>`; }).join("");
@@ -123,7 +119,15 @@ export function renderDoctorsView(
         const doc = list.find(x=>x.id===docId); const slot = doc?.available_schedules.find(s=>s.id===schId);
         if (!doc || !slot) return;
         pending = { scheduleId: schId, doctor: doc, slot };
-        bookSummary.textContent = `${doc.name} — ${formatArabicDate(slot.available_date)} ${formatTime(slot.start_time)}`;
+        const durationMin = Math.round((new Date(`2000-01-01T${slot.end_time}`).getTime() - new Date(`2000-01-01T${slot.start_time}`).getTime()) / 60000);
+        const row = (k: string, v: string) => `<div class="flex justify-between gap-3 text-sm"><span class="text-zinc-500">${k}</span><span class="font-medium">${v}</span></div>`;
+        bookSummary.innerHTML =
+          row("الطبيب", escapeHtml(doc.name)) +
+          row("التخصص", escapeHtml(doc.specialization)) +
+          row("التاريخ", escapeHtml(formatArabicDate(slot.available_date))) +
+          row("الوقت", `${escapeHtml(formatTime(slot.start_time))} – ${escapeHtml(formatTime(slot.end_time))}`) +
+          row("المدة", `${durationMin} دقيقة`) +
+          row("الرسوم", `${escapeHtml(String(doc.consultation_fee))} ر.س`);
         const nameEl = root.querySelector("#book-name") as HTMLInputElement;
         const phoneEl = root.querySelector("#book-phone") as HTMLInputElement;
         // prefill from profile if available via global
@@ -131,13 +135,6 @@ export function renderDoctorsView(
         if (u?.profile?.full_name) nameEl.value = u.profile.full_name;
         if (u?.profile?.phone) phoneEl.value = u.profile.phone;
         bookDlg.showModal();
-      });
-    });
-    grid.querySelectorAll<HTMLButtonElement>("[data-period]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const id = btn.dataset.doc!; const val = btn.dataset.period as "all"|"am"|"pm";
-        if (val === "all") periodFilter.delete(id); else periodFilter.set(id, val);
-        renderGrid(lastList);
       });
     });
     grid.querySelectorAll<HTMLInputElement>("[data-date-for]").forEach(inp => {
@@ -153,7 +150,6 @@ export function renderDoctorsView(
   };
   let lastList: Doc[] = doctors;
   const dateFilter = new Map<string, string>();
-  const periodFilter = new Map<string, "all"|"am"|"pm">();
   const extra = new Map<string, Slot[]>();
   const fetching = new Set<string>();
   const TODAY = localDateISO();
