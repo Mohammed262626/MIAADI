@@ -41,6 +41,12 @@ export async function updatePatientProfile(p: { fullName: string; phone: string 
   return { success: true };
 }
 
+export async function updatePassword(password: string) {
+  const { error } = await getClient().auth.updateUser({ password });
+  if (error) throw error;
+  return { success: true };
+}
+
 // --- doctors & schedules
 // Loads doctors plus their free slots inside a rolling window (default 14 days).
 // Filtering happens server-side so the catalog stays light as data grows; any
@@ -67,6 +73,95 @@ export async function listDoctors() {
   const { data, error } = await getClient().from("doctors").select("id,name,specialization,consultation_fee,user_id").order("name");
   if (error) throw error; return data || [];
 }
+
+// --- public directory (rich rows for the home page & catalog)
+export type DirectorySlot = { id: string; available_date: string; start_time: string; end_time: string };
+export type DoctorDirectoryRow = {
+  id: string; name: string; specialization: string; consultation_fee: number;
+  title: string | null; gender: string | null; city: string | null;
+  rating: number | null; reviews_count: number | null; experience_years: number | null; telehealth: boolean;
+  photo_url: string | null; hospital_name: string | null; hospital_city: string | null;
+  insurances: string[]; available_schedules: DirectorySlot[];
+};
+
+
+// Doctors joined with hospital, insurers and only their earliest free slots
+// (server-capped via the top-slots RPC) inside a window. Doctors with no free
+// slot in the window are intentionally omitted from the public catalog.
+export async function getDoctorsDirectory(daysWindow = 7, slotsPerDoctor = 9): Promise<DoctorDirectoryRow[]> {
+  const { data, error } = await getClient().rpc("get_doctors_directory_top_slots", {
+    p_days_window: daysWindow,
+    p_slots_per_doctor: slotsPerDoctor,
+  });
+  if (error) throw error;
+  return (((data as unknown) as Record<string, any>[]) || []).map((r) => {
+    const slots = (r.available_schedules || []) as { id: string; available_date: string; start_time: string; end_time: string }[];
+    return {
+      id: String(r.id), name: String(r.name), specialization: String(r.specialization),
+      consultation_fee: Number(r.consultation_fee), title: r.title ?? null, gender: r.gender ?? null,
+      city: r.city ?? null, rating: r.rating === null || r.rating === undefined ? null : Number(r.rating),
+      reviews_count: r.reviews_count ?? null, experience_years: r.experience_years ?? null,
+      telehealth: Boolean(r.telehealth), photo_url: r.photo_url ?? null,
+      hospital_name: r.hospital_name ?? null, hospital_city: r.hospital_city ?? null,
+      insurances: ((r.insurances || []) as string[]).filter(Boolean),
+      available_schedules: slots.map((s) => ({ id: s.id, available_date: s.available_date, start_time: s.start_time, end_time: s.end_time })),
+    };
+  });
+}
+
+// Lightweight specialization list used to fill the home page specialty tiles.
+export async function getDoctorSpecializations(): Promise<string[]> {
+  const { data, error } = await getClient().from("doctors").select("specialization");
+  if (error) throw error;
+  return ((data || []) as { specialization?: string }[]).map((d) => String(d.specialization || ""));
+}
+
+// --- doctor profile page (#doctor/:id)
+export type DoctorProfileRow = {
+  id: string; name: string; name_en: string | null; title: string | null;
+  specialization: string; consultation_fee: number; city: string | null; gender: string | null;
+  languages: string[]; rating: number; reviews_count: number; experience_years: number | null;
+  telehealth: boolean; about: string | null; photo_url: string | null;
+  hospital_name: string | null; hospital_city: string | null; hospital_address: string | null;
+  insurances: string[];
+};
+export type ProfileSlot = { id: string; available_date: string; start_time: string; end_time: string; is_booked: boolean };
+
+export async function getDoctorProfile(doctorId: string): Promise<DoctorProfileRow | null> {
+  const { data, error } = await getClient().from("doctors")
+    .select(`id,name,name_en,title,specialization,consultation_fee,city,gender,languages,rating,reviews_count,experience_years,telehealth,about,photo_url,
+             hospitals(name,city,address),
+             doctor_insurances(insurance_companies(name))`)
+    .eq("id", doctorId).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const r = data as Record<string, any>;   // eslint-disable-line @typescript-eslint/no-explicit-any
+  const hosp = (r.hospitals || null) as { name?: string; city?: string; address?: string } | null;
+  const insurances = ((r.doctor_insurances || []) as { insurance_companies?: { name?: string } }[])
+    .map((x) => x.insurance_companies?.name).filter((n): n is string => Boolean(n));
+  return {
+    id: String(r.id), name: String(r.name), name_en: r.name_en ?? null, title: r.title ?? null,
+    specialization: String(r.specialization), consultation_fee: Number(r.consultation_fee),
+    city: r.city ?? null, gender: r.gender ?? null, languages: (r.languages || []) as string[],
+    rating: r.rating === null || r.rating === undefined ? 0 : Number(r.rating),
+    reviews_count: r.reviews_count ?? 0, experience_years: r.experience_years ?? null,
+    telehealth: Boolean(r.telehealth), about: r.about ?? null, photo_url: r.photo_url ?? null,
+    hospital_name: hosp?.name ?? null, hospital_city: hosp?.city ?? null, hospital_address: hosp?.address ?? null,
+    insurances,
+  };
+}
+
+// Every slot in the window (free and booked) so the profile page can show taken
+// times struck through, exactly like the reference screen.
+export async function getDoctorProfileSlots(doctorId: string, startDate: string, endDate: string): Promise<ProfileSlot[]> {
+  const { data, error } = await getClient().from("doctor_schedules")
+    .select("id,available_date,start_time,end_time,is_booked")
+    .eq("doctor_id", doctorId).gte("available_date", startDate).lte("available_date", endDate)
+    .order("available_date", { ascending: true }).order("start_time", { ascending: true });
+  if (error) throw error;
+  return (data || []) as ProfileSlot[];
+}
+
 export async function findDoctorByUser(userId: string) {
   const { data, error } = await getClient().from("doctors").select("id,name,specialization,consultation_fee,user_id").eq("user_id", userId).maybeSingle();
   if (error) throw error; return data || null;
@@ -109,9 +204,17 @@ export async function updateAppointmentState(appointmentId: string, state: strin
   const { data, error } = await getClient().rpc("admin_update_appointment_state", { p_appointment_id: appointmentId, p_state: state });
   if (error) throw error; return data;
 }
+export async function adminRescheduleAppointmentRPC(p: { appointmentId: string; newScheduleId: string }) {
+  const { data, error } = await getClient().rpc("admin_reschedule_appointment", { p_appointment_id: p.appointmentId, p_new_schedule_id: p.newScheduleId });
+  if (error) throw error; return data;
+}
+export async function adminDeleteAppointmentRPC(appointmentId: string) {
+  const { data, error } = await getClient().rpc("admin_delete_appointment", { p_appointment_id: appointmentId });
+  if (error) throw error; return data;
+}
 export async function getPatientAppointments() {
   const c = getClient(); const { data: { user } } = await c.auth.getUser(); if (!user) return [];
-  const { data, error } = await c.from("appointments").select(`id,schedule_id,patient_id,patient_name,patient_phone,status,doctor_schedules(id,available_date,start_time,end_time,doctors(id,name,specialization,consultation_fee))`).eq("patient_id", user.id).order("id", { ascending: false });
+  const { data, error } = await c.from("appointments").select(`id,schedule_id,patient_id,patient_name,patient_phone,status,doctor_schedules(id,available_date,start_time,end_time,doctors(id,name,specialization,consultation_fee,hospitals(name)))`).eq("patient_id", user.id).order("id", { ascending: false });
   if (error) throw error; return data || [];
 }
 export function subscribeToRealtimeUpdates(onSchedule: (p: unknown)=>void, onAppointment: (p: unknown)=>void) {
@@ -205,10 +308,11 @@ export async function getAvailableSlots(doctorId: string, startDate: string, end
   if (error) throw error; return data || [];
 }
 // Housekeeping: drop unbooked slots whose date has already passed.
-// Booked rows are never touched (is_booked=false guard), so no appointment can
-// reference a deleted row. Admin-only by RLS; safe to call opportunistically.
+// Delegates to the same SQL function the pg_cron job runs daily; rows that are
+// still referenced by an appointment (FK) are skipped server-side.
 export async function purgeExpiredSlots(): Promise<number> {
-  const today = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().split("T")[0];
-  const { data, error } = await getClient().from("doctor_schedules").delete().lt("available_date", today).eq("is_booked", false).select("id");
-  if (error) throw error; return (data || []).length;
+  const { data, error } = await getClient().rpc("purge_expired_doctor_slots");
+  if (error) throw error;
+  const row = Array.isArray(data) ? (data[0] as { deleted?: number } | null) : (data as { deleted?: number } | null);
+  return row?.deleted ?? 0;
 }

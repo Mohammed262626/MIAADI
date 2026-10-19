@@ -1,48 +1,243 @@
 @import "tailwindcss";
 
+/* =========================================================================
+   ميعادي / Miaadi — tokens copied verbatim from the Stitch DESKTOP designs
+   (tailwind.config from home/doctors/bookings/doctor-profile/dashboard).
+   ========================================================================= */
 @theme {
-  --color-ink: #0F1115;
-  --color-paper: #FCFCF9;
-  --color-paper-soft: #F5F5F0;
-  --color-line: #E8E8E0;
-  --color-line-strong: #D8D8D0;
-  --color-teal: #0D9488;
-  --color-teal-hover: #0B7A70;
-  --color-danger: #DC2626;
-  --color-danger-soft: #FEF2F2;
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
-  --font-sans: "Cairo", "Inter", ui-sans-serif, system-ui;
+  /* ---- colors ---- */
+  --color-surface: #f7f9fb;
+  --color-surface-dim: #d8dadc;
+  --color-surface-bright: #f7f9fb;
+  --color-surface-variant: #e0e3e5;
+  --color-surface-tint: #006a61;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f4f6;
+  --color-surface-container: #eceef0;
+  --color-surface-container-high: #e6e8ea;
+  --color-surface-container-highest: #e0e3e5;
+  --color-background: #f7f9fb;
+  --color-on-background: #191c1e;
+  --color-on-surface: #191c1e;
+  --color-on-surface-variant: #3d4947;
+  --color-inverse-surface: #2d3133;
+  --color-inverse-on-surface: #eff1f3;
+  --color-outline: #6d7a77;
+  --color-outline-variant: #bcc9c6;
+
+  --color-primary: #00685f;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #008378;
+  --color-on-primary-container: #f4fffc;
+  --color-primary-fixed: #89f5e7;
+  --color-primary-fixed-dim: #6bd8cb;
+  --color-on-primary-fixed: #00201d;
+  --color-on-primary-fixed-variant: #005049;
+  --color-inverse-primary: #6bd8cb;
+
+  --color-secondary: #565e74;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #dae2fd;
+  --color-on-secondary-container: #5c647a;
+  --color-secondary-fixed: #dae2fd;
+  --color-secondary-fixed-dim: #bec6e0;
+  --color-on-secondary-fixed: #131b2e;
+  --color-on-secondary-fixed-variant: #3f465c;
+
+  --color-tertiary: #006947;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #00855b;
+  --color-on-tertiary-container: #f5fff6;
+  --color-tertiary-fixed: #6ffbbe;
+  --color-tertiary-fixed-dim: #4edea3;
+  --color-on-tertiary-fixed: #002113;
+  --color-on-tertiary-fixed-variant: #005236;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* legacy aliases still used by the admin console fragments */
+  --color-ink: #2d3133;
+  --color-ink-soft: #3d4947;
+  --color-paper: #f7f9fb;
+  --color-paper-soft: #f2f4f6;
+  --color-line: #e0e3e5;
+  --color-line-strong: #bcc9c6;
+  --color-teal: #00685f;
+  --color-teal-hover: #008378;
+  --color-teal-soft: #89f5e7;
+  --color-danger: #ba1a1a;
+  --color-danger-soft: #ffdad6;
+  --color-warning: #b45309;
+  --color-warning-soft: #fef3c7;
+  --color-success: #006947;
+  --color-success-soft: #d1fae5;
+
+  /* ---- spacing scale from the design system ---- */
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 1rem;
+  --spacing-space-lg: 1.5rem;
+  --spacing-space-xl: 2rem;
+  --spacing-margin: 1rem;
+  --spacing-margin-desktop: 2rem;
+  --spacing-gutter: 1rem;
+  --spacing-gutter-sm: 0.75rem;
+
+  /* ---- typography families ---- */
+  --font-sans: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+  --font-display-lg: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+  --font-headline-lg: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+  --font-headline-md: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+  --font-headline-sm: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+  --font-label-lg: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+  --font-label-md: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+  --font-label-sm: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+  --font-body-lg: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+  --font-body-md: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+  --font-body-sm: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+
+  /* ---- typography scale ---- */
+  --text-display-lg: 32px;
+  --text-display-lg--line-height: 40px;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-lg--font-weight: 700;
+
+  --text-headline-lg: 26px;
+  --text-headline-lg--line-height: 34px;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg--font-weight: 700;
+
+  --text-headline-md: 22px;
+  --text-headline-md--line-height: 30px;
+  --text-headline-md--letter-spacing: -0.01em;
+  --text-headline-md--font-weight: 600;
+
+  --text-headline-sm: 18px;
+  --text-headline-sm--line-height: 26px;
+  --text-headline-sm--font-weight: 600;
+
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-lg--font-weight: 400;
+
+  --text-body-md: 14px;
+  --text-body-md--line-height: 22px;
+  --text-body-md--font-weight: 400;
+
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 18px;
+  --text-body-sm--font-weight: 400;
+
+  --text-label-lg: 15px;
+  --text-label-lg--line-height: 20px;
+  --text-label-lg--font-weight: 600;
+
+  --text-label-md: 13px;
+  --text-label-md--line-height: 18px;
+  --text-label-md--font-weight: 600;
+
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 14px;
+  --text-label-sm--letter-spacing: 0.02em;
+  --text-label-sm--font-weight: 600;
 }
 
-* { font-family: var(--font-sans); }
-
-html { scroll-behavior: smooth; }
-
+html,
 body {
-  background: var(--color-paper);
-  color: var(--color-ink);
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  color: var(--color-on-surface);
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: var(--color-teal); color: white; }
-
-:focus-visible {
-  outline: 2px solid var(--color-teal);
-  outline-offset: 2px;
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  vertical-align: middle;
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
 }
 
-/* single soft shadow */
-.card { box-shadow: 0 8px 32px rgba(15,17,21,0.06); }
+::selection { background: var(--color-primary-fixed); color: var(--color-on-primary-fixed); }
+:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+html { scroll-behavior: smooth; }
 
-/* scrollbar minimal */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: #D8D8D0; border-radius: 999px; }
+/* card surfaces (dialogs + admin fragments) */
+.card { background: var(--color-surface-container-lowest); border-radius: 1rem; box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 30px -18px rgba(16, 24, 40, .18); }
+.card-float { background: var(--color-surface-container-lowest); border-radius: 1rem; box-shadow: 0 24px 60px -20px rgba(16, 24, 40, .35); }
+.panel { background: var(--color-surface-container-lowest); border-radius: 1.5rem; box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 12px 32px -20px rgba(16, 24, 40, .16); }
+.panel-flat { background: var(--color-surface-container-low); border-radius: 1.25rem; }
+.chrome-blur { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.tabular-nums { font-variant-numeric: tabular-nums; }
 
-/* toast pop — one motion only */
-@keyframes toast-pop { 0%{transform:scale(.96);opacity:0}100%{transform:scale(1);opacity:1} }
-.toast-enter { animation: toast-pop 180ms ease-out; }
+@keyframes toast-pop { 0% { transform: translateY(12px); opacity: 0 } 100% { transform: translateY(0); opacity: 1 } }
+.toast-enter { animation: toast-pop 200ms ease-out; }
+@keyframes modal-pop { 0% { transform: scale(.96); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
+.modal-enter { animation: modal-pop 200ms ease-out; }
 
 @media (prefers-reduced-motion: reduce) {
-  *,*::before,*::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+@media (max-width: 480px) {
+  :root { --spacing-margin-desktop: 1rem; }
+}
+
+/* dark mode: only the tokens flip — every utility keeps working */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-surface: #101416; --color-surface-dim: #101416; --color-surface-bright: #1a2023;
+  --color-surface-variant: #2a2f31;
+  --color-surface-tint: #06332e;
+  --color-surface-container-lowest: #0b0e0f;
+  --color-surface-container-low: #15191b;
+  --color-surface-container: #1c2123;
+  --color-surface-container-high: #262b2d;
+  --color-surface-container-highest: #313638;
+  --color-background: #101416;
+  --color-on-background: #e0e3e5;
+  --color-on-surface: #e0e3e5;
+  --color-on-surface-variant: #bec9c6;
+  --color-inverse-surface: #e0e3e5;
+  --color-inverse-on-surface: #2d3133;
+  --color-inverse-primary: #00685f;
+  --color-outline: #889491;
+  --color-outline-variant: #3f4846;
+  --color-primary: #6bd8cb;
+  --color-on-primary: #00201d;
+  --color-primary-container: #005049;
+  --color-on-primary-container: #f4fffc;
+  --color-secondary: #bec6e0;
+  --color-on-secondary: #131b2e;
+  --color-secondary-container: #3f465c;
+  --color-on-secondary-container: #dae2fd;
+  --color-tertiary: #4edea3;
+  --color-on-tertiary: #002113;
+  --color-tertiary-container: #005236;
+  --color-on-tertiary-container: #6ffbbe;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  --color-ink: #e0e3e5; --color-ink-soft: #bec9c6;  --color-paper: #101416; --color-paper-soft: #15191b;
+  --color-line: #262b2d; --color-line-strong: #3f4846;
+  --color-danger: #ffb4ab; --color-danger-soft: #93000a;
+  --color-warning: #ffca7a; --color-warning-soft: #4a3202;
+  --color-success: #4edea3; --color-success-soft: #005236;
 }

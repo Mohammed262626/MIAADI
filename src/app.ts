@@ -1,160 +1,325 @@
 import "./styles/tailwind.css";
-import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, findDoctorByUser, listDoctorSchedules, createDoctorSchedule, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots } from "./lib/supabase";
+import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, findDoctorByUser, listDoctorSchedules, createDoctorSchedule, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile } from "./lib/supabase";
 import { localDateISO, escapeHtml, translateAuthError, formatTime, formatArabicDate } from "./lib/format";
 import { showToast } from "./components/Toast";
-import { renderHeader } from "./components/Header";
 import { mountAuthModal } from "./components/AuthModal";
-import { renderDoctorsView } from "./views/doctors";
-import { renderAppointmentsView } from "./views/appointments";
+import { confirmSheet } from "./components/ConfirmDialog";
+import { emptyState } from "./components/ui";
+import type { Doctor, Slot } from "./components/DoctorCard";
+import { renderConfirmView } from "./views/confirm";
+import { renderProfileView } from "./views/profile";
 import { renderAdminView } from "./views/admin";
+import { renderSiteHeader, renderSiteFooter } from "./components/SiteHeader";
+import { HOME_MAIN } from "./views/stitch/home";
+import { DOCTORS_MAIN } from "./views/stitch/doctors";
+import { DOCTORPROFILE_MAIN } from "./views/stitch/doctorProfile";
+import { BOOKINGS_MAIN } from "./views/stitch/bookings";
+import { PROFILE_MAIN } from "./views/stitch/profile";
+import { registerStitchGlobals } from "./views/stitch/interactions";
+import { wireHome } from "./views/stitch/homeLive";
+import { wireDoctorsLive } from "./views/stitch/doctorsLive";
+import { wireDoctorProfile } from "./views/stitch/doctorProfileLive";
+import { wireBookings } from "./views/stitch/bookingsLive";
+import { wireProfile } from "./views/stitch/profileLive";
 
-type Tab = "doctors" | "appointments" | "admin";
+type RouteName = "home" | "doctors" | "doctor" | "confirm" | "appointments" | "profile" | "admin";
+type Route = { name: RouteName; param?: string };
+type Pending = { scheduleId: string; doctorId: string; slot: Slot; appointmentId?: string };
 
 const state = {
   currentUser: null as Awaited<ReturnType<typeof getCurrentUser>>,
   doctors: [] as Awaited<ReturnType<typeof getDoctorsWithSchedules>>,
   patientAppointments: [] as Awaited<ReturnType<typeof getPatientAppointments>>,
-  activeTab: "doctors" as Tab,
-  searchQuery: "",
-  selectedSpec: "all",
-  sortBy: "default" as "default"|"fee-asc"|"fee-desc",
+  route: { name: "home" } as Route,
+  pending: null as Pending | null,
   // admin
-  adminFilters: { status:"all", doctorId:"", dateFrom: localDateISO(), dateTo: localDateISO(), search:"", sortBy:"available_date", sortDir:"desc" },
+  adminFilters: { status: "all", doctorId: "", dateFrom: localDateISO(), dateTo: localDateISO(), search: "", sortBy: "available_date", sortDir: "desc" },
   adminPage: 0, adminPageSize: 25, adminTotal: 0,
-  adminRows: [] as { appointment_id:string; patient_name:string; patient_phone:string; doctor_name:string; available_date:string; start_time:string; status:string; doctor_id:string }[],
+  adminRows: [] as { appointment_id: string; schedule_id: string; patient_name: string; patient_phone: string; doctor_name: string; available_date: string; start_time: string; status: string; doctor_id: string }[],
   adminDoctors: [] as Awaited<ReturnType<typeof listDoctors>>,
   adminAccounts: [] as Awaited<ReturnType<typeof adminListProfiles>>,
-  adminSubTab: "appointments" as "appointments"|"management"|"accounts",
+  adminSubTab: "appointments" as "appointments" | "management" | "accounts",
   adminManagementDoctor: null as string | null,
   adminDoctorsCache: [] as Awaited<ReturnType<typeof listDoctors>>,
 };
 
 const appEl = document.getElementById("app") as HTMLElement;
-const toastContainer = document.getElementById("toast-container") as HTMLElement;
-if (!toastContainer) { const t=document.createElement("div"); t.id="toast-container"; t.className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none"; document.body.appendChild(t); }
+if (!document.getElementById("toast-container")) {
+  const t = document.createElement("div");
+  t.id = "toast-container";
+  t.className = "fixed bottom-32 left-1/2 -translate-x-1/2 z-[60] flex flex-col items-center gap-2 pointer-events-none px-4 w-full max-w-[520px]";
+  document.body.appendChild(t);
+}
 
 let authModal: ReturnType<typeof mountAuthModal> | null = null;
-let doctorsViewApi: ReturnType<typeof renderDoctorsView> | null = null;
 
-function getTabFromHash(): Tab {
-  const h = location.hash.replace("#","") as Tab;
-  return h==="appointments"||h==="admin"||h==="doctors" ? h : "doctors";
+/* ---------------------------------- routing --------------------------------- */
+
+function parseRoute(): Route {
+  const raw = decodeURIComponent(location.hash.replace(/^#/, "")).trim();
+  const [seg, param] = raw.split("/");
+  switch (seg) {
+    case "doctors": return { name: "doctors" };
+    case "doctor": return param ? { name: "doctor", param } : { name: "doctors" };
+    case "confirm": return param ? { name: "confirm", param } : { name: "home" };
+    case "appointments": return { name: "appointments" };
+    case "profile": return { name: "profile" };
+    case "admin": return { name: "admin", param };
+    default: return { name: "home" };
+  }
 }
+
+function findDoctor(id: string | undefined): Doctor | undefined {
+  if (!id) return undefined;
+  return (state.doctors as unknown as Doctor[]).find((d) => d.id === id);
+}
+
+/* ---------------------------------- render ---------------------------------- */
+
+const STATIC_VIEWS: Record<string, string> = {
+  home: HOME_MAIN,
+  doctors: DOCTORS_MAIN,
+  doctor: DOCTORPROFILE_MAIN,
+  appointments: BOOKINGS_MAIN,
+  profile: PROFILE_MAIN,
+};
+
+/* data-path values found in the Stitch desktop designs -> app routes */
+const PATH_ROUTES: Record<string, string> = {
+  home: "#home",
+  "doctors-and-specialties": "#doctors",
+  "hospitals-and-centers": "#doctors",
+  "telehealth-consultations": "#doctors",
+  "my-bookings": "#appointments",
+  "instant-consultation": "#doctors",
+  profile: "#profile",
+  "dashboard-overview": "#admin",
+  "appointments-schedule": "#admin/manage",
+  "patients-emr": "#admin/manage",
+  "prescriptions-reports": "#admin/manage",
+  "billing-cchi-claims": "#admin/manage",
+  "clinic-settings-availability": "#admin/manage",
+};
 
 function render() {
-  const tab = state.activeTab;
+  const route = state.route;
   const role = state.currentUser?.profile?.role as string | undefined;
-  const canAdmin = role==="admin" || role==="doctor";
-  if (tab==="admin" && !canAdmin) { state.activeTab = "doctors"; location.hash = "#doctors"; return render(); }
-  if (tab==="appointments" && !state.currentUser) {
-    // prompt login but still show empty state
+  const canAdmin = role === "admin" || role === "doctor";
+  const demoMode = !state.currentUser;
+  if (route.name === "admin" && !canAdmin && !demoMode) { location.hash = "#home"; return; }
+
+  if (route.name === "admin" && !route.param) {
+    appEl.innerHTML = `<main class="w-full pt-20 bg-surface min-h-dvh"><div id="admin-boot" class="p-space-xl text-center text-secondary font-body-md text-body-md flex items-center justify-center gap-space-sm"><span class="material-symbols-outlined animate-spin">progress_activity</span> جاري تحميل لوحة العيادة…</div></main><div id="auth-mount"></div>`;
+  } else {
+    const staticHtml = STATIC_VIEWS[route.name];
+    const mainOpen = staticHtml
+      ? `<main class="w-full pt-20 bg-surface min-h-dvh">${staticHtml}</main>`
+      : `<main id="main-root" class="w-full pt-20 bg-surface min-h-dvh"></main>`;
+    appEl.innerHTML = `${renderSiteHeader(state.currentUser)}${mainOpen}${renderSiteFooter()}<div id="auth-mount"></div>`;
   }
-  const badge = state.patientAppointments.filter(a=>a.status==="booked").length;
-  // @ts-ignore expose for prefill
-  (window as unknown as Record<string,unknown>).__pulseUser = state.currentUser;
 
-  const headerHtml = renderHeader(tab, state.currentUser as Parameters<typeof renderHeader>[1], badge);
-  appEl.innerHTML = `${headerHtml}<main id="main-root"></main><div id="auth-mount"></div>`;
+  wireShell();
+  if (route.name === "home") void wireHome(appEl, state.currentUser);
+  if (route.name === "doctors") void wireDoctorsLive(appEl);
+  if (route.name === "doctor" && route.param) void wireDoctorProfile(appEl, route.param, state.currentUser);
+  if (route.name === "appointments") void wireBookings(appEl, state.currentUser);
+  if (route.name === "profile") void wireProfile(appEl, state.currentUser, {
+    onOpenAuth: () => authModal?.open(),
+    onLogout: async () => {
+      try { await logoutUser(); state.currentUser = null; state.patientAppointments = []; showToast("تم تسجيل الخروج", "success"); go("#home"); }
+      catch (e) { showToast(translateAuthError(e), "error"); }
+    },
+    onSave: async ({ fullName, phone }) => {
+      try { await updatePatientProfile({ fullName, phone }); state.currentUser = await getCurrentUser(); render(); }
+      catch (e) { showToast(translateAuthError(e), "error"); throw e; }
+    },
+  });
+  if (route.name === "admin" && !route.param) {
+    void (async () => {
+      const [{ DASHBOARD_BODY: body }, { wireDoctorDashboard: wireDb }, { mountAuthModal: mountModal }] = await Promise.all([
+        import("./views/stitch/dashboard"),
+        import("./views/stitch/dashboardLive"),
+        import("./components/AuthModal"),
+      ]);
+      if (state.route.name !== "admin" || state.route.param) return;
+      appEl.innerHTML = `${body}<div id="auth-mount"></div>`;
+      wireShell();
+      authModal = mountModal(appEl.querySelector<HTMLElement>("#auth-mount")!,
+        async ({ email, password }) => { const r = await loginUser({ email, password }); state.currentUser = await getCurrentUser(); await refreshAll(); render(); return r as unknown as void; },
+        async ({ email, password, fullName, phone }) => { const r = await registerPatient({ email, password, fullName, phone }); state.currentUser = await getCurrentUser(); await refreshAll(); render(); return r as unknown as void; }
+      );
+      void wireDb(appEl, state.currentUser);
+    })();
+  }
 
-  // header actions
-  appEl.querySelector('[data-action="open-auth"]')?.addEventListener("click", ()=> authModal?.open());
-  appEl.querySelector('[data-action="logout"]')?.addEventListener("click", async ()=> { try{ await logoutUser(); state.currentUser=null; state.patientAppointments=[]; location.hash="#doctors"; state.activeTab="doctors"; render(); showToast("تم تسجيل الخروج","success"); } catch(e){ showToast(translateAuthError(e),"error"); } });
-
-  // mount auth modal
   const authMount = document.getElementById("auth-mount") as HTMLElement;
   authModal = mountAuthModal(authMount,
-    async ({email,password})=> { const r=await loginUser({email,password}); state.currentUser = await getCurrentUser(); state.activeTab="doctors"; location.hash="#doctors"; await refreshAll(); render(); return r as unknown as void; },
-    async ({email,password,fullName,phone})=> { const r=await registerPatient({email,password,fullName,phone}); state.currentUser = await getCurrentUser(); await refreshAll(); render(); return r as unknown as void; }
-  );
-
-  const main = document.getElementById("main-root") as HTMLElement;
-  if (tab==="doctors") renderDoctorsTab(main);
-  else if (tab==="appointments") renderAppointmentsTab(main);
-  else if (tab==="admin") renderAdminTab(main);
-}
-
-type Doc = { id:string; name:string; specialization:string; consultation_fee:number; available_schedules: { id:string; available_date:string; start_time:string; end_time:string }[] };
-function filteredDoctors(): Doc[] {
-  let list = [...(state.doctors as unknown as Doc[])];
-  const q = state.searchQuery.trim().toLowerCase();
-  if (q) list = list.filter(d=> d.name.toLowerCase().includes(q) || d.specialization.toLowerCase().includes(q));
-  if (state.selectedSpec!=="all") list = list.filter(d=> d.specialization===state.selectedSpec);
-  if (state.sortBy==="fee-asc") list.sort((a,b)=> a.consultation_fee - b.consultation_fee);
-  if (state.sortBy==="fee-desc") list.sort((a,b)=> b.consultation_fee - a.consultation_fee);
-  return list;
-}
-
-function renderDoctorsTab(main: HTMLElement) {
-  doctorsViewApi = renderDoctorsView(main, filteredDoctors(),
-    async (scheduleId, _doctor, _slot)=>{
-      // read patient inputs from view
-      const pending = doctorsViewApi?.getPending();
-      const inputs = doctorsViewApi?.getPatientInputs();
-      const patientName = inputs?.patientName || "";
-      const patientPhone = inputs?.patientPhone || "";
-      if (!state.currentUser) { showToast("سجّل الدخول أولاً","warning"); authModal?.open(); return; }
-      if (!patientName || !patientPhone) { showToast("أدخل الاسم والهاتف","warning"); return; }
-      try {
-        await bookAppointmentRPC({ scheduleId, patientName, patientPhone });
-        showToast("تم الحجز بنجاح","success");
-        doctorsViewApi?.closeBook();
-        await refreshDoctors(); await refreshAppointments();
-        render();
-      } catch (e) { showToast(translateAuthError(e),"error"); }
-      void pending;
+    async ({ email, password }) => {
+      const r = await loginUser({ email, password });
+      state.currentUser = await getCurrentUser();
+      await refreshAll();
+      render();
+      return r as unknown as void;
     },
-    (q)=> { state.searchQuery=q; const upd = filteredDoctors(); doctorsViewApi?.update(upd); },
-    (v)=> { state.selectedSpec=v; doctorsViewApi?.update(filteredDoctors()); },
-    (v)=> { state.sortBy=v as typeof state.sortBy; doctorsViewApi?.update(filteredDoctors()); },
-    (doctorId, date)=> getAvailableSlots(doctorId, date, date) as Promise<{ id:string; available_date:string; start_time:string; end_time:string; is_booked?:boolean }[]>
-  );
-}
-
-function renderAppointmentsTab(main: HTMLElement) {
-  if (!state.currentUser) {
-    main.innerHTML = `<div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-12 text-center"><p class="text-sm text-zinc-600">سجّل الدخول لعرض حجوزاتك</p><button data-open-auth class="mt-3 px-4 py-2 rounded-xl bg-ink text-white text-sm">دخول</button></div>`;
-    main.querySelector("[data-open-auth]")?.addEventListener("click", ()=> authModal?.open());
-    return;
-  }
-  renderAppointmentsView(main, state.patientAppointments as unknown as Parameters<typeof renderAppointmentsView>[1],
-    async (id)=>{
-      const a = state.patientAppointments.find(x=> String(x.id)===id) as unknown as { doctor_schedules?: { available_date:string; start_time:string } } | undefined;
-      const details = a?.doctor_schedules ? `${escapeHtml(formatArabicDate(a.doctor_schedules.available_date || ""))} ${escapeHtml(formatTime(a.doctor_schedules.start_time || ""))}` : "";
-      if (!confirm(`إلغاء الموعد ${details}؟`)) return;
-      try { await cancelAppointmentRPC(id); showToast("تم الإلغاء","success"); await refreshAll(); render(); } catch(e){ showToast(translateAuthError(e),"error"); }
-    },
-    async (id)=>{
-      // reschedule: pick new slot via prompt — reuse doctors view slots
-      const a = state.patientAppointments.find(x=>x.id===id);
-      const docId = (a as unknown as { doctor_schedules?: { doctors?: { id:string } } })?.doctor_schedules?.doctors?.id;
-      if (!docId) { showToast("تعذر تحديد الطبيب","error"); return; }
-      const date = prompt("أدخل التاريخ الجديد YYYY-MM-DD");
-      if (!date) return;
-      try {
-        const slots = await getAvailableSlots(docId, date, date);
-        if (!slots.length) { showToast("لا مواعيد في هذا التاريخ","warning"); return; }
-        const choice = prompt(`اختر رقم الموعد:\n${slots.map((s: {id:string;start_time:string;end_time:string},i:number)=>`${i+1}. ${s.start_time}-${s.end_time} (${s.id.slice(0,6)})`).join("\n")}`);
-        const idx = parseInt(choice||"",10)-1;
-        const slot = slots[idx];
-        if (!slot) return;
-        await rescheduleAppointmentRPC({ appointmentId:id, newScheduleId: slot.id });
-        showToast("تمت إعادة الجدولة","success"); await refreshAll(); render();
-      } catch(e){ showToast(translateAuthError(e),"error"); }
-    },
-    (a)=>{
-      const s = a.doctor_schedules as { available_date:string; start_time:string; doctors?: { name:string; specialization:string } } | undefined;
-      const docName = s?.doctors?.name || "الطبيب"; const spec = s?.doctors?.specialization || "";
-      const msg = `تذكير بموعدي في نبض العافية:\n- الطبيب: ${docName} (${spec})\n- التاريخ: ${formatArabicDate(s?.available_date||"")}\n- الوقت: ${formatTime(s?.start_time||"")}`;
-      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
-      window.open(url, "_blank", "noopener,noreferrer");
+    async ({ email, password, fullName, phone }) => {
+      const r = await registerPatient({ email, password, fullName, phone });
+      state.currentUser = await getCurrentUser();
+      await refreshAll();
+      render();
+      return r as unknown as void;
     }
   );
+
+  const main = document.getElementById("main-root") as HTMLElement | null;
+  switch (route.name) {
+    case "confirm": if (main) renderConfirmTab(main, route.param!); break;
+    case "profile": if (main) renderProfileTab(main); break;
+    case "admin": if (main) void renderAdminTab(main); break;
+  }
 }
+
+/* --------------------------------- shell ---------------------------------- */
+
+function wireShell() {
+  appEl.querySelectorAll<HTMLElement>('[data-action="open-auth"]').forEach((b) => b.addEventListener("click", () => authModal?.open()));
+  appEl.querySelectorAll<HTMLElement>('[data-action="lang"]').forEach((b) => b.addEventListener("click", () => showToast("دعم اللغة الإنجليزية قريباً", "info")));
+
+  const headRow = appEl.querySelector<HTMLElement>("header > div");
+  if (headRow && !document.getElementById("theme-toggle")) {
+    const btn = document.createElement("button");
+    btn.id = "theme-toggle";
+    btn.type = "button";
+    btn.title = "الوضع الداكن";
+    btn.className = "w-9 h-9 rounded-full border border-outline-variant text-on-surface grid place-items-center hover:bg-surface-container-high transition-all";
+    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">dark_mode</span>';
+    headRow.appendChild(btn);
+    btn.addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      try { localStorage.setItem("miaadi.theme", next); } catch {}
+      btn.querySelector(".material-symbols-outlined")!.textContent = next === "dark" ? "light_mode" : "dark_mode";
+    });
+  }
+
+  const menu = appEl.querySelector<HTMLElement>("#mobile-menu");
+  const menuIcon = appEl.querySelector<HTMLElement>("#mobile-menu-icon");
+  appEl.querySelector<HTMLButtonElement>("#mobile-menu-btn")?.addEventListener("click", () => {
+    if (!menu) return;
+    const nowHidden = menu.classList.toggle("hidden");
+    if (menuIcon) menuIcon.textContent = nowHidden ? "menu" : "close";
+  });
+  menu?.addEventListener("click", (e) => {
+    if (!(e.target as HTMLElement).closest("[data-path]")) return;
+    menu.classList.add("hidden");
+    if (menuIcon) menuIcon.textContent = "menu";
+  });
+}
+
+function handleClick(e: MouseEvent) {
+  const target = e.target as HTMLElement | null;
+  if (!target) return;
+
+  const pathEl = target.closest<HTMLElement>("[data-path]");
+  if (pathEl) {
+    const dest = PATH_ROUTES[pathEl.dataset.path || ""];
+    if (dest) { e.preventDefault(); go(dest); return; }
+  }
+
+  const anchor = target.closest<HTMLAnchorElement>('a[href="#"]');
+  if (anchor) e.preventDefault();
+
+  const doctorBtn = target.closest<HTMLElement>("[data-book-doctor], [data-doctor-id]");
+  if (doctorBtn) {
+    const id = doctorBtn.dataset.bookDoctor || doctorBtn.dataset.doctorId;
+    if (id) { e.preventDefault(); go(`#doctor/${id}`); return; }
+  }
+
+  const clickable = target.closest<HTMLElement>("button, a");
+  if (!clickable) return;
+  const label = (clickable.textContent || "").replace(/\s+/g, " ").trim();
+  if (!label) return;
+
+  if (label.includes("عرض بطاقة الدخول")) { go("#appointments"); return; }
+  if (/متابعة الحجز/.test(label)) { showToast("قريباً: ربط الحجز والدفع بقاعدة البيانات", "info"); return; }
+  if (/احجز موعداً|حجز باقة|حجز الباقة|احجز الآن مع خدمة المنزل/.test(label)) { go("#doctors"); }
+}
+
+/* ----------------------------------- views ---------------------------------- */
+
+function renderConfirmTab(main: HTMLElement, scheduleId: string) {
+  const pending = state.pending;
+  if (!pending || pending.scheduleId !== scheduleId) {
+    main.innerHTML = `<div class="px-4 pt-3">${emptyState({
+      icon: "link_off",
+      title: "لا يوجد حجز قيد التأكيد",
+      body: "ابدأ من جديد باختيار الطبيب والموعد المناسب لك.",
+      actionHtml: `<a href="#doctors" class="mt-1 h-11 px-5 rounded-full bg-primary text-on-primary font-bold text-sm grid place-items-center">تصفح الأطباء</a>`,
+    })}</div>`;
+    return;
+  }
+  const doctor = findDoctor(pending.doctorId);
+  if (!doctor) {
+    main.innerHTML = `<div class="px-4 pt-3">${emptyState({ icon: "error", title: "تعذّر تحميل بيانات الطبيب", body: "ارجع وأعد المحاولة." })}</div>`;
+    return;
+  }
+  renderConfirmView(main, {
+    doctor,
+    slot: pending.slot,
+    user: state.currentUser,
+    mode: pending.appointmentId ? "reschedule" : "book",
+    onOpenAuth: () => authModal?.open(),
+    onConfirm: async (p) => {
+      try {
+        let res: { id?: string } | void;
+        if (pending.appointmentId) {
+          res = await rescheduleAppointmentRPC({ appointmentId: pending.appointmentId, newScheduleId: pending.scheduleId }) as { id?: string };
+          showToast("تمت إعادة الجدولة", "success");
+        } else {
+          res = await bookAppointmentRPC({ scheduleId: pending.scheduleId, patientName: p.patientName, patientPhone: p.patientPhone }) as { id?: string };
+        }
+        await Promise.all([refreshDoctors(), refreshAppointments()]);
+        state.pending = null;
+        return res;
+      } catch (e) {
+        showToast(translateAuthError(e), "error");
+        throw e;
+      }
+    },
+  });
+}
+
+function renderProfileTab(main: HTMLElement) {
+  const role = state.currentUser?.profile?.role as string | undefined;
+  renderProfileView(main, {
+    user: state.currentUser as unknown as Parameters<typeof renderProfileView>[1]["user"],
+    canAdmin: role === "admin" || role === "doctor",
+    onOpenAuth: () => authModal?.open(),
+    onAdmin: () => go("#admin"),
+    onLogout: async () => {
+      try {
+        await logoutUser();
+        state.currentUser = null;
+        state.patientAppointments = [];
+        showToast("تم تسجيل الخروج", "success");
+        go("#home");
+      } catch (e) { showToast(translateAuthError(e), "error"); }
+    },
+    onSave: async ({ fullName, phone }) => {
+      try {
+        await updatePatientProfile({ fullName, phone });
+        state.currentUser = await getCurrentUser();
+        render();
+      } catch (e) { showToast(translateAuthError(e), "error"); throw e; }
+    },
+  });
+}
+
+/* ----------------------------------- admin ---------------------------------- */
 
 async function renderAdminTab(main: HTMLElement) {
   const role = state.currentUser?.profile?.role as string;
-  const isDoctor = role==="doctor";
-  // preload admin data
+  const isDoctor = role === "doctor";
+  if (state.adminSubTab !== "appointments") { await renderAdminManagement(main, state.adminSubTab); return; }
   try {
     if (isDoctor) {
       const my = await findDoctorByUser(state.currentUser!.id);
@@ -162,347 +327,567 @@ async function renderAdminTab(main: HTMLElement) {
     }
     if (!state.adminDoctors.length) state.adminDoctors = await listDoctors();
     state.adminDoctorsCache = state.adminDoctors;
-  } catch {}
-  let stats = { total:0, booked:0, completed:0, cancelled:0, noShow:0, today:0 };
-  try { stats = await getAdminStats(); } catch {}
+  } catch { /* ignore */ }
+  let stats = { total: 0, booked: 0, completed: 0, cancelled: 0, noShow: 0, today: 0 };
+  try { stats = await getAdminStats(); } catch { /* ignore */ }
   try {
-    const res = await getAdminAppointments({ statuses: state.adminFilters.status==="all"?undefined: state.adminFilters.status==="cancelled"? ["cancelled_by_patient","cancelled_by_clinic"] : [state.adminFilters.status], doctorId: state.adminFilters.doctorId||undefined, dateFrom: state.adminFilters.dateFrom||undefined, dateTo: state.adminFilters.dateTo||undefined, search: state.adminFilters.search||undefined, page: state.adminPage, pageSize: state.adminPageSize, sortBy: state.adminFilters.sortBy, sortDir: state.adminFilters.sortDir });
+    const res = await getAdminAppointments({ statuses: state.adminFilters.status === "all" ? undefined : state.adminFilters.status === "cancelled" ? ["cancelled_by_patient", "cancelled_by_clinic"] : [state.adminFilters.status], doctorId: state.adminFilters.doctorId || undefined, dateFrom: state.adminFilters.dateFrom || undefined, dateTo: state.adminFilters.dateTo || undefined, search: state.adminFilters.search || undefined, page: state.adminPage, pageSize: state.adminPageSize, sortBy: state.adminFilters.sortBy, sortDir: state.adminFilters.sortDir });
     state.adminRows = (res.rows as typeof state.adminRows) || []; state.adminTotal = res.total || 0;
-  } catch (e) { showToast(translateAuthError(e),"error"); }
+  } catch (e) { showToast(translateAuthError(e), "error"); }
 
-  const api = renderAdminView(main, {
+  renderAdminView(main, {
     rows: state.adminRows, total: state.adminTotal, page: state.adminPage, pageSize: state.adminPageSize, stats,
-    filters: state.adminFilters, doctors: state.adminDoctors.map(d=>({id:d.id,name:d.name})),
-    onFilter: (patch)=> { Object.assign(state.adminFilters, patch); state.adminPage=0; renderAdminTab(main); },
-    onPage: (dir)=> { state.adminPage = Math.max(0, state.adminPage + dir); renderAdminTab(main); },
-    onState: async (id, s)=> { try{ await updateAppointmentState(id,s); showToast("تم التحديث","success"); await refreshAdminRows(); renderAdminTab(main); } catch(e){ showToast(translateAuthError(e),"error"); } },
-    onClinicCancel: async (id)=> { await cancelAppointmentClinic(id); showToast("تم الإلغاء وإتاحة الموعد","success"); await refreshAdminRows(); await refreshDoctors(); },
-    onManageTab: (tab)=> { state.adminSubTab=tab; if(tab==="appointments") renderAdminTab(main); else renderAdminManagement(main, tab); },
+    filters: state.adminFilters, doctors: state.adminDoctors.map((d) => ({ id: d.id, name: d.name })),
+    roleLabel: isDoctor ? "حساب طبيب" : "حساب مشرف",
+    onFilter: (patch) => { Object.assign(state.adminFilters, patch); state.adminPage = 0; void renderAdminTab(main); },
+    onPage: (dir) => { state.adminPage = Math.max(0, state.adminPage + dir); void renderAdminTab(main); },
+    onState: async (id, s) => { try { await updateAppointmentState(id, s); showToast("تم التحديث", "success"); await refreshAdminRows(); void renderAdminTab(main); } catch (e) { showToast(translateAuthError(e), "error"); } },
+    onClinicCancel: async (id) => { try { await cancelAppointmentClinic(id); showToast("تم الإلغاء وإتاحة الموعد", "success"); await refreshAdminRows(); await refreshDoctors(); } catch (e) { showToast(translateAuthError(e), "error"); } },
+    onEdit: (row) => { void openApptEditDialog(row, main); },
+    onDelete: async (row) => {
+      try { await adminDeleteAppointmentRPC(row.appointment_id); showToast("تم حذف الحجز بنجاح", "success"); await refreshAdminRows(); void renderAdminTab(main); }
+      catch (e) { showToast(translateAuthError(e), "error"); }
+    },
+    onManageTab: (tab) => { state.adminSubTab = tab; if (tab === "appointments") void renderAdminTab(main); else void renderAdminManagement(main, tab); },
     activeSubTab: state.adminSubTab,
   });
-  void api;
 }
 
-async function renderAdminManagement(main: HTMLElement, tab: "management"|"accounts") {
-  if (tab==="accounts") {
-    try { state.adminAccounts = await adminListProfiles(); } catch(e){ showToast(translateAuthError(e),"error"); }
-    const rows = state.adminAccounts as { user_id:string; full_name:string; email:string; phone:string; role:string }[];
+type AdminRow = (typeof state.adminRows)[number];
+
+async function openApptEditDialog(row: AdminRow, main: HTMLElement) {
+  document.getElementById("appt-edit-dialog")?.remove();
+  const today = localDateISO();
+  const endDate = new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0];
+  let free: { id: string; available_date: string; start_time: string; end_time?: string }[] = [];
+  try {
+    const slots = await getAvailableSlots(row.doctor_id, today, endDate);
+    free = (slots as unknown as { id: string; available_date: string; start_time: string }[]).filter((s) => s.id !== row.schedule_id);
+  } catch (e) { showToast(translateAuthError(e), "error"); return; }
+
+  const dates = free.length ? [...new Set(free.map((s) => s.available_date))] : [];
+  if (!dates.length) { showToast("لا توجد مواعيد متاحة لهذا الطبيب خلال الأسبوعين القادمين", "info"); return; }
+
+  const dlg = document.createElement("dialog");
+  dlg.id = "appt-edit-dialog";
+  dlg.className = "p-0 bg-transparent backdrop:bg-inverse-surface/50 backdrop:backdrop-blur-sm open:grid place-items-center min-h-dvh w-full max-w-none";
+  dlg.innerHTML = `
+  <div class="bg-surface-container-lowest rounded-[28px] shadow-[0_24px_60px_-20px_rgba(16,24,40,.4)] w-full max-w-[440px] p-space-xl mx-4 flex flex-col gap-space-lg">
+    <div class="flex items-center gap-space-sm">
+      <span class="w-11 h-11 rounded-2xl grid place-items-center bg-primary/10 text-primary"><span class="material-symbols-outlined text-[22px]">edit_calendar</span></span>
+      <div class="min-w-0">
+        <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">تعديل موعد المريض</h3>
+        <p class="font-label-sm text-label-sm text-secondary truncate">${escapeHtml(row.patient_name)} • ${escapeHtml(row.doctor_name)}</p>
+      </div>
+    </div>
+    <div class="bg-surface-container-low rounded-xl p-space-md flex items-center justify-between gap-space-sm font-label-sm text-label-sm">
+      <span class="text-secondary whitespace-nowrap">الموعد الحالي:</span>
+      <span class="font-bold text-on-surface truncate">${escapeHtml(formatArabicDate(row.available_date))} • ${escapeHtml(formatTime(row.start_time))}</span>
+    </div>
+    <div class="grid grid-cols-2 gap-space-md">
+      <label class="flex flex-col gap-1 font-label-sm text-label-sm text-secondary">التاريخ
+        <select id="appt-date" class="px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface outline-none focus:border-primary"></select>
+      </label>
+      <label class="flex flex-col gap-1 font-label-sm text-label-sm text-secondary">الوقت
+        <select id="appt-time" class="px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface outline-none focus:border-primary"></select>
+      </label>
+    </div>
+    <div class="flex items-center justify-end gap-space-sm">
+      <button id="appt-cancel" class="px-space-lg py-2.5 rounded-full border border-outline-variant font-label-md text-label-md text-on-surface hover:bg-surface-container transition-all">إلغاء</button>
+      <button id="appt-save" class="px-space-lg py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-primary-container transition-all">حفظ التعديل</button>
+    </div>
+  </div>`;
+  document.body.appendChild(dlg);
+  dlg.showModal();
+
+  const dateSel = dlg.querySelector("#appt-date") as HTMLSelectElement;
+  const timeSel = dlg.querySelector("#appt-time") as HTMLSelectElement;
+  const fillTimes = () => {
+    const day = free.filter((s) => s.available_date === dateSel.value);
+    timeSel.innerHTML = day.map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(formatTime(s.start_time))}</option>`).join("");
+  };
+  dateSel.innerHTML = dates.map((d, i) => `<option value="${escapeHtml(d)}">${escapeHtml(formatArabicDate(d))}${i === 0 ? " • أقرب" : ""}</option>`).join("");
+  dateSel.value = dates[0];
+  fillTimes();
+  dateSel.addEventListener("change", fillTimes);
+
+  const closeDlg = () => { dlg.close(); dlg.remove(); };
+  dlg.querySelector("#appt-cancel")?.addEventListener("click", closeDlg);
+  dlg.querySelector("#appt-save")?.addEventListener("click", async () => {
+    const newScheduleId = timeSel.value;
+    if (!newScheduleId) return;
+    const saveBtn = dlg.querySelector("#appt-save") as HTMLButtonElement;
+    saveBtn.disabled = true;
+    try {
+      await adminRescheduleAppointmentRPC({ appointmentId: row.appointment_id, newScheduleId });
+      showToast("تم تعديل موعد المريض بنجاح", "success");
+      closeDlg();
+      await refreshAdminRows();
+      void renderAdminTab(main);
+    } catch (e) { showToast(translateAuthError(e), "error"); saveBtn.disabled = false; }
+  });
+}
+
+async function renderAdminManagement(main: HTMLElement, tab: "management" | "accounts") {
+  if (tab === "accounts") {
+    try { state.adminAccounts = await adminListProfiles(); } catch (e) { showToast(translateAuthError(e), "error"); }
+    const rows = state.adminAccounts as { user_id: string; full_name: string; email: string; phone: string; role: string }[];
+    const rolePill = (role: string) => role === "admin"
+      ? `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full font-label-sm text-label-sm font-bold bg-inverse-surface text-inverse-on-surface"><span class="material-symbols-outlined text-[14px]">shield_person</span>مشرف</span>`
+      : role === "doctor"
+        ? `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full font-label-sm text-label-sm font-bold bg-primary/10 text-primary"><span class="material-symbols-outlined text-[14px]">stethoscope</span>طبيب</span>`
+        : `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full font-label-sm text-label-sm font-bold bg-surface-container-high text-on-surface-variant"><span class="material-symbols-outlined text-[14px]">person</span>مريض</span>`;
     main.innerHTML = `
-      <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-8 space-y-4">
-        <div class="flex items-center gap-2">
-          <button data-back class="px-3 py-2 rounded-xl border border-line text-sm">رجوع للحجوزات</button>
-          <h2 class="font-bold">الحسابات والأدوار</h2>
+      <div class="w-full px-margin-desktop py-space-xl">
+        <div class="flex flex-wrap items-center justify-between gap-space-md mb-space-lg">
+          <div class="flex items-center gap-space-sm text-secondary font-label-md text-label-md">
+            <span class="text-on-surface">بوابة الإدارة</span><span>/</span><span class="text-primary font-bold">الحسابات والأدوار</span>
+          </div>
+          <button data-back class="flex items-center gap-space-xs px-space-md py-2 rounded-full border border-outline-variant font-label-md text-label-md text-on-surface hover:bg-surface-container transition-all">
+            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>رجوع للحجوزات
+          </button>
         </div>
-        <div class="rounded-2xl border border-line bg-paper card overflow-hidden">
-          <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-paper-soft border-b border-line text-zinc-500"><tr><th class="p-3 text-right">الاسم</th><th class="p-3 text-right">البريد</th><th class="p-3 text-right">الهاتف</th><th class="p-3 text-right">الدور</th><th class="p-3">إجراء</th></tr></thead>
-          <tbody class="divide-y divide-line">${rows.map(p=>`
-            <tr><td class="p-3 font-semibold">${escapeHtml(p.full_name||"—")}</td><td class="p-3 font-mono text-xs" dir="ltr">${escapeHtml(p.email||"")}</td><td class="p-3 font-mono text-xs" dir="ltr">${escapeHtml(p.phone||"—")}</td><td class="p-3"><span class="px-2 py-1 rounded-full border text-xs ${p.role==="admin"?"bg-ink text-white border-ink":p.role==="doctor"?"bg-teal text-white border-teal":"bg-zinc-100 text-zinc-700 border-zinc-200"}">${escapeHtml(p.role)}</span></td>
-            <td class="p-3"><select data-role-for="${escapeHtml(p.user_id)}" class="px-2 py-1.5 rounded-xl border border-line bg-white text-xs"><option value="patient" ${p.role==="patient"?"selected":""}>مريض</option><option value="doctor" ${p.role==="doctor"?"selected":""}>طبيب</option><option value="admin" ${p.role==="admin"?"selected":""}>مشرف</option></select></td></tr>`).join("")}</tbody></table></div>
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-lg mb-space-xl">
+          <div>
+            <div class="flex items-center gap-space-xs text-primary font-label-sm text-label-sm uppercase tracking-wider mb-space-xs"><span>USER MANAGEMENT</span><span>•</span><span>إدارة المستخدمين</span></div>
+            <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">الحسابات والأدوار
+              <span class="font-body-lg text-body-lg text-secondary font-normal block lg:inline-block lg:mr-space-sm">| Accounts &amp; Roles</span>
+            </h1>
+          </div>
+          <div class="flex items-center gap-space-sm bg-surface-container-low px-space-md py-space-xs rounded-full">
+            <span class="material-symbols-outlined text-primary text-[20px]">group</span>
+            <span class="font-label-sm text-label-sm text-on-surface">إجمالي الحسابات <span class="tabular-nums font-bold">${rows.length}</span></span>
+          </div>
+        </div>
+        <div class="bg-surface-container-lowest rounded-3xl shadow-sm overflow-hidden">
+          <div class="max-sm:hidden overflow-x-auto">
+            <table class="w-full font-body-md text-body-md">
+              <thead class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm"><tr>
+                <th class="px-space-lg py-space-md text-right font-semibold">الاسم</th>
+                <th class="px-space-lg py-space-md text-right font-semibold">البريد الإلكتروني</th>
+                <th class="px-space-lg py-space-md text-right font-semibold">الهاتف</th>
+                <th class="px-space-lg py-space-md text-right font-semibold">الدور</th>
+                <th class="px-space-lg py-space-md text-center font-semibold">تغيير الدور</th>
+              </tr></thead>
+              <tbody class="divide-y divide-outline-variant/40">${rows.map((p) => `
+                <tr class="hover:bg-surface-container-low/60 transition-colors">
+                  <td class="px-space-lg py-space-md font-semibold text-on-surface">${escapeHtml(p.full_name || "—")}</td>
+                  <td class="px-space-lg py-space-md font-mono text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.email || "")}</td>
+                  <td class="px-space-lg py-space-md font-mono text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.phone || "—")}</td>
+                  <td class="px-space-lg py-space-md">${rolePill(p.role)}</td>
+                  <td class="px-space-lg py-space-md text-center"><select data-role-for="${escapeHtml(p.user_id)}" class="px-space-md py-1.5 rounded-xl border border-outline-variant bg-surface text-label-sm text-on-surface"><option value="patient" ${p.role === "patient" ? "selected" : ""}>مريض</option><option value="doctor" ${p.role === "doctor" ? "selected" : ""}>طبيب</option><option value="admin" ${p.role === "admin" ? "selected" : ""}>مشرف</option></select></td>
+                </tr>`).join("")}</tbody>
+            </table>
+          </div>
+          <div class="sm:hidden flex flex-col gap-space-md p-space-md">${rows.map((p) => `
+            <div class="bg-surface-container-low/60 rounded-2xl p-space-md flex flex-col gap-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-label-md text-label-md font-bold text-on-surface truncate">${escapeHtml(p.full_name || "—")}</span>
+                ${rolePill(p.role)}
+              </div>
+              <span class="font-mono text-label-sm text-on-surface-variant truncate" dir="ltr">${escapeHtml(p.email || "")}</span>
+              <span class="font-mono text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.phone || "—")}</span>
+              <label class="flex items-center gap-2 pt-1 border-t border-outline-variant/40">
+                <span class="font-label-sm text-label-sm text-secondary">تغيير الدور</span>
+                <select data-role-for="${escapeHtml(p.user_id)}" class="flex-1 px-space-md py-1.5 rounded-xl border border-outline-variant bg-surface text-label-sm text-on-surface"><option value="patient" ${p.role === "patient" ? "selected" : ""}>مريض</option><option value="doctor" ${p.role === "doctor" ? "selected" : ""}>طبيب</option><option value="admin" ${p.role === "admin" ? "selected" : ""}>مشرف</option></select>
+              </label>
+            </div>`).join("")}</div>
         </div>
       </div>`;
-    main.querySelector("[data-back]")?.addEventListener("click", ()=> { state.adminSubTab="appointments"; render(); });
-    main.querySelectorAll<HTMLSelectElement>("[data-role-for]").forEach(sel=> sel.addEventListener("change", async ()=>{
+    main.querySelector("[data-back]")?.addEventListener("click", () => { state.adminSubTab = "appointments"; render(); });
+    main.querySelectorAll<HTMLSelectElement>("[data-role-for]").forEach((sel) => sel.addEventListener("change", async () => {
       const uid = sel.dataset.roleFor!; const prev = sel.value;
-      try { await assignUserRole(uid, sel.value); showToast("تم تحديث الدور","success"); } catch(e){ showToast(translateAuthError(e),"error"); sel.value = prev; }
+      try { await assignUserRole(uid, sel.value); showToast("تم تحديث الدور", "success"); } catch (e) { showToast(translateAuthError(e), "error"); sel.value = prev; }
     }));
     return;
   }
-  // management: doctors + schedules
-  const docs = state.adminDoctorsCache.length ? state.adminDoctorsCache : await listDoctors().then(d=> state.adminDoctorsCache=d);
+
+  const docs = state.adminDoctorsCache.length ? state.adminDoctorsCache : await listDoctors();
+  state.adminDoctorsCache = docs;
   main.innerHTML = `
-    <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-8 space-y-6">
-      <div class="flex items-center gap-2">
-        <button data-back class="px-3 py-2 rounded-xl border border-line text-sm">رجوع للحجوزات</button>
-        <h2 class="font-bold">الأطباء والمواعيد</h2>
-        <button id="add-doctor" class="mr-auto px-4 py-2 rounded-xl bg-ink text-white text-sm font-semibold">إضافة طبيب</button>
+    <div class="w-full px-margin-desktop py-space-xl">
+      <div class="flex flex-wrap items-center justify-between gap-space-md mb-space-lg">
+        <div class="flex items-center gap-space-sm text-secondary font-label-md text-label-md">
+          <span class="text-on-surface">بوابة الإدارة</span><span>/</span><span class="text-primary font-bold">الأطباء والمواعيد</span>
+        </div>
+        <button data-back class="flex items-center gap-space-xs px-space-md py-2 rounded-full border border-outline-variant font-label-md text-label-md text-on-surface hover:bg-surface-container transition-all">
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>رجوع للحجوزات
+        </button>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${docs.map(d=>`
-        <div class="rounded-2xl border border-line bg-paper card p-4 flex flex-col gap-3">
-          <h3 class="font-bold">${escapeHtml(d.name)}</h3><p class="text-xs text-zinc-500">${escapeHtml(d.specialization)} · ${escapeHtml(String(d.consultation_fee))} ر.س</p>
-          <div class="flex gap-2">
-            <button data-manage="${escapeHtml(d.id)}" class="flex-1 py-2 rounded-xl border border-line text-xs">المواعيد</button>
-            <button data-edit="${escapeHtml(d.id)}" class="px-3 py-2 rounded-xl border border-line text-xs">تعديل</button>
-            <button data-del="${escapeHtml(d.id)}" class="px-3 py-2 rounded-xl bg-danger text-white text-xs">حذف</button>
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-lg mb-space-xl">
+        <div>
+          <div class="flex items-center gap-space-xs text-primary font-label-sm text-label-sm uppercase tracking-wider mb-space-xs"><span>PROVIDER MANAGEMENT</span><span>•</span><span>إدارة مقدمي الرعاية</span></div>
+          <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">الأطباء والمواعيد
+            <span class="font-body-lg text-body-lg text-secondary font-normal block lg:inline-block lg:mr-space-sm">| Doctors &amp; Schedules</span>
+          </h1>
+        </div>
+        <button id="add-doctor" class="flex items-center gap-space-xs px-space-lg py-3 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-sm hover:bg-teal-hover transition-colors">
+          <span class="material-symbols-outlined text-[20px]">person_add</span>إضافة طبيب
+        </button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-md">${docs.map((d) => `
+        <div class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm flex flex-col gap-space-md">
+          <div class="flex items-start gap-space-sm">
+            <span class="w-11 h-11 rounded-2xl shrink-0 grid place-items-center bg-primary/10 text-primary">
+              <span class="material-symbols-outlined text-[22px]">stethoscope</span>
+            </span>
+            <div class="min-w-0">
+              <h3 class="font-label-lg text-label-lg font-bold text-on-surface truncate">${escapeHtml(d.name)}</h3>
+              <p class="font-body-sm text-body-sm text-secondary truncate">${escapeHtml(d.specialization)} · <span class="tabular-nums">${escapeHtml(String(d.consultation_fee))}</span> ج.س</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-auto">
+            <button data-manage="${escapeHtml(d.id)}" class="flex-1 flex items-center justify-center gap-1 px-space-sm py-2 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-bold hover:bg-primary/20 transition-all">
+              <span class="material-symbols-outlined text-[16px]">calendar_month</span>المواعيد
+            </button>
+            <button data-edit="${escapeHtml(d.id)}" class="px-space-md py-2 rounded-full border border-outline-variant font-label-sm text-label-sm text-on-surface hover:bg-surface-container transition-all">تعديل</button>
+            <button data-del="${escapeHtml(d.id)}" class="px-space-md py-2 rounded-full bg-error-container/60 text-on-error-container font-label-sm text-label-sm font-bold hover:bg-error-container transition-all">حذف</button>
           </div>
         </div>`).join("")}</div>
-      <div id="schedules-root" class="${state.adminManagementDoctor ? "" : "hidden"} border-t border-line pt-6"></div>
+      <div id="schedules-root" class="${state.adminManagementDoctor ? "" : "hidden"} mt-space-xl"></div>
     </div>
-    <dialog id="doctor-dialog" class="p-0 bg-transparent backdrop:bg-ink/60 open:grid place-items-center min-h-dvh w-full max-w-none">
-      <div class="bg-paper rounded-2xl border border-line card w-full max-w-[480px] p-6 mx-4">
-        <h3 class="font-bold" id="doctor-dialog-title">طبيب</h3>
-        <form id="doctor-form" class="mt-4 space-y-3">
-          <input id="doc-name" required placeholder="الاسم" class="w-full px-3 py-2.5 rounded-xl border border-line bg-white outline-none focus:border-teal text-sm" />
-          <input id="doc-spec" required placeholder="التخصص" class="w-full px-3 py-2.5 rounded-xl border border-line bg-white outline-none focus:border-teal text-sm" />
-          <input id="doc-fee" required type="number" min="0" placeholder="رسوم الكشف" class="w-full px-3 py-2.5 rounded-xl border border-line bg-white outline-none focus:border-teal text-sm" />
-          <select id="doc-user" class="w-full px-3 py-2.5 rounded-xl border border-line bg-white text-sm"><option value="">بدون حساب</option>${(state.adminAccounts as {user_id:string;full_name:string;email:string}[]).map(p=>`<option value="${escapeHtml(p.user_id)}">${escapeHtml(p.full_name)} — ${escapeHtml(p.email)}</option>`).join("")}</select>
-          <div class="flex gap-2"><button type="button" data-close-doc class="flex-1 py-2.5 rounded-xl border border-line">إلغاء</button><button type="submit" class="flex-1 py-2.5 rounded-xl bg-ink text-white font-semibold">حفظ</button></div>
+    <dialog id="doctor-dialog" class="p-0 bg-transparent backdrop:bg-inverse-surface/50 backdrop:backdrop-blur-sm open:grid place-items-center min-h-dvh w-full max-w-none">
+      <div class="bg-surface-container-lowest rounded-[28px] shadow-[0_24px_60px_-20px_rgba(16,24,40,.4)] w-full max-w-[480px] p-space-xl mx-4">
+        <div class="flex items-center gap-space-sm mb-space-lg">
+          <span class="w-11 h-11 rounded-2xl grid place-items-center bg-primary/10 text-primary"><span class="material-symbols-outlined text-[22px]">stethoscope</span></span>
+          <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface" id="doctor-dialog-title">طبيب</h3>
+        </div>
+        <form id="doctor-form" class="space-y-3">
+          <label class="block font-label-sm text-label-sm text-secondary">الاسم
+            <input id="doc-name" required placeholder="د. الاسم الكامل" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
+          </label>
+          <label class="block font-label-sm text-label-sm text-secondary">التخصص
+            <input id="doc-spec" required placeholder="التخصص" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
+          </label>
+          <label class="block font-label-sm text-label-sm text-secondary">رسوم الكشف (ج.س)
+            <input id="doc-fee" required type="number" min="0" placeholder="3000" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
+          </label>
+          <label class="block font-label-sm text-label-sm text-secondary">حساب المستخدم
+            <select id="doc-user" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface"><option value="">بدون حساب</option>${(state.adminAccounts as { user_id: string; full_name: string; email: string }[]).map((p) => `<option value="${escapeHtml(p.user_id)}">${escapeHtml(p.full_name)} — ${escapeHtml(p.email)}</option>`).join("")}</select>
+          </label>
+          <div class="flex gap-2 pt-1">
+            <button type="button" data-close-doc class="flex-1 py-3 rounded-full border border-outline-variant font-label-md text-label-md text-on-surface hover:bg-surface-container transition-all">إلغاء</button>
+            <button type="submit" class="flex-1 py-3 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors">حفظ</button>
+          </div>
         </form>
       </div>
     </dialog>
   `;
-  main.querySelector("[data-back]")?.addEventListener("click", ()=> { state.adminSubTab="appointments"; render(); });
+  main.querySelector("[data-back]")?.addEventListener("click", () => { state.adminSubTab = "appointments"; render(); });
   const docDlg = main.querySelector("#doctor-dialog") as HTMLDialogElement;
   let editing: string | null = null;
   const openDoc = async (id?: string) => {
     editing = id || null;
     (main.querySelector("#doctor-dialog-title") as HTMLElement).textContent = id ? "تعديل طبيب" : "إضافة طبيب";
-    if (id) { const d = docs.find(x=>x.id===id)!; (main.querySelector("#doc-name") as HTMLInputElement).value=d.name; (main.querySelector("#doc-spec") as HTMLInputElement).value=d.specialization; (main.querySelector("#doc-fee") as HTMLInputElement).value=String(d.consultation_fee); (main.querySelector("#doc-user") as HTMLSelectElement).value=(d as {user_id?:string}).user_id||""; }
-    else { (main.querySelector("#doctor-form") as HTMLFormElement).reset(); }
-    try { if(!state.adminAccounts.length) state.adminAccounts = await adminListProfiles(); } catch {}
+    if (id) {
+      const d = docs.find((x) => x.id === id)!;
+      (main.querySelector("#doc-name") as HTMLInputElement).value = d.name;
+      (main.querySelector("#doc-spec") as HTMLInputElement).value = d.specialization;
+      (main.querySelector("#doc-fee") as HTMLInputElement).value = String(d.consultation_fee);
+      (main.querySelector("#doc-user") as HTMLSelectElement).value = (d as { user_id?: string }).user_id || "";
+    } else {
+      (main.querySelector("#doctor-form") as HTMLFormElement).reset();
+    }
+    try { if (!state.adminAccounts.length) state.adminAccounts = await adminListProfiles(); } catch { /* ignore */ }
     docDlg.showModal();
   };
-  main.querySelector("#add-doctor")?.addEventListener("click", ()=> openDoc());
-  main.querySelectorAll<HTMLButtonElement>("[data-edit]").forEach(b=> b.addEventListener("click", ()=> openDoc(b.dataset.edit!)));
-  main.querySelectorAll<HTMLButtonElement>("[data-del]").forEach(b=> b.addEventListener("click", async ()=>{
-    const doc = docs.find(x=>x.id===b.dataset.del);
-    if (!confirm(`حذف ${doc?.name || "الطبيب"}؟`)) return;
-    try { await deleteDoctor(b.dataset.del!); showToast("تم الحذف","success"); state.adminDoctorsCache = await listDoctors(); renderAdminManagement(main, "management"); } catch(e){ const m=String((e as {message?:string})?.message||""); if(/23503|foreign key|appointments/i.test(m)) showToast("لا يمكن الحذف — توجد حجوزات","error"); else showToast(translateAuthError(e),"error"); }
+  main.querySelector("#add-doctor")?.addEventListener("click", () => void openDoc());
+  main.querySelectorAll<HTMLButtonElement>("[data-edit]").forEach((b) => b.addEventListener("click", () => void openDoc(b.dataset.edit!)));
+  main.querySelectorAll<HTMLButtonElement>("[data-del]").forEach((b) => b.addEventListener("click", async () => {
+    const doc = docs.find((x) => x.id === b.dataset.del);
+    const ok = await confirmSheet({ title: "حذف الطبيب؟", body: `سيتم حذف ${doc?.name || "الطبيب"} نهائياً.`, confirmLabel: "حذف", tone: "danger" });
+    if (!ok) return;
+    try { await deleteDoctor(b.dataset.del!); showToast("تم الحذف", "success"); state.adminDoctorsCache = await listDoctors(); void renderAdminManagement(main, "management"); }
+    catch (e) { const m = String((e as { message?: string })?.message || ""); if (/23503|foreign key|appointments/i.test(m)) showToast("لا يمكن الحذف — توجد حجوزات", "error"); else showToast(translateAuthError(e), "error"); }
   }));
-  main.querySelectorAll<HTMLButtonElement>("[data-manage]").forEach(b=> b.addEventListener("click", async ()=> { state.adminManagementDoctor=b.dataset.manage!; await renderSchedules(main.querySelector("#schedules-root") as HTMLElement, state.adminManagementDoctor); }));
-  main.querySelector("[data-close-doc]")?.addEventListener("click", ()=> docDlg.close());
-  docDlg.addEventListener("click", e=> { if(e.target===docDlg) docDlg.close(); });
-  (main.querySelector("#doctor-form") as HTMLFormElement).addEventListener("submit", async (e)=>{
+  main.querySelectorAll<HTMLButtonElement>("[data-manage]").forEach((b) => b.addEventListener("click", async () => { state.adminManagementDoctor = b.dataset.manage!; await renderSchedules(main.querySelector("#schedules-root") as HTMLElement, state.adminManagementDoctor); }));
+  main.querySelector("[data-close-doc]")?.addEventListener("click", () => docDlg.close());
+  docDlg.addEventListener("click", (e) => { if (e.target === docDlg) docDlg.close(); });
+  (main.querySelector("#doctor-form") as HTMLFormElement).addEventListener("submit", async (e) => {
     e.preventDefault();
-    const name=(main.querySelector("#doc-name") as HTMLInputElement).value.trim();
-    const specialization=(main.querySelector("#doc-spec") as HTMLInputElement).value.trim();
-    const consultationFee=Number((main.querySelector("#doc-fee") as HTMLInputElement).value);
-    const userId=(main.querySelector("#doc-user") as HTMLSelectElement).value || null;
-    try { await saveDoctor({ id: editing||undefined, name, specialization, consultationFee, userId }); showToast("تم الحفظ","success"); docDlg.close(); state.adminDoctorsCache = await listDoctors(); state.adminDoctors = state.adminDoctorsCache; renderAdminManagement(main,"management"); } catch(err){ showToast(translateAuthError(err),"error"); }
+    const name = (main.querySelector("#doc-name") as HTMLInputElement).value.trim();
+    const specialization = (main.querySelector("#doc-spec") as HTMLInputElement).value.trim();
+    const consultationFee = Number((main.querySelector("#doc-fee") as HTMLInputElement).value);
+    const userId = (main.querySelector("#doc-user") as HTMLSelectElement).value || null;
+    try { await saveDoctor({ id: editing || undefined, name, specialization, consultationFee, userId }); showToast("تم الحفظ", "success"); docDlg.close(); state.adminDoctorsCache = await listDoctors(); state.adminDoctors = state.adminDoctorsCache; void renderAdminManagement(main, "management"); } catch (err) { showToast(translateAuthError(err), "error"); }
   });
   if (state.adminManagementDoctor) await renderSchedules(main.querySelector("#schedules-root") as HTMLElement, state.adminManagementDoctor);
 }
 
 async function renderSchedules(root: HTMLElement, doctorId: string) {
   root.classList.remove("hidden");
-  root.innerHTML = `<p class="text-sm text-zinc-500 py-4">جاري تحميل المواعيد…</p>`;
-  type AvRule = { day_of_week:number; start_time:string; end_time:string; is_enabled:boolean; slot_minutes:number|null; break_start_1:string|null; break_end_1:string|null; break_start_2:string|null; break_end_2:string|null };
-  type Blocked = { id:string; start_date:string; end_date:string; reason:string|null };
+  root.innerHTML = `<p class="font-body-md text-body-md text-secondary py-space-lg text-center">جاري تحميل المواعيد…</p>`;
+  type AvRule = { day_of_week: number; start_time: string; end_time: string; is_enabled: boolean; slot_minutes: number | null; break_start_1: string | null; break_end_1: string | null; break_start_2: string | null; break_end_2: string | null };
+  type Blocked = { id: string; start_date: string; end_date: string; reason: string | null };
   try {
     const [schedules, availability, blocked] = await Promise.all([
       listDoctorSchedules(doctorId),
-      getDoctorAvailability(doctorId).catch(()=>[]) as Promise<AvRule[]>,
-      listBlockedDates(doctorId).catch(()=>[]) as Promise<Blocked[]>,
+      getDoctorAvailability(doctorId).catch(() => []) as Promise<AvRule[]>,
+      listBlockedDates(doctorId).catch(() => []) as Promise<Blocked[]>,
     ]);
-    const doc = state.adminDoctorsCache.find(d=>d.id===doctorId);
-    const DAYS = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
-    const enabled = availability.filter(r=>r.is_enabled);
+    const doc = state.adminDoctorsCache.find((d) => d.id === doctorId);
+    const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    const enabled = availability.filter((r) => r.is_enabled);
     const hasRules = enabled.length > 0;
-    const selected = new Set<number>(enabled.map(r=>r.day_of_week));
-    const byDay = new Map(enabled.map(r=>[r.day_of_week, r]));
+    const selected = new Set<number>(enabled.map((r) => r.day_of_week));
+    const byDay = new Map(enabled.map((r) => [r.day_of_week, r]));
     const first = enabled[0];
-    const sharedStart = (first?.start_time || "09:00").slice(0,5);
-    const sharedEnd = (first?.end_time || "14:00").slice(0,5);
+    const sharedStart = (first?.start_time || "09:00").slice(0, 5);
+    const sharedEnd = (first?.end_time || "14:00").slice(0, 5);
     const slotMinutes = String(first?.slot_minutes ?? 30);
-    const pick = (v: string|null|undefined, dflt: string)=> (hasRules ? (v || "") : dflt).slice(0,5);
+    const pick = (v: string | null | undefined, dflt: string) => (hasRules ? (v || "") : dflt).slice(0, 5);
     const b1s = pick(first?.break_start_1, "13:00"), b1e = pick(first?.break_end_1, "14:00");
     const b2s = pick(first?.break_start_2, "15:00"), b2e = pick(first?.break_end_2, "16:00");
 
     root.innerHTML = `
-      <h3 class="font-bold mb-3">مواعيد ${escapeHtml(doc?.name || "الطبيب")}</h3>
+      <div class="flex items-center gap-space-sm mb-space-lg">
+        <span class="w-11 h-11 rounded-2xl grid place-items-center bg-primary/10 text-primary shrink-0"><span class="material-symbols-outlined text-[22px]">calendar_month</span></span>
+        <div>
+          <div class="text-primary font-label-sm text-label-sm uppercase tracking-wider">SCHEDULES • جداول العمل</div>
+          <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">مواعيد ${escapeHtml(doc?.name || "الطبيب")}</h3>
+        </div>
+      </div>
 
-      <section class="rounded-2xl border border-line bg-paper-soft p-4">
-        <h4 class="text-sm font-bold mb-3">أوقات العمل الأسبوعية</h4>
-        <div id="day-chips" class="flex flex-wrap gap-2">
-          ${DAYS.map((d,i)=>`<button type="button" data-day="${i}" class="px-3 py-1.5 rounded-full border text-xs font-semibold ${selected.has(i)?"bg-teal text-white border-teal":"bg-white border-line text-zinc-600"}">${d}</button>`).join("")}
-        </div>
-        <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
-          <label class="text-xs">من <input id="wk-start" type="time" value="${escapeHtml(sharedStart)}" class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-          <label class="text-xs">إلى <input id="wk-end" type="time" value="${escapeHtml(sharedEnd)}" class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-          <label class="text-xs">مدة الموعد
-            <select id="wk-slot" class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm">
-              ${[15,20,30,45,60].map(m=>`<option value="${m}"${String(m)===slotMinutes?" selected":""}>${m} دقيقة</option>`).join("")}
-            </select>
-          </label>
-          <p id="av-preview" class="text-xs text-zinc-500 self-center"></p>
-        </div>
-        <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
-          <label class="text-xs">استراحة 1 من <input id="brk1-start" type="time" value="${escapeHtml(b1s)}" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-          <label class="text-xs">استراحة 1 إلى <input id="brk1-end" type="time" value="${escapeHtml(b1e)}" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-          <label class="text-xs">استراحة 2 من <input id="brk2-start" type="time" value="${escapeHtml(b2s)}" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-          <label class="text-xs">استراحة 2 إلى <input id="brk2-end" type="time" value="${escapeHtml(b2e)}" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-        </div>
-        <p class="mt-1 text-xs text-zinc-500">اترك حقول أي استراحة فارغة لإلغائها.</p>
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-          <button id="save-availability" class="px-4 py-2.5 rounded-xl bg-ink text-white text-sm font-semibold">حفظ الأوقات</button>
-          <button id="generate-schedule" class="px-4 py-2.5 rounded-xl bg-teal text-white text-sm font-semibold">توليد المواعيد (90 يوماً)</button>
-          <label class="flex items-center gap-1.5 text-xs text-zinc-600 ms-auto"><input id="gen-replace" type="checkbox" /> استبدال المواعيد الفارغة القادمة</label>
-        </div>
-        <details class="mt-3">
-          <summary class="cursor-pointer text-xs text-zinc-600">تخصيص ساعات مختلفة لبعض الأيام</summary>
-          <p class="mt-2 text-xs text-zinc-500">اترك الحقل فارغاً لاستخدام الوقت المشترك بالأعلى.</p>
-          <div class="mt-2 space-y-2">
-            ${DAYS.map((d,i)=>{ const r=byDay.get(i); return `
-              <div class="grid grid-cols-3 gap-2 items-center text-xs">
-                <span class="font-semibold">${d}</span>
-                <input type="time" data-av-start="${i}" value="${r?escapeHtml(r.start_time.slice(0,5)):""}" class="px-2 py-1.5 rounded-xl border border-line bg-white" />
-                <input type="time" data-av-end="${i}" value="${r?escapeHtml(r.end_time.slice(0,5)):""}" class="px-2 py-1.5 rounded-xl border border-line bg-white" />
-              </div>`; }).join("")}
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-space-lg items-start">
+        <section class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm">
+          <h4 class="flex items-center gap-space-xs font-label-lg text-label-lg font-bold text-on-surface mb-space-md">
+            <span class="material-symbols-outlined text-[20px] text-primary">schedule</span>أوقات العمل الأسبوعية
+          </h4>
+          <div id="day-chips" class="flex flex-wrap gap-space-xs">
+            ${DAYS.map((d, i) => `<button type="button" data-day="${i}" class="px-space-md py-1.5 rounded-full border font-label-sm text-label-sm font-bold transition-all ${selected.has(i) ? "bg-primary text-on-primary border-primary" : "border-outline-variant text-on-surface-variant hover:bg-surface-container"}">${d}</button>`).join("")}
           </div>
-        </details>
-      </section>
+          <div class="mt-space-md grid grid-cols-2 sm:grid-cols-4 gap-space-sm items-end">
+            <label class="font-label-sm text-label-sm text-secondary">من <input id="wk-start" type="time" value="${escapeHtml(sharedStart)}" class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+            <label class="font-label-sm text-label-sm text-secondary">إلى <input id="wk-end" type="time" value="${escapeHtml(sharedEnd)}" class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+            <label class="font-label-sm text-label-sm text-secondary">مدة الموعد
+              <select id="wk-slot" class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary">
+                ${[15, 20, 30, 45, 60].map((m) => `<option value="${m}"${String(m) === slotMinutes ? " selected" : ""}>${m} دقيقة</option>`).join("")}
+              </select>
+            </label>
+            <p id="av-preview" class="font-label-sm text-label-sm text-secondary self-center"></p>
+          </div>
+          <div class="mt-space-md grid grid-cols-2 sm:grid-cols-4 gap-space-sm items-end">
+            <label class="font-label-sm text-label-sm text-secondary">استراحة 1 من <input id="brk1-start" type="time" value="${escapeHtml(b1s)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+            <label class="font-label-sm text-label-sm text-secondary">استراحة 1 إلى <input id="brk1-end" type="time" value="${escapeHtml(b1e)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+            <label class="font-label-sm text-label-sm text-secondary">استراحة 2 من <input id="brk2-start" type="time" value="${escapeHtml(b2s)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+            <label class="font-label-sm text-label-sm text-secondary">استراحة 2 إلى <input id="brk2-end" type="time" value="${escapeHtml(b2e)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+          </div>
+          <p class="mt-space-xs font-label-sm text-label-sm text-outline">اترك حقول أي استراحة فارغة لإلغائها.</p>
+          <div class="mt-space-md flex flex-wrap items-center gap-space-sm">
+            <button id="save-availability" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors"><span class="material-symbols-outlined text-[18px]">save</span>حفظ الأوقات</button>
+            <button id="generate-schedule" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-full bg-secondary text-on-secondary font-label-md text-label-md font-bold hover:brightness-110 transition-all"><span class="material-symbols-outlined text-[18px]">auto_awesome</span>توليد المواعيد (90 يوماً)</button>
+          </div>
+          <label class="mt-space-xs flex items-center gap-space-xs font-label-sm text-label-sm text-secondary"><input id="gen-replace" type="checkbox" /> استبدال المواعيد الفارغة القادمة</label>
+          <details class="mt-space-md rounded-2xl bg-surface-container-low p-space-md">
+            <summary class="cursor-pointer font-label-md text-label-md font-bold text-on-surface">تخصيص ساعات مختلفة لبعض الأيام</summary>
+            <p class="mt-space-xs font-label-sm text-label-sm text-outline">اترك الحقل فارغاً لاستخدام الوقت المشترك بالأعلى.</p>
+            <div class="mt-space-sm space-y-2">
+              ${DAYS.map((d, i) => { const r = byDay.get(i); return `
+                <div class="grid grid-cols-3 gap-space-sm items-center">
+                  <span class="font-label-sm text-label-sm font-bold text-on-surface">${d}</span>
+                  <input type="time" data-av-start="${i}" value="${r ? escapeHtml(r.start_time.slice(0, 5)) : ""}" class="px-space-sm py-1.5 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" />
+                  <input type="time" data-av-end="${i}" value="${r ? escapeHtml(r.end_time.slice(0, 5)) : ""}" class="px-space-sm py-1.5 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" />
+                </div>`; }).join("")}
+            </div>
+          </details>
+        </section>
 
-      <section class="mt-4 rounded-2xl border border-line bg-paper-soft p-4">
-        <h4 class="text-sm font-bold mb-1">إجازات وأيام مغلقة</h4>
-        <p class="text-xs text-zinc-500 mb-3">إغلاق نطاق يحذف المواعيد الفارغة غير المحجوزة فيه ويمنع توليدها لاحقاً.</p>
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end text-xs">
-          <label>من <input id="block-start" type="date" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white" /></label>
-          <label>إلى <input id="block-end" type="date" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white" /></label>
-          <label>السبب <input id="block-reason" placeholder="إجازة" class="mt-1 w-full px-2 py-2 rounded-xl border border-line bg-white" /></label>
-          <button id="add-blocked" class="py-2.5 rounded-xl bg-danger text-white font-semibold">إغلاق التواريخ</button>
+        <div class="flex flex-col gap-space-lg">
+          <section class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm">
+            <h4 class="flex items-center gap-space-xs font-label-lg text-label-lg font-bold text-on-surface">إجازات وأيام مغلقة</h4>
+            <p class="mt-space-xs font-label-sm text-label-sm text-outline mb-space-md">إغلاق نطاق يحذف المواعيد الفارغة غير المحجوزة فيه ويمنع توليدها لاحقاً.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-sm items-end font-label-sm text-label-sm text-secondary">
+              <label>من <input id="block-start" type="date" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <label>إلى <input id="block-end" type="date" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <label>السبب <input id="block-reason" placeholder="إجازة" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <button id="add-blocked" class="py-2.5 rounded-full bg-error text-on-error font-label-md text-label-md font-bold hover:brightness-110 transition-all">إغلاق التواريخ</button>
+            </div>
+            <div class="mt-space-md grid gap-space-sm">${blocked.length ? blocked.map((b) => `
+              <div class="flex items-center justify-between gap-space-sm rounded-2xl bg-surface-container-low p-space-md font-body-sm text-body-sm text-on-surface">
+                <span>${escapeHtml(formatArabicDate(b.start_date))}${b.start_date !== b.end_date ? " – " + escapeHtml(formatArabicDate(b.end_date)) : ""} · ${escapeHtml(b.reason || "إجازة")}</span>
+                <button data-unblock="${escapeHtml(b.id)}" class="px-space-md py-1.5 rounded-full border border-outline-variant font-label-sm text-label-sm text-on-surface hover:bg-surface-container-lowest transition-all">إلغاء الإغلاق</button>
+              </div>`).join("") : `<p class="font-label-sm text-label-sm text-outline">لا توجد إجازات مسجّلة</p>`}</div>
+          </section>
+
+          <details class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm">
+            <summary class="cursor-pointer font-label-lg text-label-lg font-bold text-on-surface">إضافة موعد ليوم واحد</summary>
+            <form id="add-schedule" class="mt-space-md grid grid-cols-1 sm:grid-cols-4 gap-space-sm items-end font-label-sm text-label-sm text-secondary">
+              <label>التاريخ <input id="sch-date" type="date" min="${escapeHtml(localDateISO())}" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <label>من <input id="sch-start" type="time" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <label>إلى <input id="sch-end" type="time" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <button type="submit" class="py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors">إضافة</button>
+            </form>
+          </details>
         </div>
-        <div class="mt-3 grid gap-2">${blocked.length ? blocked.map(b=>`
-          <div class="flex items-center justify-between gap-3 rounded-xl border border-line bg-white p-3 text-sm">
-            <span>${escapeHtml(formatArabicDate(b.start_date))}${b.start_date!==b.end_date ? " – "+escapeHtml(formatArabicDate(b.end_date)) : ""} · ${escapeHtml(b.reason || "إجازة")}</span>
-            <button data-unblock="${escapeHtml(b.id)}" class="px-3 py-1.5 rounded-xl border border-line text-xs">إلغاء الإغلاق</button>
-          </div>`).join("") : `<p class="text-xs text-zinc-500">لا توجد إجازات مسجّلة</p>`}</div>
-      </section>
+      </div>
 
-      <details class="mt-4 rounded-2xl border border-line bg-paper p-4">
-        <summary class="cursor-pointer text-sm font-bold">إضافة موعد ليوم واحد</summary>
-        <form id="add-schedule" class="mt-3 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
-          <label class="text-xs">التاريخ <input id="sch-date" type="date" min="${escapeHtml(localDateISO())}" required class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-          <label class="text-xs">من <input id="sch-start" type="time" required class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-          <label class="text-xs">إلى <input id="sch-end" type="time" required class="mt-1 w-full px-3 py-2 rounded-xl border border-line bg-white text-sm" /></label>
-          <button type="submit" class="py-2.5 rounded-xl bg-teal text-white text-sm font-semibold">إضافة</button>
-        </form>
-      </details>
+      <h4 class="mt-space-xl mb-space-md flex items-center gap-space-xs font-label-lg text-label-lg font-bold text-on-surface">
+        <span class="material-symbols-outlined text-[20px] text-primary">event_available</span>المواعيد المتاحة
+        <span class="font-body-md text-body-md text-secondary tabular-nums">(${schedules.length})</span>
+      </h4>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-space-sm">${schedules.length ? schedules.map((s: { id: string; available_date: string; start_time: string; end_time: string; is_booked: boolean }) => `
+        <div class="flex items-center justify-between gap-space-sm rounded-2xl p-space-md font-body-sm text-body-sm ${s.is_booked ? "bg-warning-soft/60 text-on-surface" : "bg-surface-container-lowest shadow-sm text-on-surface"}">
+          <span>${escapeHtml(formatArabicDate(s.available_date))} · <span class="tabular-nums">${escapeHtml(formatTime(s.start_time))}–${escapeHtml(formatTime(s.end_time))}</span> ${s.is_booked ? `<span class="ms-space-xs px-space-sm py-0.5 rounded-full bg-warning-soft text-warning font-label-sm text-label-sm font-bold">محجوز</span>` : ""}</span>
+          ${s.is_booked ? "" : `<button data-del-sch="${escapeHtml(s.id)}" class="px-space-md py-1.5 rounded-full bg-error-container/60 text-on-error-container font-label-sm text-label-sm font-bold hover:bg-error-container transition-all">حذف</button>`}
+        </div>`).join("") : `<p class="font-body-md text-body-md text-outline">لا مواعيد</p>`}</div>`;
 
-      <h4 class="mt-6 mb-2 text-sm font-bold">المواعيد المتاحة (${schedules.length})</h4>
-      <div class="grid gap-2">${schedules.length ? schedules.map((s: {id:string;available_date:string;start_time:string;end_time:string;is_booked:boolean})=>`
-        <div class="flex items-center justify-between gap-3 rounded-xl border ${s.is_booked?"border-amber-200 bg-amber-50":"border-line bg-paper"} p-3 text-sm">
-          <span>${escapeHtml(formatArabicDate(s.available_date))} · ${escapeHtml(formatTime(s.start_time))}–${escapeHtml(formatTime(s.end_time))} ${s.is_booked?'<span class="text-amber-700">(محجوز)</span>':""}</span>
-          ${s.is_booked ? "" : `<button data-del-sch="${escapeHtml(s.id)}" class="px-3 py-1.5 rounded-xl bg-danger text-white text-xs">حذف</button>`}
-        </div>`).join("") : `<p class="text-sm text-zinc-500">لا مواعيد</p>`}</div>`;
-
-    const startOf = (i:number)=> (root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement).value;
-    const endOf = (i:number)=> (root.querySelector(`[data-av-end="${i}"]`) as HTMLInputElement).value;
-    const val = (sel: string)=> (root.querySelector(sel) as HTMLInputElement).value;
-    const toMin = (t: string)=> { const [h,m]=t.split(":").map(Number); return h*60+(m||0); };
-    const shared = ()=> [val("#wk-start"), val("#wk-end")] as const;
-    const breaks = (): [number,number][] => {
-      const out: [number,number][] = [];
-      const pairs: [string,string][] = [["#brk1-start","#brk1-end"],["#brk2-start","#brk2-end"]];
-      pairs.forEach(([a,b])=>{ const s=val(a), e=val(b); if (s && e && toMin(e)>toMin(s)) out.push([toMin(s), toMin(e)]); });
+    const startOf = (i: number) => (root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement).value;
+    const endOf = (i: number) => (root.querySelector(`[data-av-end="${i}"]`) as HTMLInputElement).value;
+    const val = (sel: string) => (root.querySelector(sel) as HTMLInputElement).value;
+    const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
+    const shared = () => [val("#wk-start"), val("#wk-end")] as const;
+    const breaks = (): [number, number][] => {
+      const out: [number, number][] = [];
+      const pairs: [string, string][] = [["#brk1-start", "#brk1-end"], ["#brk2-start", "#brk2-end"]];
+      pairs.forEach(([a, b]) => { const s = val(a), e = val(b); if (s && e && toMin(e) > toMin(s)) out.push([toMin(s), toMin(e)]); });
       return out;
     };
-    const cellsInDay = (i:number): number => {
-      const [ss,se] = [startOf(i) || shared()[0], endOf(i) || shared()[1]];
+    const cellsInDay = (i: number): number => {
+      const [ss, se] = [startOf(i) || shared()[0], endOf(i) || shared()[1]];
       if (!ss || !se) return 0;
       const slot = Number(val("#wk-slot")) || 30; const bs = breaks();
       let n = 0;
       for (let t = toMin(ss); t + slot <= toMin(se); t += slot) {
         const e = t + slot;
-        if (!bs.some(([a,b])=> e > a && t < b)) n++;
+        if (!bs.some(([a, b]) => e > a && t < b)) n++;
       }
       return n;
     };
-    const preview = ()=>{
-      const perWeek = [...selected].reduce((sum,i)=> sum + cellsInDay(i), 0);
+    const preview = () => {
+      const perWeek = [...selected].reduce((sum, i) => sum + cellsInDay(i), 0);
       (root.querySelector("#av-preview") as HTMLElement).textContent = selected.size
-        ? `${selected.size} أيام أسبوعياً · ${perWeek} موعداً/أسبوع · ~${Math.round(perWeek*90/7)} لـ90 يوماً`
+        ? `${selected.size} أيام أسبوعياً · ${perWeek} موعداً/أسبوع · ~${Math.round(perWeek * 90 / 7)} لـ90 يوماً`
         : "لم يتم اختيار أي يوم — حدّد الأيام التي يعمل فيها الطبيب";
     };
-    const paintChips = ()=>{
-      root.querySelectorAll<HTMLButtonElement>("#day-chips [data-day]").forEach(b=>{
+    const paintChips = () => {
+      root.querySelectorAll<HTMLButtonElement>("#day-chips [data-day]").forEach((b) => {
         const on = selected.has(Number(b.dataset.day));
-        b.className = `px-3 py-1.5 rounded-full border text-xs font-semibold ${on?"bg-teal text-white border-teal":"bg-white border-line text-zinc-600"}`;
+        b.className = `px-space-md py-1.5 rounded-full border font-label-sm text-label-sm font-bold transition-all ${on ? "bg-primary text-on-primary border-primary" : "border-outline-variant text-on-surface-variant hover:bg-surface-container"}`;
         const i = Number(b.dataset.day);
-        const st = root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement|null;
-        const en = root.querySelector(`[data-av-end="${i}"]`) as HTMLInputElement|null;
+        const st = root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement | null;
+        const en = root.querySelector(`[data-av-end="${i}"]`) as HTMLInputElement | null;
         if (st) st.disabled = !on; if (en) en.disabled = !on;
       });
       preview();
     };
-    root.querySelectorAll<HTMLButtonElement>("#day-chips [data-day]").forEach(b=> b.addEventListener("click", ()=>{
+    root.querySelectorAll<HTMLButtonElement>("#day-chips [data-day]").forEach((b) => b.addEventListener("click", () => {
       const i = Number(b.dataset.day);
       if (selected.has(i)) selected.delete(i); else selected.add(i);
       paintChips();
     }));
-    ["#wk-start","#wk-end","#brk1-start","#brk1-end","#brk2-start","#brk2-end"].forEach(s=> (root.querySelector(s) as HTMLInputElement).addEventListener("input", preview));
+    ["#wk-start", "#wk-end", "#brk1-start", "#brk1-end", "#brk2-start", "#brk2-end"].forEach((s) => (root.querySelector(s) as HTMLInputElement).addEventListener("input", preview));
     (root.querySelector("#wk-slot") as HTMLSelectElement).addEventListener("change", preview);
     paintChips();
 
-    (root.querySelector("#save-availability") as HTMLButtonElement).addEventListener("click", async ()=>{
-      const [ss,se] = shared();
-      if (selected.size && (!ss || !se)) { showToast("حدّد وقت البداية والنهاية","warning"); return; }
+    (root.querySelector("#save-availability") as HTMLButtonElement).addEventListener("click", async () => {
+      const [ss, se] = shared();
+      if (selected.size && (!ss || !se)) { showToast("حدّد وقت البداية والنهاية", "warning"); return; }
       const mins = Number(val("#wk-slot")) || 30;
       const rules: Record<string, unknown>[] = [];
-      selected.forEach(i=>{
+      selected.forEach((i) => {
         const st = startOf(i) || ss; const en = endOf(i) || se;
         if (st && en) rules.push({ doctor_id: doctorId, day_of_week: i, start_time: st, end_time: en, is_enabled: true, slot_minutes: mins,
           break_start_1: val("#brk1-start") || null, break_end_1: val("#brk1-end") || null,
           break_start_2: val("#brk2-start") || null, break_end_2: val("#brk2-end") || null });
       });
-      try { await saveDoctorAvailability(doctorId, rules); showToast(rules.length ? `تم حفظ ${rules.length} أيام · ${mins} دقيقة للموعد` : "تم مسح الأوقات","success"); paintChips(); }
-      catch(err){ showToast(translateAuthError(err),"error"); }
+      try { await saveDoctorAvailability(doctorId, rules); showToast(rules.length ? `تم حفظ ${rules.length} أيام · ${mins} دقيقة للموعد` : "تم مسح الأوقات", "success"); paintChips(); }
+      catch (err) { showToast(translateAuthError(err), "error"); }
     });
 
-    (root.querySelector("#generate-schedule") as HTMLButtonElement).addEventListener("click", async ()=>{
+    (root.querySelector("#generate-schedule") as HTMLButtonElement).addEventListener("click", async () => {
       const replace = (root.querySelector("#gen-replace") as HTMLInputElement).checked;
-      if (replace && !confirm("سيُحذف كل موعد فارغ غير محجوز في الـ90 يوماً القادمة ثم يُعاد التوليد — نعم؟")) return;
+      if (replace) {
+        const ok = await confirmSheet({ title: "إعادة توليد المواعيد؟", body: "سيُحذف كل موعد فارغ غير محجوز في الـ90 يوماً القادمة ثم يُعاد التوليد.", confirmLabel: "توليد", tone: "primary" });
+        if (!ok) return;
+      }
       try {
         (root.querySelector("#generate-schedule") as HTMLButtonElement).disabled = true;
         const { created } = await generateDoctorSchedule(doctorId, 90, replace);
-        showToast(created ? `أُضيف ${created} موعداً` : "لا مواعيد جديدة — تأكد من حفظ الأوقات أولاً","success");
+        showToast(created ? `أُضيف ${created} موعداً` : "لا مواعيد جديدة — تأكد من حفظ الأوقات أولاً", "success");
         await renderSchedules(root, doctorId); await refreshDoctors();
-      } catch(err){ showToast(translateAuthError(err),"error"); (root.querySelector("#generate-schedule") as HTMLButtonElement).disabled = false; }
+      } catch (err) { showToast(translateAuthError(err), "error"); (root.querySelector("#generate-schedule") as HTMLButtonElement).disabled = false; }
     });
 
-    (root.querySelector("#add-blocked") as HTMLButtonElement).addEventListener("click", async ()=>{
+    (root.querySelector("#add-blocked") as HTMLButtonElement).addEventListener("click", async () => {
       const start = (root.querySelector("#block-start") as HTMLInputElement).value;
       const end = (root.querySelector("#block-end") as HTMLInputElement).value || start;
       const reason = (root.querySelector("#block-reason") as HTMLInputElement).value || "إجازة";
-      if (!start) { showToast("حدّد تاريخ البداية","warning"); return; }
+      if (!start) { showToast("حدّد تاريخ البداية", "warning"); return; }
       try {
         const { deleted } = await blockDoctorDates(doctorId, start, end, reason);
-        showToast(deleted ? `أُغلق النطاق وحُذف ${deleted} موعداً فارغاً` : "أُغلق النطاق","success");
+        showToast(deleted ? `أُغلق النطاق وحُذف ${deleted} موعداً فارغاً` : "أُغلق النطاق", "success");
         await renderSchedules(root, doctorId); await refreshDoctors();
-      } catch(err){ showToast(translateAuthError(err),"error"); }
+      } catch (err) { showToast(translateAuthError(err), "error"); }
     });
-    root.querySelectorAll<HTMLButtonElement>("[data-unblock]").forEach(b=> b.addEventListener("click", async ()=>{
-      if (!confirm("إلغاء إغلاق هذا النطاق؟ لن تعود المواعيد المحذوفة تلقائياً — استخدم زر التوليد.")) return;
-      try { await unblockDoctorDates(b.dataset.unblock!); showToast("تم إلغاء الإغلاق","success"); await renderSchedules(root, doctorId); }
-      catch(e){ showToast(translateAuthError(e),"error"); }
+    root.querySelectorAll<HTMLButtonElement>("[data-unblock]").forEach((b) => b.addEventListener("click", async () => {
+      const ok = await confirmSheet({ title: "إلغاء إغلاق النطاق؟", body: "لن تعود المواعيد المحذوفة تلقائياً — استخدم زر التوليد.", confirmLabel: "إلغاء الإغلاق", tone: "primary" });
+      if (!ok) return;
+      try { await unblockDoctorDates(b.dataset.unblock!); showToast("تم إلغاء الإغلاق", "success"); await renderSchedules(root, doctorId); }
+      catch (e) { showToast(translateAuthError(e), "error"); }
     }));
 
-    (root.querySelector("#add-schedule") as HTMLFormElement).addEventListener("submit", async (e)=>{
+    (root.querySelector("#add-schedule") as HTMLFormElement).addEventListener("submit", async (e) => {
       e.preventDefault();
-      const availableDate=(root.querySelector("#sch-date") as HTMLInputElement).value;
-      const startTime=(root.querySelector("#sch-start") as HTMLInputElement).value;
-      const endTime=(root.querySelector("#sch-end") as HTMLInputElement).value;
-      try { await createDoctorSchedule({ doctorId, availableDate, startTime, endTime }); showToast("تمت الإضافة","success"); await renderSchedules(root, doctorId); await refreshDoctors(); } catch(err){ showToast(translateAuthError(err),"error"); }
+      const availableDate = (root.querySelector("#sch-date") as HTMLInputElement).value;
+      const startTime = (root.querySelector("#sch-start") as HTMLInputElement).value;
+      const endTime = (root.querySelector("#sch-end") as HTMLInputElement).value;
+      try { await createDoctorSchedule({ doctorId, availableDate, startTime, endTime }); showToast("تمت الإضافة", "success"); await renderSchedules(root, doctorId); await refreshDoctors(); } catch (err) { showToast(translateAuthError(err), "error"); }
     });
-    root.querySelectorAll<HTMLButtonElement>("[data-del-sch]").forEach(b=> b.addEventListener("click", async ()=>{
-      if (!confirm("حذف هذا الموعد؟")) return;
-      try { await deleteDoctorSchedule(b.dataset.delSch!); showToast("تم الحذف","success"); await renderSchedules(root, doctorId); await refreshDoctors(); } catch(e){ showToast(translateAuthError(e),"error"); }
+    root.querySelectorAll<HTMLButtonElement>("[data-del-sch]").forEach((b) => b.addEventListener("click", async () => {
+      const ok = await confirmSheet({ title: "حذف هذا الموعد؟", confirmLabel: "حذف", tone: "danger" });
+      if (!ok) return;
+      try { await deleteDoctorSchedule(b.dataset.delSch!); showToast("تم الحذف", "success"); await renderSchedules(root, doctorId); await refreshDoctors(); } catch (e) { showToast(translateAuthError(e), "error"); }
     }));
   } catch (e) { root.innerHTML = `<p class="text-sm text-red-600">تعذر التحميل: ${escapeHtml(translateAuthError(e))}</p>`; }
 }
 
-async function refreshDoctors(){ try{ state.doctors = await getDoctorsWithSchedules(); } catch{} }
-async function refreshAppointments(){ try{ state.patientAppointments = await getPatientAppointments(); } catch{} }
-async function refreshAdminRows(){
-  try {
-    const res = await getAdminAppointments({ statuses: state.adminFilters.status==="all"?undefined: state.adminFilters.status==="cancelled"? ["cancelled_by_patient","cancelled_by_clinic"]:[state.adminFilters.status], doctorId: state.adminFilters.doctorId||undefined, dateFrom: state.adminFilters.dateFrom||undefined, dateTo: state.adminFilters.dateTo||undefined, search: state.adminFilters.search||undefined, page: state.adminPage, pageSize: state.adminPageSize, sortBy: state.adminFilters.sortBy, sortDir: state.adminFilters.sortDir });
-    state.adminRows = res.rows as typeof state.adminRows; state.adminTotal = res.total;
-  } catch{}
+/* ---------------------------------- helpers --------------------------------- */
+
+function go(hash: string) {
+  if (location.hash === hash) { state.route = parseRoute(); render(); }
+  else location.hash = hash;
 }
-async function refreshAll(){ await Promise.all([refreshDoctors(), refreshAppointments()]); }
+
+async function refreshDoctors() { try { state.doctors = await getDoctorsWithSchedules(); } catch { /* ignore */ } }
+async function refreshAppointments() { try { state.patientAppointments = await getPatientAppointments(); } catch { /* ignore */ } }
+async function refreshAdminRows() {
+  try {
+    const res = await getAdminAppointments({ statuses: state.adminFilters.status === "all" ? undefined : state.adminFilters.status === "cancelled" ? ["cancelled_by_patient", "cancelled_by_clinic"] : [state.adminFilters.status], doctorId: state.adminFilters.doctorId || undefined, dateFrom: state.adminFilters.dateFrom || undefined, dateTo: state.adminFilters.dateTo || undefined, search: state.adminFilters.search || undefined, page: state.adminPage, pageSize: state.adminPageSize, sortBy: state.adminFilters.sortBy, sortDir: state.adminFilters.sortDir });
+    state.adminRows = res.rows as typeof state.adminRows; state.adminTotal = res.total;
+  } catch { /* ignore */ }
+}
+async function refreshAll() { await Promise.all([refreshDoctors(), refreshAppointments()]); }
 
 async function runHousekeeping() {
   const role = (state.currentUser as { profile?: { role?: string } } | null)?.profile?.role;
   if (role !== "admin") return;
-  try { await purgeExpiredSlots(); } catch {}
+  try { await purgeExpiredSlots(); } catch { /* ignore */ }
 }
 
 async function init() {
-  state.currentUser = await getCurrentUser().catch(()=>null);
-  state.activeTab = getTabFromHash();
-  window.addEventListener("hashchange", ()=> { const t=getTabFromHash(); if(t!==state.activeTab){ state.activeTab=t; render(); } });
-  try { onAuthChange(async (_e, session)=> { if ((session as {user?:unknown})?.user) state.currentUser = await getCurrentUser(); else state.currentUser=null; await refreshAll(); void runHousekeeping(); render(); }); } catch {}
+  registerStitchGlobals();
+  state.currentUser = await getCurrentUser().catch(() => null);
+  state.route = parseRoute();
+  appEl.addEventListener("click", handleClick);
+  window.addEventListener("hashchange", () => {
+    const next = parseRoute();
+    if (next.name !== state.route.name || next.param !== state.route.param) {
+      state.route = next;
+      render();
+    }
+  });
+  try {
+    onAuthChange(async (_e, session) => {
+      if ((session as { user?: unknown })?.user) state.currentUser = await getCurrentUser();
+      else state.currentUser = null;
+      await refreshAll();
+      void runHousekeeping();
+      render();
+    });
+  } catch { /* ignore */ }
   await refreshAll();
   void runHousekeeping();
   render();
-  try { subscribeToRealtimeUpdates(()=> refreshDoctors().then(render), ()=> refreshAll().then(render)); } catch {}
+  try { subscribeToRealtimeUpdates(() => void refreshDoctors().then(render), () => void refreshAll().then(render)); } catch { /* ignore */ }
 }
-init();
+void init();

@@ -14,10 +14,35 @@ export function formatTime(timeStr: string): string {
   return `${hour}:${m} ${ampm}`;
 }
 
+const AR = "ar-SA-u-nu-latn";
+
 export function formatArabicDate(dateStr: string): string {
   if (!dateStr) return "";
   const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("ar-SA", { weekday: "short", year: "numeric", month: "short", day: "numeric" });
+  return d.toLocaleDateString(AR, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+export function formatWeekdayShort(dateStr: string): string {
+  if (!dateStr) return "";
+  return new Date(dateStr + "T12:00:00").toLocaleDateString(AR, { weekday: "short" });
+}
+
+export function formatDayNum(dateStr: string): string {
+  if (!dateStr) return "";
+  return new Date(dateStr + "T12:00:00").toLocaleDateString(AR, { day: "numeric" });
+}
+
+export function formatMonthShort(dateStr: string): string {
+  if (!dateStr) return "";
+  return new Date(dateStr + "T12:00:00").toLocaleDateString(AR, { month: "short" });
+}
+
+export function formatRelativeDay(dateStr: string): string {
+  if (!dateStr) return "";
+  if (dateStr === localDateISO(0)) return "اليوم";
+  if (dateStr === localDateISO(1)) return "غداً";
+  if (dateStr === localDateISO(2)) return "بعد غد";
+  return formatArabicDate(dateStr);
 }
 
 export function escapeHtml(value: unknown): string {

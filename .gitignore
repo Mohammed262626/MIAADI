@@ -1,13 +1,17 @@
 # Dependencies
 node_modules/
 
-# Environment / secrets (never commit real keys)
+# Demos/test credentials (never commit real keys)
 .env
 .env.*
 !.env.example
+scripts/.smoke.env
 
 # Supabase CLI local state
 supabase/.temp*
+
+# Demo/test credentials (never commit)
+docs/demo-accounts.txt
 
 # Logs
 *.log
@@ -28,4 +32,6 @@ dist/
 .agents/
 .codex/
 .impeccable/
+.opencode/
+opencode.json
 skills-lock.json
