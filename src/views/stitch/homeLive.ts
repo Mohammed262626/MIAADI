@@ -1,9 +1,9 @@
-import { escapeHtml, formatArabicDate, formatRelativeDay, formatTime, localDateISO } from "../../lib/format";
+import { escapeHtml, formatArabicDate, formatDayNum, formatMonthShort, formatRelativeDay, formatTime, localDateISO } from "../../lib/format";
 import { getDoctorSpecializations, getDoctorsDirectory, getPatientAppointments, type DoctorDirectoryRow } from "../../lib/supabase";
 import { countSpecialties } from "../../lib/specialties";
 import { initials, money, shortRef } from "../../components/ui";
 import { qrSvg } from "../../components/qr";
-import { NEXT_APPOINTMENT_SKELETON } from "./home";
+import { FEATURED_DOCTORS_SKELETON, NEXT_APPOINTMENT_SKELETON } from "./home";
 import { seedDoctorsFilters } from "./doctorsLive";
 
 type HomeUser = { id?: string; profile?: { full_name?: string | null; role?: string | null } | null } | null;
@@ -29,9 +29,30 @@ function doctorPhoto(doc: DoctorDirectoryRow): string {
   return `<span class="w-16 h-16 rounded-2xl shrink-0 shadow-sm grid place-items-center bg-primary text-on-primary font-extrabold text-lg">${escapeHtml(initials(doc.name))}</span>`;
 }
 
+const RELATIVE_DAYS = [localDateISO(0), localDateISO(1), localDateISO(2)];
+
+/* "اليوم" reads better than a full date inside a compact row; anything further
+   out drops the year so the label fits one line on a four-up card. */
+function shortDateLabel(date: string): string {
+  return RELATIVE_DAYS.includes(date)
+    ? formatRelativeDay(date)
+    : `${formatDayNum(date)} ${formatMonthShort(date)}`;
+}
+
+/* The hero has room for the full date, but not for a doubled weekday
+   ("اليوم، الثلاثاء، 20 أكتوبر"). */
+function fullDateLabel(date: string): string {
+  return RELATIVE_DAYS.includes(date) ? formatRelativeDay(date) : formatArabicDate(date);
+}
+
 function nextSlotLabel(doc: DoctorDirectoryRow): string | null {
   const s = doc.available_schedules[0];
-  return s ? `${formatRelativeDay(s.available_date)} ${formatTime(s.start_time)}` : null;
+  return s ? `${shortDateLabel(s.available_date)}، ${formatTime(s.start_time)}` : null;
+}
+
+function nextSlotTitle(doc: DoctorDirectoryRow): string {
+  const s = doc.available_schedules[0];
+  return s ? `${formatArabicDate(s.available_date)} — ${formatTime(s.start_time)}` : "";
 }
 
 function featuredCardHtml(doc: DoctorDirectoryRow, index: number): string {
@@ -50,7 +71,7 @@ function featuredCardHtml(doc: DoctorDirectoryRow, index: number): string {
         <div class="flex items-center justify-between gap-1">
           <span class="font-label-sm text-label-sm px-2 py-0.5 rounded-md ${badge} font-bold truncate">${escapeHtml(doc.title || "طبيب")}</span>
           <div class="flex items-center gap-1 text-on-surface font-label-md text-label-md shrink-0">
-            <span class="material-symbols-outlined text-[16px] text-[#F59E0B]" style="font-variation-settings: 'FILL' 1;">star</span>
+            <span aria-hidden="true" class="material-symbols-outlined text-[16px] text-[#F59E0B]" style="font-variation-settings: 'FILL' 1;">star</span>
             <span class="font-bold tabular-nums">${escapeHtml(rating)}</span>
             <span class="text-secondary text-label-sm tabular-nums">(${escapeHtml(doc.reviews_count ?? 0)})</span>
           </div>
@@ -61,24 +82,24 @@ function featuredCardHtml(doc: DoctorDirectoryRow, index: number): string {
     </div>
     <div class="bg-surface-container-low rounded-2xl p-space-sm mb-space-sm flex flex-col gap-1.5">
       <div class="flex items-center gap-1.5 text-secondary font-body-sm text-body-sm">
-        <span class="material-symbols-outlined text-[16px] text-primary">apartment</span>
+        <span aria-hidden="true" class="material-symbols-outlined text-[16px] text-primary">apartment</span>
         <span class="truncate">${escapeHtml(doc.hospital_name || "العيادة الخاصة")}</span>
       </div>
       <div class="flex items-center gap-1.5 text-secondary font-body-sm text-body-sm">
-        <span class="material-symbols-outlined text-[16px] text-primary">location_on</span>
+        <span aria-hidden="true" class="material-symbols-outlined text-[16px] text-primary">location_on</span>
         <span class="truncate">${escapeHtml(doc.hospital_city || doc.city || "—")}</span>
       </div>
       <div class="flex items-center gap-1.5 text-tertiary font-label-sm text-label-sm mt-1">
-        <span class="material-symbols-outlined text-[16px]">verified</span>
+        <span aria-hidden="true" class="material-symbols-outlined text-[16px]">verified</span>
         <span class="truncate">تغطية: ${escapeHtml(coverage)}</span>
       </div>
     </div>
-    <div class="flex items-center justify-between px-space-sm py-1.5 rounded-xl bg-surface-container mb-space-sm">
-      <div class="flex items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full ${next ? "bg-tertiary" : "bg-outline"}"></span>
+    <div class="flex items-center justify-between gap-2 px-space-sm py-1.5 rounded-xl bg-surface-container mb-space-sm">
+      <div class="flex items-center gap-1.5 shrink-0">
+        <span aria-hidden="true" class="w-2 h-2 rounded-full ${next ? "bg-tertiary" : "bg-outline"}"></span>
         <span class="font-label-sm text-label-sm text-on-surface">أقرب موعد متاح:</span>
       </div>
-      <span class="font-label-sm text-label-sm ${next ? "text-primary" : "text-secondary"} font-bold">${next ? escapeHtml(next) : "لا يوجد حالياً"}</span>
+      <span class="font-label-sm text-label-sm ${next ? "text-primary" : "text-secondary"} font-bold truncate text-start" title="${escapeHtml(nextSlotTitle(doc))}">${next ? escapeHtml(next) : "لا يوجد حالياً"}</span>
     </div>
   </div>
   <div class="pt-space-xs flex items-center justify-between">
@@ -93,35 +114,22 @@ function featuredCardHtml(doc: DoctorDirectoryRow, index: number): string {
 </div>`;
 }
 
-function featuredLoadingHtml(): string {
-  return [0, 1, 2, 3].map(() => `
-<div class="bg-surface-container-lowest rounded-3xl p-space-md shadow-sm animate-pulse">
-  <div class="flex items-start gap-space-sm mb-space-sm">
-    <div class="w-16 h-16 rounded-2xl bg-surface-container-high shrink-0"></div>
-    <div class="flex flex-col gap-2 flex-1 pt-1">
-      <div class="h-3 w-2/3 rounded-full bg-surface-container-high"></div>
-      <div class="h-3 w-1/2 rounded-full bg-surface-container"></div>
-    </div>
-  </div>
-  <div class="h-24 rounded-2xl bg-surface-container-low mb-space-sm"></div>
-  <div class="h-4 w-1/2 rounded-full bg-surface-container"></div>
-</div>`).join("");
-}
-
 function renderFeaturedDoctors(root: HTMLElement, docs: DoctorDirectoryRow[]) {
   const grid = root.querySelector<HTMLElement>("#featured-doctors");
   if (!grid) return;
   grid.setAttribute("aria-busy", "false");
   if (!docs.length) {
     grid.innerHTML = `<div class="col-span-full rise-in bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm">
-      <span class="material-symbols-outlined text-[28px] text-outline">event_busy</span>
+      <span aria-hidden="true" class="material-symbols-outlined text-[28px] text-outline">event_busy</span>
       <span>لا يوجد أطباء لديهم مواعيد متاحة خلال الأسبوع القادم.</span>
       <a href="#doctors" class="press min-h-11 px-space-lg inline-flex items-center rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md">تصفح جميع الأطباء</a>
     </div>`;
     return;
   }
+  // Four cards is more than a phone screen; the rest only earn their space once
+  // the grid is four-up, and "عرض الجميع" is always one tap away.
   grid.innerHTML = docs.slice(0, 8)
-    .map((doc, i) => `<div class="rise-in" style="animation-delay:${i * 50}ms">${featuredCardHtml(doc, i)}</div>`)
+    .map((doc, i) => `<div class="rise-in ${i >= 4 ? "hidden lg:block" : ""}" style="animation-delay:${i * 50}ms">${featuredCardHtml(doc, i)}</div>`)
     .join("");
 }
 
@@ -215,7 +223,7 @@ function heroFailureHtml(): string {
   <div class="flex flex-col lg:flex-row items-center justify-between gap-space-lg">
     <div class="flex items-center gap-space-md">
       <span class="w-16 h-16 rounded-2xl bg-error-container text-on-error-container grid place-items-center shrink-0">
-        <span class="material-symbols-outlined text-[28px]">cloud_off</span>
+        <span aria-hidden="true" class="material-symbols-outlined text-[28px]">cloud_off</span>
       </span>
       <div class="min-w-0">
         <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">تعذّر تحميل موعدك القادم</h2>
@@ -223,7 +231,7 @@ function heroFailureHtml(): string {
       </div>
     </div>
     <button type="button" data-retry-appt class="press w-full sm:w-auto px-space-lg py-3 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container shadow-sm shrink-0 inline-flex items-center justify-center gap-1.5">
-      <span class="material-symbols-outlined text-[18px]">refresh</span>
+      <span aria-hidden="true" class="material-symbols-outlined text-[18px]">refresh</span>
       <span>إعادة المحاولة</span>
     </button>
   </div>
@@ -255,7 +263,7 @@ function emptyHeroHtml(loggedIn: boolean): string {
   <div class="flex flex-col lg:flex-row items-center justify-between gap-space-lg">
     <div class="flex items-center gap-space-md">
       <span class="w-16 h-16 rounded-2xl bg-primary/10 text-primary grid place-items-center shrink-0">
-        <span class="material-symbols-outlined text-[32px]">${icon}</span>
+        <span aria-hidden="true" class="material-symbols-outlined text-[32px]">${icon}</span>
       </span>
       <div class="min-w-0">
         <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(title)}</h2>
@@ -277,7 +285,7 @@ function bookingHeroHtml(appt: AppointmentRow): string {
   const spec = shortSpecialty(String(doc.specialization || ""));
   const place = doc.hospitals?.name ? `${spec} • ${doc.hospitals.name}` : spec;
   const mode = "حضور بالعيادة";
-  const when = `${formatRelativeDay(String(sch.available_date || ""))}، ${formatArabicDate(String(sch.available_date || ""))}`;
+  const when = fullDateLabel(String(sch.available_date || ""));
   const at = formatTime(String(sch.start_time || ""));
   const shareText = [
     "موعدي في ميعادي",
@@ -294,7 +302,7 @@ function bookingHeroHtml(appt: AppointmentRow): string {
       <div class="relative">
         <span class="w-20 h-20 rounded-2xl shadow-sm grid place-items-center bg-gradient-to-br from-primary-container to-primary text-on-primary font-extrabold text-2xl">${escapeHtml(initials(String(doc.name || "")))}</span>
         <span class="absolute -bottom-1 -left-1 w-6 h-6 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center text-[14px]">
-          <span class="material-symbols-outlined text-[14px]">check</span>
+          <span aria-hidden="true" class="material-symbols-outlined text-[14px]">check</span>
         </span>
       </div>
       <div class="flex flex-col min-w-0">
@@ -305,11 +313,11 @@ function bookingHeroHtml(appt: AppointmentRow): string {
         <p class="font-body-md text-body-md text-on-surface-variant">${escapeHtml(place)}</p>
         <div class="flex items-center gap-space-md mt-2 flex-wrap">
           <div class="flex items-center gap-1 text-primary font-label-md text-label-md">
-            <span class="material-symbols-outlined text-[18px]">calendar_today</span>
+            <span aria-hidden="true" class="material-symbols-outlined text-[18px]">calendar_today</span>
             <span>${escapeHtml(when)}</span>
           </div>
           <div class="flex items-center gap-1 text-primary font-label-md text-label-md">
-            <span class="material-symbols-outlined text-[18px]">schedule</span>
+            <span aria-hidden="true" class="material-symbols-outlined text-[18px]">schedule</span>
             <span>${escapeHtml(at)} (${escapeHtml(mode)})</span>
           </div>
         </div>
@@ -326,11 +334,11 @@ function bookingHeroHtml(appt: AppointmentRow): string {
       </div>
       <div class="flex items-center gap-space-xs w-full sm:w-auto">
         <button type="button" data-hero-cta="#appointments" class="press flex-1 sm:flex-initial px-space-md py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container flex items-center justify-center gap-1.5 shadow-sm">
-          <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+          <span aria-hidden="true" class="material-symbols-outlined text-[18px]">calendar_month</span>
           <span>عرض بطاقة الدخول</span>
         </button>
         <a href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener noreferrer" class="press p-2.5 min-h-11 min-w-11 rounded-full bg-surface-container-lowest text-on-surface hover:bg-surface-container-high inline-flex items-center justify-center" aria-label="مشاركة تفاصيل الموعد على واتساب" title="مشاركة على واتساب">
-          <span class="material-symbols-outlined text-[20px]">chat</span>
+          <span aria-hidden="true" class="material-symbols-outlined text-[20px]">chat</span>
         </a>
       </div>
     </div>
@@ -379,14 +387,14 @@ export async function wireHome(appEl: HTMLElement, user: HomeUser) {
     const grid = appEl.querySelector<HTMLElement>("#featured-doctors");
     if (!grid) return;
     grid.innerHTML = `<div class="col-span-full rise-in bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm">
-      <span class="material-symbols-outlined text-[28px] text-outline">cloud_off</span>
+      <span aria-hidden="true" class="material-symbols-outlined text-[28px] text-outline">cloud_off</span>
       <span>تعذّر تحميل الأطباء.</span>
-      <button class="press inline-flex items-center gap-1.5 min-h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md" type="button" data-retry-featured><span class="material-symbols-outlined text-[18px]">refresh</span>إعادة المحاولة</button>
+      <button class="press inline-flex items-center gap-1.5 min-h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md" type="button" data-retry-featured><span aria-hidden="true" class="material-symbols-outlined text-[18px]">refresh</span>إعادة المحاولة</button>
     </div>`;
     grid.setAttribute("aria-busy", "false");
     grid.querySelector("[data-retry-featured]")?.addEventListener("click", async () => {
       const gridNow = appEl.querySelector<HTMLElement>("#featured-doctors");
-      if (gridNow) { gridNow.innerHTML = featuredLoadingHtml(); gridNow.setAttribute("aria-busy", "true"); }
+      if (gridNow) { gridNow.innerHTML = FEATURED_DOCTORS_SKELETON; gridNow.setAttribute("aria-busy", "true"); }
       try {
         const rows = await getDoctorsDirectory(7);
         populateHeroFilters(appEl, rows);
