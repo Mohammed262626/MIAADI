@@ -23,7 +23,7 @@ function doctorPhoto(doc: DoctorDirectoryRow): string {
   if (doc.photo_url) {
     return `<img class="w-16 h-16 rounded-2xl object-cover shrink-0 shadow-sm" src="${escapeHtml(doc.photo_url)}" alt="${escapeHtml(doc.name)}" loading="lazy"/>`;
   }
-  return `<span class="w-16 h-16 rounded-2xl shrink-0 shadow-sm grid place-items-center bg-gradient-to-br from-primary-container to-primary text-on-primary font-extrabold text-lg">${escapeHtml(initials(doc.name))}</span>`;
+  return `<span class="w-16 h-16 rounded-2xl shrink-0 shadow-sm grid place-items-center bg-primary text-on-primary font-extrabold text-lg">${escapeHtml(initials(doc.name))}</span>`;
 }
 
 function nextSlotLabel(doc: DoctorDirectoryRow): string | null {
@@ -157,7 +157,7 @@ function emptyHeroHtml(loggedIn: boolean): string {
         <span class="material-symbols-outlined text-[32px]">${icon}</span>
       </span>
       <div class="min-w-0">
-        <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(title)}</h3>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(title)}</h2>
         <p class="font-body-md text-body-md text-on-surface-variant">${escapeHtml(body)}</p>
       </div>
     </div>

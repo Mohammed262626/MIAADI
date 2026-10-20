@@ -8,7 +8,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <div class="w-full px-margin-desktop pt-space-xl max-w-7xl mx-auto flex flex-col items-center">
 <!-- Status Chip & Accreditations Overline -->
 <div class="inline-flex items-center gap-space-xs bg-surface-container-lowest px-space-md py-space-xs rounded-full shadow-sm mb-space-md">
-<span class="w-2.5 h-2.5 rounded-full bg-tertiary animate-pulse"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-tertiary"></span>
 <span class="font-label-md text-label-md text-primary font-semibold">بوابة الرعاية الطبية الوطنية الأولى بالمملكة</span>
 <span class="text-outline-variant font-body-sm text-body-sm">|</span>
 <span class="font-label-sm text-label-sm text-secondary tracking-wide">Vision 2030 Health Sector Transformation</span>

@@ -206,7 +206,7 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
       .map((v) => `<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm hover:shadow-md transition-all">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md">
           <div class="flex items-start gap-space-md">
-            <span class="w-16 h-16 rounded-xl shrink-0 grid place-items-center bg-gradient-to-br from-primary-container to-primary text-on-primary font-extrabold text-xl">${escapeHtml(initials(v.doctorName))}</span>
+            <span class="w-16 h-16 rounded-xl shrink-0 grid place-items-center bg-primary text-on-primary font-extrabold text-xl">${escapeHtml(initials(v.doctorName))}</span>
             <div class="flex flex-col">
               <div class="flex items-center gap-space-xs flex-wrap">
                 <span class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(v.doctorName)}</span>

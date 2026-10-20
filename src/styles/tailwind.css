@@ -155,6 +155,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Even out heading line lengths and pull orphan words off a short last line.
+   Progressive enhancement: ignored where unsupported, harmless where not. */
+h1, h2, h3, h4 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
 .material-symbols-outlined {
   font-family: "Material Symbols Outlined";
   font-weight: normal;
