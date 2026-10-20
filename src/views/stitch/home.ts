@@ -1,5 +1,21 @@
 // Home shell — painted instantly, then wired live in homeLive.ts.
 // Copy is limited to committed product reality (see docs/PRODUCT.md).
+
+// Hero card skeleton — also reused by the retry path in homeLive.ts.
+export const NEXT_APPOINTMENT_SKELETON = `<div class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-lg relative overflow-hidden animate-pulse">
+<div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary via-primary-container to-tertiary"></div>
+<div class="flex flex-col lg:flex-row items-center justify-between gap-space-lg">
+<div class="flex items-center gap-space-md flex-1 w-full">
+<div class="w-16 h-16 rounded-2xl bg-surface-container-high shrink-0"></div>
+<div class="flex flex-col gap-2 flex-1">
+<div class="h-4 w-40 rounded-full bg-surface-container-high"></div>
+<div class="h-3 w-64 max-w-full rounded-full bg-surface-container"></div>
+</div>
+</div>
+<div class="h-16 w-full lg:w-72 rounded-2xl bg-surface-container"></div>
+</div>
+</div>`;
+
 export const HOME_MAIN = `<div class="flex flex-col w-full">
 <!-- HERO SECTION WITH INTEGRATED SEARCH -->
 <section class="relative w-full overflow-hidden bg-gradient-to-b from-surface-container-low/70 via-surface to-surface pb-space-xl">
@@ -64,7 +80,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 </div>
 </form>
 <!-- Fast Filter Pills -->
-<div class="mt-space-md pt-space-sm flex items-center flex-wrap gap-space-xs bg-surface-container-lowest">
+<div class="mt-space-md pt-space-sm flex items-center flex-wrap gap-space-xs">
 <span class="font-label-sm text-label-sm text-secondary me-2">خيارات سريعة:</span>
 <button class="inline-flex items-center gap-1.5 px-space-md py-1.5 min-h-11 lg:min-h-8 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" type="button" data-quick="today">
 <span class="material-symbols-outlined text-[16px] text-tertiary">today</span>
@@ -79,20 +95,8 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 </div>
 </section>
 <!-- UPCOMING APPOINTMENT SLOT (filled live) -->
-<section id="home-next-appointment" class="w-full px-margin-desktop -mt-6 max-w-7xl mx-auto z-20" aria-live="polite">
-<div class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-lg relative overflow-hidden">
-<div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary via-primary-container to-tertiary"></div>
-<div class="flex flex-col lg:flex-row items-center justify-between gap-space-lg animate-pulse">
-<div class="flex items-center gap-space-md flex-1 w-full">
-<div class="w-16 h-16 rounded-2xl bg-surface-container-high shrink-0"></div>
-<div class="flex flex-col gap-2 flex-1">
-<div class="h-4 w-40 rounded-full bg-surface-container-high"></div>
-<div class="h-3 w-64 max-w-full rounded-full bg-surface-container"></div>
-</div>
-</div>
-<div class="h-16 w-full lg:w-72 rounded-2xl bg-surface-container"></div>
-</div>
-</div>
+<section id="home-next-appointment" class="relative w-full px-margin-desktop -mt-6 max-w-7xl mx-auto z-20" aria-live="polite">
+${NEXT_APPOINTMENT_SKELETON}
 </section>
 <!-- MEDICAL SPECIALTIES BENTO GRID (8 TILES) -->
 <section class="w-full px-margin-desktop py-space-xl max-w-7xl mx-auto">
@@ -116,7 +120,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container-low text-secondary group-hover:bg-surface-container-lowest font-medium" data-specialty-count="cardiology">—</span>
 </div>
 <div>
-<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">القلب والأوعية</h3>
+<span role="heading" aria-level="3" class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">القلب والأوعية</span>
 <p class="font-label-sm text-label-sm text-secondary">Cardiology &amp; Vascular</p>
 </div>
 </button>
@@ -128,7 +132,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container-low text-secondary group-hover:bg-surface-container-lowest font-medium" data-specialty-count="dental">—</span>
 </div>
 <div>
-<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">طب وجراحة الأسنان</h3>
+<span role="heading" aria-level="3" class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">طب وجراحة الأسنان</span>
 <p class="font-label-sm text-label-sm text-secondary">Dental &amp; Oral Care</p>
 </div>
 </button>
@@ -140,7 +144,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container-low text-secondary group-hover:bg-surface-container-lowest font-medium" data-specialty-count="pediatrics">—</span>
 </div>
 <div>
-<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">طب الأطفال وحديثي الولادة</h3>
+<span role="heading" aria-level="3" class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">طب الأطفال وحديثي الولادة</span>
 <p class="font-label-sm text-label-sm text-secondary">Pediatrics &amp; Neonatal</p>
 </div>
 </button>
@@ -152,7 +156,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container-low text-secondary group-hover:bg-surface-container-lowest font-medium" data-specialty-count="dermatology">—</span>
 </div>
 <div>
-<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">الجلدية والتجميل والليزر</h3>
+<span role="heading" aria-level="3" class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">الجلدية والتجميل والليزر</span>
 <p class="font-label-sm text-label-sm text-secondary">Dermatology &amp; Laser</p>
 </div>
 </button>
@@ -164,7 +168,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container-low text-secondary group-hover:bg-surface-container-lowest font-medium" data-specialty-count="orthopedics">—</span>
 </div>
 <div>
-<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">العظام والمفاصل والعمود الفقري</h3>
+<span role="heading" aria-level="3" class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">العظام والمفاصل والعمود الفقري</span>
 <p class="font-label-sm text-label-sm text-secondary">Orthopedic Surgery</p>
 </div>
 </button>
@@ -176,7 +180,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container-low text-secondary group-hover:bg-surface-container-lowest font-medium" data-specialty-count="ophthalmology">—</span>
 </div>
 <div>
-<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">طب وجراحة العيون</h3>
+<span role="heading" aria-level="3" class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">طب وجراحة العيون</span>
 <p class="font-label-sm text-label-sm text-secondary">Ophthalmology</p>
 </div>
 </button>
@@ -188,7 +192,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container-low text-secondary group-hover:bg-surface-container-lowest font-medium" data-specialty-count="ent">—</span>
 </div>
 <div>
-<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">أنف وأذن وحنجرة</h3>
+<span role="heading" aria-level="3" class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">أنف وأذن وحنجرة</span>
 <p class="font-label-sm text-label-sm text-secondary">ENT Head &amp; Neck</p>
 </div>
 </button>
@@ -200,7 +204,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm px-2.5 py-1 rounded-full bg-surface-container-low text-secondary group-hover:bg-surface-container-lowest font-medium" data-specialty-count="internal">—</span>
 </div>
 <div>
-<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">الباطنية والجهاز الهضمي</h3>
+<span role="heading" aria-level="3" class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">الباطنية والجهاز الهضمي</span>
 <p class="font-label-sm text-label-sm text-secondary">Internal Medicine</p>
 </div>
 </button>
@@ -237,7 +241,8 @@ ${[0, 1, 2, 3].map(() => `
 </section>
 <!-- WHY THIS WORKS -->
 <section class="w-full px-margin-desktop py-space-xl max-w-7xl mx-auto">
-<div class="bg-primary text-on-primary rounded-3xl p-space-xl relative overflow-hidden shadow-xl">
+<!-- the brand panel keeps a dark surface in dark mode via .advantage-card (see tailwind.css) -->
+<div class="advantage-card bg-primary text-on-primary rounded-3xl p-space-xl relative overflow-hidden shadow-xl">
 <div class="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-primary-container/40 blur-2xl pointer-events-none"></div>
 <div class="relative z-10">
 <div class="max-w-2xl mb-space-lg">
