@@ -100,6 +100,28 @@ const PATH_ROUTES: Record<string, string> = {
   "clinic-settings-availability": "#admin/manage",
 };
 
+let revealObserver: IntersectionObserver | null = null;
+
+function wireReveal() {
+  const nodes = appEl.querySelectorAll<HTMLElement>("[data-reveal]:not(.is-in)");
+  if (!nodes.length) return;
+  if (!("IntersectionObserver" in window)) {
+    nodes.forEach((n) => n.classList.add("is-in"));
+    return;
+  }
+  document.documentElement.classList.add("reveal-ready");
+  if (!revealObserver) {
+    revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-in");
+        revealObserver?.unobserve(entry.target);
+      });
+    }, { threshold: 0.08, rootMargin: "0px 0px -6% 0px" });
+  }
+  nodes.forEach((n) => revealObserver!.observe(n));
+}
+
 function render() {
   const route = state.route;
   const role = state.currentUser?.profile?.role as string | undefined;
@@ -118,6 +140,7 @@ function render() {
   }
 
   wireShell();
+  wireReveal();
   if (route.name === "home") void wireHome(appEl, state.currentUser);
   if (route.name === "doctors") void wireDoctorsLive(appEl);
   if (route.name === "doctor" && route.param) void wireDoctorProfile(appEl, route.param, state.currentUser);

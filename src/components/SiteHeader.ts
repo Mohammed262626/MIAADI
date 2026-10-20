@@ -1,8 +1,8 @@
 import { SITE_HEADER, SITE_FOOTER } from "../views/stitch/shell";
 
-const AVATAR_LOGGED_OUT = `<button data-action="open-auth" type="button" aria-label="دخول" class="flex items-center gap-space-xs px-space-md py-space-xs min-h-11 rounded-full border border-outline-variant text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-all"><span class="material-symbols-outlined text-[18px]">login</span><span>دخول</span></button>`;
+const AVATAR_LOGGED_OUT = `<button data-action="open-auth" type="button" aria-label="دخول" class="flex items-center gap-space-xs px-space-md py-space-xs min-h-11 rounded-xl bg-surface-container-low text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[18px]">login</span><span>دخول</span></button>`;
 
-const AVATAR_LOGGED_IN = `<a data-path="profile" href="#profile" title="حسابي" aria-label="حسابي" class="w-11 h-11 rounded-full bg-primary flex items-center justify-center shadow-sm"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></a>`;
+const AVATAR_LOGGED_IN = `<a data-path="profile" href="#profile" title="حسابي" aria-label="حسابي" class="w-11 h-11 rounded-xl bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></a>`;
 
 const AVATAR_RE =
   /<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">[\s\S]*?<\/div>/;
@@ -16,8 +16,8 @@ const BASE_NAV: NavItem[] = [
   { key: "bookings", label: "مواعيدي", path: "my-bookings" },
 ];
 
-const DESKTOP_IDLE = "font-label-md text-label-md px-space-md py-space-xs rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all";
-const DESKTOP_ACTIVE = "font-label-md text-label-md px-space-md py-space-xs rounded-full bg-primary-container text-on-primary-container";
+const DESKTOP_IDLE = "font-label-md text-label-md px-space-md py-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors";
+const DESKTOP_ACTIVE = "font-label-md text-label-md px-space-md py-space-xs rounded-xl bg-primary-container text-on-primary-container";
 const DRAWER_IDLE = "min-h-11 py-2.5 px-space-md rounded-xl font-label-md text-label-md text-on-surface hover:bg-surface-container-low transition-colors";
 const DRAWER_ACTIVE = "min-h-11 py-2.5 px-space-md rounded-xl font-label-md text-label-md bg-primary-container text-on-primary-container font-bold";
 
@@ -62,7 +62,7 @@ export function renderSiteHeader(user: unknown, route?: { name: string } | null)
     .replace("__DESKTOP_NAV__", items.map((i) => desktopLink(i, i.key === key)).join(""))
     .replace("__DRAWER_NAV__", items.map((i) => drawerLink(i, i.key === key)).join(""));
   inner = inner.replace(AVATAR_RE, user ? AVATAR_LOGGED_IN : AVATAR_LOGGED_OUT);
-  return `<header class="fixed top-0 w-full z-50 pt-[env(safe-area-inset-top)] bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]">${inner}</header>`;
+  return `<header class="fixed top-0 w-full z-50 pt-[env(safe-area-inset-top)] bg-surface-container-lowest">${inner}</header>`;
 }
 
 export function renderSiteFooter(): string {

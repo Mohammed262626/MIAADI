@@ -1,20 +1,13 @@
-import { escapeHtml, formatArabicDate, formatDayNum, formatMonthShort, formatRelativeDay, formatTime, localDateISO } from "../../lib/format";
+import { escapeHtml, formatArabicDate, formatRelativeDay, formatTime, localDateISO } from "../../lib/format";
 import { getDoctorSpecializations, getDoctorsDirectory, getPatientAppointments, type DoctorDirectoryRow } from "../../lib/supabase";
 import { countSpecialties } from "../../lib/specialties";
 import { initials, money, shortRef } from "../../components/ui";
 import { qrSvg } from "../../components/qr";
-import { FEATURED_DOCTORS_SKELETON, NEXT_APPOINTMENT_SKELETON } from "./home";
 import { seedDoctorsFilters } from "./doctorsLive";
 
 type HomeUser = { id?: string; profile?: { full_name?: string | null; role?: string | null } | null } | null;
 
 /* ------------------------------ featured doctors ------------------------------ */
-
-const BADGE_STYLES = [
-  "bg-primary-fixed text-on-primary-fixed",
-  "bg-secondary-container text-on-secondary-container",
-  "bg-tertiary-fixed text-on-tertiary-fixed",
-];
 
 const TITLE_PREFIX = /^(استشاري أول|استشارية|استشاري|أخصائية|أخصائي|طبيب|طبيبة)\s+/;
 
@@ -24,94 +17,74 @@ function shortSpecialty(spec: string): string {
 
 function doctorPhoto(doc: DoctorDirectoryRow): string {
   if (doc.photo_url) {
-    return `<img class="w-16 h-16 rounded-2xl object-cover shrink-0 shadow-sm" src="${escapeHtml(doc.photo_url)}" alt="${escapeHtml(doc.name)}" loading="lazy"/>`;
+    return `<img class="h-20 w-20 shrink-0 rounded-xl object-cover" src="${escapeHtml(doc.photo_url)}" alt="${escapeHtml(doc.name)}" loading="lazy"/>`;
   }
-  return `<span class="w-16 h-16 rounded-2xl shrink-0 shadow-sm grid place-items-center bg-primary text-on-primary font-extrabold text-lg">${escapeHtml(initials(doc.name))}</span>`;
-}
-
-const RELATIVE_DAYS = [localDateISO(0), localDateISO(1), localDateISO(2)];
-
-/* "اليوم" reads better than a full date inside a compact row; anything further
-   out drops the year so the label fits one line on a four-up card. */
-function shortDateLabel(date: string): string {
-  return RELATIVE_DAYS.includes(date)
-    ? formatRelativeDay(date)
-    : `${formatDayNum(date)} ${formatMonthShort(date)}`;
-}
-
-/* The hero has room for the full date, but not for a doubled weekday
-   ("اليوم، الثلاثاء، 20 أكتوبر"). */
-function fullDateLabel(date: string): string {
-  return RELATIVE_DAYS.includes(date) ? formatRelativeDay(date) : formatArabicDate(date);
+  return `<span class="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-primary text-[22px] font-extrabold text-on-primary">${escapeHtml(initials(doc.name))}</span>`;
 }
 
 function nextSlotLabel(doc: DoctorDirectoryRow): string | null {
   const s = doc.available_schedules[0];
-  return s ? `${shortDateLabel(s.available_date)}، ${formatTime(s.start_time)}` : null;
+  return s ? `${formatRelativeDay(s.available_date)} ${formatTime(s.start_time)}` : null;
 }
 
-function nextSlotTitle(doc: DoctorDirectoryRow): string {
-  const s = doc.available_schedules[0];
-  return s ? `${formatArabicDate(s.available_date)} — ${formatTime(s.start_time)}` : "";
-}
-
-function featuredCardHtml(doc: DoctorDirectoryRow, index: number): string {
-  const badge = BADGE_STYLES[index % BADGE_STYLES.length];
+function featuredCardHtml(doc: DoctorDirectoryRow, _index: number): string {
   const rating = doc.rating === null ? "—" : doc.rating.toFixed(1);
   const next = nextSlotLabel(doc);
   const coverage = doc.insurances.length
     ? doc.insurances.slice(0, 3).join("، ")
     : "دفع مباشر";
   return `
-<div class="bg-surface-container-lowest rounded-3xl p-space-md shadow-sm hover:shadow-xl press flex flex-col justify-between" data-doctor-card="${escapeHtml(doc.id)}" data-doctor-id="${escapeHtml(doc.id)}">
-  <div>
-    <div class="flex items-start gap-space-sm mb-space-sm">
-      ${doctorPhoto(doc)}
-      <div class="flex flex-col min-w-0 flex-1">
-        <div class="flex items-center justify-between gap-1">
-          <span class="font-label-sm text-label-sm px-2 py-0.5 rounded-md ${badge} font-bold truncate">${escapeHtml(doc.title || "طبيب")}</span>
-          <div class="flex items-center gap-1 text-on-surface font-label-md text-label-md shrink-0">
-            <span aria-hidden="true" class="material-symbols-outlined text-[16px] text-[#F59E0B]" style="font-variation-settings: 'FILL' 1;">star</span>
-            <span class="font-bold tabular-nums">${escapeHtml(rating)}</span>
-            <span class="text-secondary text-label-sm tabular-nums">(${escapeHtml(doc.reviews_count ?? 0)})</span>
-          </div>
-        </div>
-        <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold truncate mt-1">${escapeHtml(doc.name)}</h3>
-        <p class="font-body-sm text-body-sm text-on-surface-variant truncate" title="${escapeHtml(doc.specialization)}">${escapeHtml(shortSpecialty(doc.specialization))}</p>
+<article class="press cursor-pointer rounded-xl bg-surface-container-lowest p-4 sm:p-5" data-doctor-card="${escapeHtml(doc.id)}" data-doctor-id="${escapeHtml(doc.id)}">
+  <div class="flex items-start gap-4">
+    ${doctorPhoto(doc)}
+    <div class="min-w-0 flex-1">
+      <div class="flex items-start justify-between gap-2">
+        <h3 class="truncate text-[19px] font-bold leading-tight text-on-surface">${escapeHtml(doc.name)}</h3>
+        <span class="flex shrink-0 items-center gap-1 text-[14px] text-on-surface-variant">
+          <span class="text-primary material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
+          <span class="font-semibold tabular-nums text-on-surface">${escapeHtml(rating)}</span>
+          <span class="tabular-nums">(${escapeHtml(doc.reviews_count ?? 0)})</span>
+        </span>
       </div>
-    </div>
-    <div class="bg-surface-container-low rounded-2xl p-space-sm mb-space-sm flex flex-col gap-1.5">
-      <div class="flex items-center gap-1.5 text-secondary font-body-sm text-body-sm">
-        <span aria-hidden="true" class="material-symbols-outlined text-[16px] text-primary">apartment</span>
-        <span class="truncate">${escapeHtml(doc.hospital_name || "العيادة الخاصة")}</span>
-      </div>
-      <div class="flex items-center gap-1.5 text-secondary font-body-sm text-body-sm">
-        <span aria-hidden="true" class="material-symbols-outlined text-[16px] text-primary">location_on</span>
-        <span class="truncate">${escapeHtml(doc.hospital_city || doc.city || "—")}</span>
-      </div>
-      <div class="flex items-center gap-1.5 text-tertiary font-label-sm text-label-sm mt-1">
-        <span aria-hidden="true" class="material-symbols-outlined text-[16px]">verified</span>
-        <span class="truncate">تغطية: ${escapeHtml(coverage)}</span>
-      </div>
-    </div>
-    <div class="flex items-center justify-between gap-2 px-space-sm py-1.5 rounded-xl bg-surface-container mb-space-sm">
-      <div class="flex items-center gap-1.5 shrink-0">
-        <span aria-hidden="true" class="w-2 h-2 rounded-full ${next ? "bg-tertiary" : "bg-outline"}"></span>
-        <span class="font-label-sm text-label-sm text-on-surface">أقرب موعد متاح:</span>
-      </div>
-      <span class="font-label-sm text-label-sm ${next ? "text-primary" : "text-secondary"} font-bold truncate text-start" title="${escapeHtml(nextSlotTitle(doc))}">${next ? escapeHtml(next) : "لا يوجد حالياً"}</span>
+      <p class="mt-1 truncate text-[15px] text-on-surface-variant" title="${escapeHtml(doc.specialization)}">${escapeHtml(shortSpecialty(doc.specialization))}</p>
+      <p class="mt-1 truncate text-[14px] text-on-surface-variant">${escapeHtml(doc.hospital_name || "العيادة الخاصة")} · ${escapeHtml(doc.hospital_city || doc.city || "—")}</p>
     </div>
   </div>
-  <div class="pt-space-xs flex items-center justify-between">
-    <div class="flex flex-col">
-      <span class="font-label-sm text-label-sm text-secondary">رسوم الكشف:</span>
-      <span class="font-headline-sm text-headline-sm text-on-surface font-bold tabular-nums">${escapeHtml(money(doc.consultation_fee))}</span>
+  <div class="mt-4 flex flex-wrap items-end justify-between gap-3">
+    <div class="min-w-0">
+      <p class="text-[13px] text-on-surface-variant">أقرب موعد متاح</p>
+      <p class="mt-0.5 text-[15px] font-semibold ${next ? "text-primary" : "text-on-surface-variant"}">${next ? escapeHtml(next) : "لا يوجد حالياً"}</p>
+      <p class="mt-1 truncate text-[13px] text-on-surface-variant">تغطية: ${escapeHtml(coverage)}</p>
     </div>
-    <button class="press px-space-md py-2.5 min-h-11 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md shadow-sm" type="button" data-book-doctor="${escapeHtml(doc.id)}">
-      احجز موعداً
-    </button>
+    <div class="flex shrink-0 items-center gap-3">
+      <div class="text-end">
+        <p class="text-[13px] text-on-surface-variant">رسوم الكشف</p>
+        <p class="text-[17px] font-bold tabular-nums text-on-surface">${escapeHtml(money(doc.consultation_fee))}</p>
+      </div>
+      <button class="press h-11 rounded-xl bg-primary px-4 text-[15px] font-semibold text-on-primary transition-colors hover:bg-primary-container" type="button" data-book-doctor="${escapeHtml(doc.id)}">
+        احجز
+      </button>
+    </div>
   </div>
-</div>`;
+</article>`;
+}
+
+function featuredLoadingHtml(): string {
+  return [0, 1, 2].map(() => `
+<div class="rounded-xl bg-surface-container-lowest p-4 sm:p-5">
+  <div class="flex items-start gap-4">
+    <div class="h-20 w-20 shrink-0 rounded-xl bg-surface-container-high"></div>
+    <div class="flex-1 pt-1">
+      <div class="h-4 w-2/3 rounded bg-surface-container-high"></div>
+      <div class="mt-2 h-3 w-1/2 rounded bg-surface-container"></div>
+      <div class="mt-2 h-3 w-3/4 rounded bg-surface-container"></div>
+    </div>
+  </div>
+  <div class="mt-4 flex items-end justify-between gap-4">
+    <div class="h-3 w-32 rounded bg-surface-container"></div>
+    <div class="h-11 w-24 rounded-xl bg-surface-container-high"></div>
+  </div>
+</div>`).join("");
 }
 
 function renderFeaturedDoctors(root: HTMLElement, docs: DoctorDirectoryRow[]) {
@@ -119,33 +92,26 @@ function renderFeaturedDoctors(root: HTMLElement, docs: DoctorDirectoryRow[]) {
   if (!grid) return;
   grid.setAttribute("aria-busy", "false");
   if (!docs.length) {
-    grid.innerHTML = `<div class="col-span-full rise-in bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm">
-      <span aria-hidden="true" class="material-symbols-outlined text-[28px] text-outline">event_busy</span>
-      <span>لا يوجد أطباء لديهم مواعيد متاحة خلال الأسبوع القادم.</span>
-      <a href="#doctors" class="press min-h-11 px-space-lg inline-flex items-center rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md">تصفح جميع الأطباء</a>
+    grid.innerHTML = `<div class="rise-in flex flex-col items-center gap-3 rounded-xl bg-surface-container-lowest px-5 py-8 text-center">
+      <span class="material-symbols-outlined text-[28px] text-outline">event_busy</span>
+      <p class="text-[16px] text-on-surface-variant">لا يوجد أطباء لديهم مواعيد متاحة خلال الأسبوع القادم.</p>
+      <a href="#doctors" class="press inline-flex h-11 items-center rounded-xl bg-primary px-5 text-[15px] font-semibold text-on-primary">تصفح جميع الأطباء</a>
     </div>`;
     return;
   }
-  // Four cards is more than a phone screen; the rest only earn their space once
-  // the grid is four-up, and "عرض الجميع" is always one tap away.
-  grid.innerHTML = docs.slice(0, 8)
-    .map((doc, i) => `<div class="rise-in ${i >= 4 ? "hidden lg:block" : ""}" style="animation-delay:${i * 50}ms">${featuredCardHtml(doc, i)}</div>`)
+  grid.innerHTML = docs.slice(0, 5)
+    .map((doc, i) => `<div class="rise-in" style="animation-delay:${i * 50}ms">${featuredCardHtml(doc, i)}</div>`)
     .join("");
 }
 
 /* ------------------------------ specialty counts ------------------------------ */
 
-function renderSpecialtyCounts(root: HTMLElement, specializations: string[] | null) {
-  const counts = specializations ? countSpecialties(specializations) : null;
+function renderSpecialtyCounts(root: HTMLElement, specializations: string[]) {
+  const counts = countSpecialties(specializations);
   root.querySelectorAll<HTMLButtonElement>("[data-specialty-link]").forEach((btn) => {
     const key = btn.dataset.specialtyLink || "";
-    const badge = btn.querySelector<HTMLElement>(`[data-specialty-count="${key}"]`);
-    if (!counts) {
-      // Doctor table unreachable: keep tiles navigable instead of claiming "no data".
-      if (badge) badge.textContent = "…";
-      return;
-    }
     const n = counts[key] ?? 0;
+    const badge = btn.querySelector<HTMLElement>(`[data-specialty-count="${key}"]`);
     if (badge) badge.textContent = n > 0 ? `${n} طبيب` : "قريباً";
     const off = n === 0;
     btn.disabled = off;
@@ -216,28 +182,6 @@ type AppointmentRow = {
   } | null;
 };
 
-function heroFailureHtml(): string {
-  return `
-<div class="rise-in bg-surface-container-lowest rounded-3xl p-space-lg shadow-lg relative overflow-hidden">
-  <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary via-primary-container to-tertiary"></div>
-  <div class="flex flex-col lg:flex-row items-center justify-between gap-space-lg">
-    <div class="flex items-center gap-space-md">
-      <span class="w-16 h-16 rounded-2xl bg-error-container text-on-error-container grid place-items-center shrink-0">
-        <span aria-hidden="true" class="material-symbols-outlined text-[28px]">cloud_off</span>
-      </span>
-      <div class="min-w-0">
-        <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">تعذّر تحميل موعدك القادم</h2>
-        <p class="font-body-md text-body-md text-on-surface-variant">تحقق من اتصالك بالإنترنت ثم أعد المحاولة.</p>
-      </div>
-    </div>
-    <button type="button" data-retry-appt class="press w-full sm:w-auto px-space-lg py-3 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container shadow-sm shrink-0 inline-flex items-center justify-center gap-1.5">
-      <span aria-hidden="true" class="material-symbols-outlined text-[18px]">refresh</span>
-      <span>إعادة المحاولة</span>
-    </button>
-  </div>
-</div>`;
-}
-
 function pickNextAppointment(rows: AppointmentRow[]): AppointmentRow | null {
   const today = localDateISO();
   const upcoming = rows
@@ -258,22 +202,19 @@ function emptyHeroHtml(loggedIn: boolean): string {
   const cta = loggedIn ? "تصفح الأطباء" : "تسجيل الدخول";
   const icon = loggedIn ? "event_busy" : "login";
   return `
-<div class="rise-in bg-surface-container-lowest rounded-3xl p-space-lg shadow-lg relative overflow-hidden">
-  <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary via-primary-container to-tertiary"></div>
-  <div class="flex flex-col lg:flex-row items-center justify-between gap-space-lg">
-    <div class="flex items-center gap-space-md">
-      <span class="w-16 h-16 rounded-2xl bg-primary/10 text-primary grid place-items-center shrink-0">
-        <span aria-hidden="true" class="material-symbols-outlined text-[32px]">${icon}</span>
-      </span>
-      <div class="min-w-0">
-        <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(title)}</h2>
-        <p class="font-body-md text-body-md text-on-surface-variant">${escapeHtml(body)}</p>
-      </div>
+<div class="rise-in rounded-xl bg-surface-container-low p-4">
+  <div class="flex items-start gap-3">
+    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+      <span class="material-symbols-outlined text-[22px]">${icon}</span>
+    </span>
+    <div class="min-w-0">
+      <p class="text-[16px] font-semibold leading-snug text-on-surface">${escapeHtml(title)}</p>
+      <p class="mt-0.5 text-[14px] leading-relaxed text-on-surface-variant">${escapeHtml(body)}</p>
     </div>
-    <button type="button" data-hero-cta="${loggedIn ? "#doctors" : "auth"}" class="press w-full sm:w-auto px-space-lg py-3 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container shadow-sm shrink-0">
-      ${escapeHtml(cta)}
-    </button>
   </div>
+  <button type="button" data-hero-cta="${loggedIn ? "#doctors" : "auth"}" class="press mt-3 h-11 w-full rounded-xl bg-primary text-[15px] font-semibold text-on-primary transition-colors hover:bg-primary-container">
+    ${escapeHtml(cta)}
+  </button>
 </div>`;
 }
 
@@ -285,7 +226,7 @@ function bookingHeroHtml(appt: AppointmentRow): string {
   const spec = shortSpecialty(String(doc.specialization || ""));
   const place = doc.hospitals?.name ? `${spec} • ${doc.hospitals.name}` : spec;
   const mode = "حضور بالعيادة";
-  const when = fullDateLabel(String(sch.available_date || ""));
+  const when = `${formatRelativeDay(String(sch.available_date || ""))}، ${formatArabicDate(String(sch.available_date || ""))}`;
   const at = formatTime(String(sch.start_time || ""));
   const shareText = [
     "موعدي في ميعادي",
@@ -295,106 +236,69 @@ function bookingHeroHtml(appt: AppointmentRow): string {
     `رقم المرجع: ${pass}`,
   ].join("\n");
   return `
-<div class="rise-in bg-surface-container-lowest rounded-3xl p-space-lg shadow-lg relative overflow-hidden">
-  <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary via-primary-container to-tertiary"></div>
-  <div class="flex flex-col lg:flex-row items-stretch justify-between gap-space-lg">
-    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-space-md flex-1">
-      <div class="relative">
-        <span class="w-20 h-20 rounded-2xl shadow-sm grid place-items-center bg-gradient-to-br from-primary-container to-primary text-on-primary font-extrabold text-2xl">${escapeHtml(initials(String(doc.name || "")))}</span>
-        <span class="absolute -bottom-1 -left-1 w-6 h-6 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center text-[14px]">
-          <span aria-hidden="true" class="material-symbols-outlined text-[14px]">check</span>
-        </span>
-      </div>
-      <div class="flex flex-col min-w-0">
-        <div class="inline-flex items-center gap-2 mb-1">
-          <span class="px-2 py-0.5 rounded-md bg-secondary-container font-label-sm text-label-sm text-on-secondary-container font-bold">موعدك القادم المؤكد</span>
-        </div>
-        <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(String(doc.name || "—"))}</h3>
-        <p class="font-body-md text-body-md text-on-surface-variant">${escapeHtml(place)}</p>
-        <div class="flex items-center gap-space-md mt-2 flex-wrap">
-          <div class="flex items-center gap-1 text-primary font-label-md text-label-md">
-            <span aria-hidden="true" class="material-symbols-outlined text-[18px]">calendar_today</span>
-            <span>${escapeHtml(when)}</span>
-          </div>
-          <div class="flex items-center gap-1 text-primary font-label-md text-label-md">
-            <span aria-hidden="true" class="material-symbols-outlined text-[18px]">schedule</span>
-            <span>${escapeHtml(at)} (${escapeHtml(mode)})</span>
-          </div>
-        </div>
-      </div>
+<div class="rise-in rounded-xl bg-surface-container-low p-4">
+  <div class="flex items-center justify-between gap-3">
+    <span class="text-[13px] font-semibold text-tertiary">موعدك القادم</span>
+    <span class="text-[13px] tabular-nums text-on-surface-variant">${escapeHtml(pass)}</span>
+  </div>
+  <p class="mt-2 text-[19px] font-bold leading-tight text-on-surface">${escapeHtml(String(doc.name || "—"))}</p>
+  <p class="mt-0.5 text-[14px] text-on-surface-variant">${escapeHtml(place)}</p>
+  <div class="mt-3 grid grid-cols-2 gap-2">
+    <div class="rounded-xl bg-surface-container-lowest p-2.5">
+      <p class="text-[13px] text-on-surface-variant">التاريخ</p>
+      <p class="mt-0.5 text-[14px] font-semibold leading-snug text-on-surface">${escapeHtml(when)}</p>
     </div>
-    <div class="flex flex-col sm:flex-row items-center gap-space-md bg-surface-container-low rounded-2xl p-space-md shrink-0 justify-between">
-      <div class="flex items-center gap-space-md">
-        <div class="w-16 h-16 bg-white p-1.5 rounded-xl flex items-center justify-center shadow-sm" role="img" aria-label="رمز الاستجابة السريعة لرقم مرجع الموعد">${qrSvg(pass)}</div>
-        <div class="flex flex-col">
-          <span class="font-label-sm text-label-sm text-secondary">رقم مرجع الموعد</span>
-          <span class="font-headline-sm text-headline-sm text-on-surface font-mono tracking-wider font-bold tabular-nums">${escapeHtml(pass)}</span>
-          <span class="font-body-sm text-body-sm text-tertiary">احتفظ به لمراجعة موعدك</span>
-        </div>
-      </div>
-      <div class="flex items-center gap-space-xs w-full sm:w-auto">
-        <button type="button" data-hero-cta="#appointments" class="press flex-1 sm:flex-initial px-space-md py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container flex items-center justify-center gap-1.5 shadow-sm">
-          <span aria-hidden="true" class="material-symbols-outlined text-[18px]">calendar_month</span>
-          <span>عرض بطاقة الدخول</span>
-        </button>
-        <a href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener noreferrer" class="press p-2.5 min-h-11 min-w-11 rounded-full bg-surface-container-lowest text-on-surface hover:bg-surface-container-high inline-flex items-center justify-center" aria-label="مشاركة تفاصيل الموعد على واتساب" title="مشاركة على واتساب">
-          <span aria-hidden="true" class="material-symbols-outlined text-[20px]">chat</span>
-        </a>
-      </div>
+    <div class="rounded-xl bg-surface-container-lowest p-2.5">
+      <p class="text-[13px] text-on-surface-variant">الوقت</p>
+      <p class="mt-0.5 text-[14px] font-semibold tabular-nums text-on-surface">${escapeHtml(at)}</p>
     </div>
+  </div>
+  <div class="mt-3 flex items-center gap-3 rounded-xl bg-surface-container-lowest p-2.5">
+    <div class="h-14 w-14 shrink-0 rounded-md bg-white p-1" role="img" aria-label="رمز الاستجابة السريعة لرقم مرجع الموعد">${qrSvg(pass)}</div>
+    <p class="text-[13px] leading-snug text-on-surface-variant">أظهر هذا الرمز في الاستقبال للتحقق من حجزك.</p>
+  </div>
+  <div class="mt-3 flex gap-2">
+    <button type="button" data-hero-cta="#appointments" class="press h-11 flex-1 rounded-xl bg-primary text-[15px] font-semibold text-on-primary transition-colors hover:bg-primary-container">
+      بطاقة الدخول
+    </button>
+    <a href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener noreferrer" class="press grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-surface-container-lowest text-on-surface transition-colors hover:bg-surface-container-high" aria-label="مشاركة تفاصيل الموعد على واتساب" title="مشاركة على واتساب">
+      <span class="material-symbols-outlined text-[20px]">chat</span>
+    </a>
   </div>
 </div>`;
 }
 
 /* ---------------------------------- wiring ---------------------------------- */
 
-async function renderNextAppointment(root: HTMLElement, user: HomeUser, rows: AppointmentRow[] | null) {
-  const heroEl = root.querySelector<HTMLElement>("#home-next-appointment");
-  if (!heroEl) return;
-  if (!user) { heroEl.innerHTML = emptyHeroHtml(false); return; }
-  if (rows) {
-    const next = pickNextAppointment(rows);
-    heroEl.innerHTML = next ? bookingHeroHtml(next) : emptyHeroHtml(true);
-    return;
-  }
-  heroEl.innerHTML = heroFailureHtml();
-  heroEl.querySelector("[data-retry-appt]")?.addEventListener("click", () => {
-    heroEl.innerHTML = NEXT_APPOINTMENT_SKELETON;
-    getPatientAppointments()
-      .catch(() => null)
-      .then((r) => void renderNextAppointment(root, user, r as AppointmentRow[] | null));
-  });
-}
-
 export async function wireHome(appEl: HTMLElement, user: HomeUser) {
-  // Signed-out guests have nothing to fetch; signed-in failures surface as a
-  // retryable card instead of a fake "لا توجد مواعيد قادمة" state.
-  const appointmentsPromise: Promise<AppointmentRow[] | null> = user
-    ? getPatientAppointments().catch(() => null).then((r) => r as AppointmentRow[] | null)
-    : Promise.resolve([] as AppointmentRow[]);
+  const heroEl = appEl.querySelector<HTMLElement>("#home-next-appointment");
 
-  const [specializations, directory] = await Promise.all([
-    getDoctorSpecializations().catch(() => null),
+  const [specializations, appointments, directory] = await Promise.all([
+    getDoctorSpecializations().catch(() => [] as string[]),
+    user ? getPatientAppointments().catch(() => [] as unknown[]).then((r) => r as AppointmentRow[]) : Promise.resolve([] as AppointmentRow[]),
     getDoctorsDirectory(7).catch(() => null),
   ]);
 
   renderSpecialtyCounts(appEl, specializations);
   wireHeroControls(appEl);
 
-  await renderNextAppointment(appEl, user, await appointmentsPromise);
+  if (heroEl) {
+    const next = pickNextAppointment(appointments);
+    heroEl.innerHTML = next ? bookingHeroHtml(next) : emptyHeroHtml(Boolean(user));
+  }
 
   const renderFeaturedFailure = () => {
     const grid = appEl.querySelector<HTMLElement>("#featured-doctors");
     if (!grid) return;
-    grid.innerHTML = `<div class="col-span-full rise-in bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm">
-      <span aria-hidden="true" class="material-symbols-outlined text-[28px] text-outline">cloud_off</span>
-      <span>تعذّر تحميل الأطباء.</span>
-      <button class="press inline-flex items-center gap-1.5 min-h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md" type="button" data-retry-featured><span aria-hidden="true" class="material-symbols-outlined text-[18px]">refresh</span>إعادة المحاولة</button>
+    grid.innerHTML = `<div class="rise-in flex flex-col items-center gap-3 rounded-xl bg-surface-container-lowest px-5 py-8 text-center">
+      <span class="material-symbols-outlined text-[28px] text-outline">cloud_off</span>
+      <p class="text-[16px] text-on-surface-variant">تعذّر تحميل الأطباء.</p>
+      <button class="press inline-flex h-11 items-center gap-1.5 rounded-xl bg-primary px-5 text-[15px] font-semibold text-on-primary" type="button" data-retry-featured><span class="material-symbols-outlined text-[18px]">refresh</span>إعادة المحاولة</button>
     </div>`;
     grid.setAttribute("aria-busy", "false");
     grid.querySelector("[data-retry-featured]")?.addEventListener("click", async () => {
       const gridNow = appEl.querySelector<HTMLElement>("#featured-doctors");
-      if (gridNow) { gridNow.innerHTML = FEATURED_DOCTORS_SKELETON; gridNow.setAttribute("aria-busy", "true"); }
+      if (gridNow) { gridNow.innerHTML = featuredLoadingHtml(); gridNow.setAttribute("aria-busy", "true"); }
       try {
         const rows = await getDoctorsDirectory(7);
         populateHeroFilters(appEl, rows);

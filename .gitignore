@@ -35,3 +35,5 @@ dist/
 .opencode/
 opencode.json
 skills-lock.json
+# taste-skill inspector artefacts
+.taste-skill/
