@@ -41,7 +41,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-md text-label-md text-primary font-semibold">حجز مواعيد طبية موثوق في السودان</span>
 </div>
 <div class="text-center max-w-4xl mb-space-lg">
-<h1 class="font-display-lg text-[2rem] leading-[2.5rem] sm:text-[2.25rem] sm:leading-[2.9rem] lg:text-[2.75rem] lg:leading-[3.4rem] text-on-surface tracking-tight mb-space-sm">
+<h1 class="font-display-lg text-[2.25rem] leading-[2.75rem] sm:text-[2.5rem] sm:leading-[3.1rem] lg:text-[2.75rem] lg:leading-[3.4rem] text-on-surface tracking-tight mb-space-sm">
           احجز موعدك الطبي بكل ثقة وسهولة
         </h1>
 <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
@@ -62,30 +62,30 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 </div>
 </div>
 <!-- City Selector -->
-<div class="lg:col-span-3 bg-surface-container-low rounded-2xl p-space-sm flex items-center gap-space-xs hover:bg-surface-container transition-colors focus-within:ring-2 focus-within:ring-primary/50">
+<div class="lg:col-span-3 relative bg-surface-container-low rounded-2xl p-space-sm flex items-center gap-space-xs hover:bg-surface-container transition-colors focus-within:ring-2 focus-within:ring-primary/50">
 <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
 <span aria-hidden="true" class="material-symbols-outlined text-[22px]">pin_drop</span>
 </div>
 <div class="flex flex-col min-w-0 flex-1">
 <label class="font-label-sm text-label-sm text-secondary" for="hero-city">المدينة</label>
-<select id="hero-city" class="bg-transparent appearance-none h-11 w-full font-label-md text-label-md text-on-surface focus:outline-none cursor-pointer">
+<select id="hero-city" class="bg-transparent appearance-none pe-8 h-11 w-full font-label-md text-label-md text-on-surface focus:outline-none cursor-pointer">
 <option value="">كافة المدن</option>
 </select>
 </div>
-<span aria-hidden="true" class="material-symbols-outlined text-[20px] text-outline shrink-0">expand_more</span>
+<span aria-hidden="true" class="material-symbols-outlined text-[20px] text-outline pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">expand_more</span>
 </div>
 <!-- Insurance Selector -->
-<div class="lg:col-span-3 bg-surface-container-low rounded-2xl p-space-sm flex items-center gap-space-xs hover:bg-surface-container transition-colors focus-within:ring-2 focus-within:ring-primary/50">
+<div class="lg:col-span-3 relative bg-surface-container-low rounded-2xl p-space-sm flex items-center gap-space-xs hover:bg-surface-container transition-colors focus-within:ring-2 focus-within:ring-primary/50">
 <div class="w-10 h-10 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary shrink-0">
 <span aria-hidden="true" class="material-symbols-outlined text-[22px]">verified_user</span>
 </div>
 <div class="flex flex-col min-w-0 flex-1">
 <label class="font-label-sm text-label-sm text-secondary" for="hero-insurance">شركة التأمين</label>
-<select id="hero-insurance" class="bg-transparent appearance-none h-11 w-full font-label-md text-label-md text-on-surface focus:outline-none cursor-pointer">
+<select id="hero-insurance" class="bg-transparent appearance-none pe-8 h-11 w-full font-label-md text-label-md text-on-surface focus:outline-none cursor-pointer">
 <option value="">كافة شركات التأمين</option>
 </select>
 </div>
-<span aria-hidden="true" class="material-symbols-outlined text-[20px] text-outline shrink-0">expand_more</span>
+<span aria-hidden="true" class="material-symbols-outlined text-[20px] text-outline pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">expand_more</span>
 </div>
 <!-- Submit Button -->
 <div class="lg:col-span-1 flex items-center justify-center h-full">
@@ -118,7 +118,7 @@ ${NEXT_APPOINTMENT_SKELETON}
 <section class="w-full px-margin-desktop py-space-xl max-w-7xl mx-auto">
 <div class="flex flex-col md:flex-row md:items-end justify-between mb-space-lg gap-space-sm">
 <div>
-<h2 class="font-display-lg text-display-lg text-on-surface font-bold">التخصصات الطبية</h2>
+<h2 class="font-headline-lg text-headline-lg text-on-surface font-bold">التخصصات الطبية</h2>
 <p class="font-body-md text-body-md text-on-surface-variant">اختر التخصص لتتصفح الأطباء المتاحين فيه</p>
 </div>
 <a class="inline-flex items-center gap-1.5 min-h-11 py-1 text-primary font-label-md text-label-md group link-arrow" href="#doctors">
@@ -231,7 +231,7 @@ ${NEXT_APPOINTMENT_SKELETON}
 <div class="max-w-7xl mx-auto">
 <div class="flex flex-col md:flex-row md:items-end justify-between mb-space-lg gap-space-sm">
 <div>
-<h2 class="font-display-lg text-display-lg text-on-surface font-bold">أطباء متاحون للحجز الآن</h2>
+<h2 class="font-headline-lg text-headline-lg text-on-surface font-bold">أطباء متاحون للحجز الآن</h2>
 <p class="font-body-md text-body-md text-on-surface-variant">الأطباء الذين لديهم مواعيد متاحة فعلياً خلال الأسبوع القادم</p>
 </div>
 <a class="inline-flex items-center gap-1.5 min-h-11 py-1 text-primary font-label-md text-label-md group link-arrow" href="#doctors">
