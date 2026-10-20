@@ -35,7 +35,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 </div>
 <div class="flex flex-col min-w-0 flex-1">
 <label class="font-label-sm text-label-sm text-secondary">التخصص الطبي أو العَرَض</label>
-<input class="bg-transparent font-label-md text-label-md text-on-surface focus:outline-none placeholder:text-outline truncate" placeholder="استشاري قلب وقسطرة..." type="text" value="استشاري قلب وقسطرة"/>
+<input class="bg-transparent h-11 w-full font-label-md text-label-md text-on-surface focus:outline-none placeholder:text-outline truncate" placeholder="استشاري قلب وقسطرة..." type="text" value="استشاري قلب وقسطرة"/>
 </div>
 </div>
 <!-- Doctor or Hospital Name -->
@@ -45,7 +45,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 </div>
 <div class="flex flex-col min-w-0 flex-1">
 <label class="font-label-sm text-label-sm text-secondary">اسم الطبيب أو المستشفى</label>
-<input class="bg-transparent font-label-md text-label-md text-on-surface focus:outline-none placeholder:text-outline truncate" placeholder="مستشفى رويال كير الدولي..." type="text"/>
+<input class="bg-transparent h-11 w-full font-label-md text-label-md text-on-surface focus:outline-none placeholder:text-outline truncate" placeholder="مستشفى رويال كير الدولي..." type="text"/>
 </div>
 </div>
 <!-- City & Neighborhood Selector -->
@@ -55,7 +55,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 </div>
 <div class="flex flex-col min-w-0 flex-1">
 <label class="font-label-sm text-label-sm text-secondary">المدينة أو الحي</label>
-<select class="bg-transparent font-label-md text-label-md text-on-surface focus:outline-none cursor-pointer">
+<select class="bg-transparent h-11 w-full font-label-md text-label-md text-on-surface focus:outline-none cursor-pointer">
 <option>الخرطوم - حي أمبات</option>
 <option>الخرطوم - حي المقرن</option>
 <option>أم درمان - حي أمباجة</option>
@@ -70,7 +70,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 </div>
 <div class="flex flex-col min-w-0 flex-1">
 <label class="font-label-sm text-label-sm text-secondary">شركة التأمين</label>
-<select class="bg-transparent font-label-md text-label-md text-on-surface focus:outline-none cursor-pointer">
+<select class="bg-transparent h-11 w-full font-label-md text-label-md text-on-surface focus:outline-none cursor-pointer">
 <option>شيكان للتأمين</option>
 <option>أتلاف للتأمين</option>
 <option>سلام للتأمين</option>
@@ -89,19 +89,19 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <!-- Fast Filter Pills -->
 <div class="mt-space-md pt-space-sm flex items-center flex-wrap gap-space-xs bg-surface-container-lowest">
 <span class="font-label-sm text-label-sm text-secondary me-2">خيارات سريعة:</span>
-<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md transition-all" type="button">
+<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 min-h-11 lg:min-h-8 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md transition-all" type="button">
 <span class="material-symbols-outlined text-[16px] text-tertiary">today</span>
 <span>كشف عاجل اليوم (Available Today)</span>
 </button>
-<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md transition-all" type="button">
+<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 min-h-11 lg:min-h-8 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md transition-all" type="button">
 <span class="material-symbols-outlined text-[16px] text-primary">videocam</span>
 <span>استشارة مرئية (Telehealth)</span>
 </button>
-<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md transition-all" type="button">
+<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 min-h-11 lg:min-h-8 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md transition-all" type="button">
 <span class="material-symbols-outlined text-[16px] text-secondary">home_health</span>
 <span>زيارة منزلية (Home Visit)</span>
 </button>
-<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md transition-all" type="button">
+<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 min-h-11 lg:min-h-8 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md transition-all" type="button">
 <span class="material-symbols-outlined text-[16px] text-tertiary">check_circle</span>
 <span>تغطية تأمينية كاملة 100%</span>
 </button>
@@ -202,7 +202,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <h2 class="font-display-lg text-display-lg text-on-surface font-bold">التخصصات الطبية المميزة</h2>
 <p class="font-body-md text-body-md text-on-surface-variant">تصفح الرعاية الطبية الدقيقة والموثوقة وفق أعلى المعايير الصحية العالمية</p>
 </div>
-<a class="inline-flex items-center gap-1.5 text-primary font-label-md text-label-md hover:gap-2 transition-all group" href="#">
+<a class="inline-flex items-center gap-1.5 min-h-11 py-1 text-primary font-label-md text-label-md hover:gap-2 transition-all group" href="#">
 <span>عرض جميع التخصصات (48 تخصص)</span>
 <span class="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-x-1">arrow_back</span>
 </a>
@@ -387,7 +387,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm text-secondary">رسوم الكشف:</span>
 <span class="font-headline-sm text-headline-sm text-on-surface font-bold">3000 ج.س</span>
 </div>
-<button class="px-space-md py-2.5 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-all shadow-sm" type="button">
+<button class="px-space-md py-2.5 min-h-11 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-all shadow-sm" type="button">
               احجز موعداً
             </button>
 </div>
@@ -437,7 +437,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm text-secondary">رسوم الكشف:</span>
 <span class="font-headline-sm text-headline-sm text-on-surface font-bold">2500 ج.س</span>
 </div>
-<button class="px-space-md py-2.5 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-all shadow-sm" type="button">
+<button class="px-space-md py-2.5 min-h-11 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-all shadow-sm" type="button">
               احجز موعداً
             </button>
 </div>
@@ -487,7 +487,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm text-secondary">رسوم الكشف:</span>
 <span class="font-headline-sm text-headline-sm text-on-surface font-bold">2000 ج.س</span>
 </div>
-<button class="px-space-md py-2.5 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-all shadow-sm" type="button">
+<button class="px-space-md py-2.5 min-h-11 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-all shadow-sm" type="button">
               احجز موعداً
             </button>
 </div>
@@ -537,7 +537,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm text-secondary">رسوم الكشف:</span>
 <span class="font-headline-sm text-headline-sm text-on-surface font-bold">2800 ج.س</span>
 </div>
-<button class="px-space-md py-2.5 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-all shadow-sm" type="button">
+<button class="px-space-md py-2.5 min-h-11 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-all shadow-sm" type="button">
               احجز موعداً
             </button>
 </div>
@@ -547,14 +547,14 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 </section>
 <!-- VALUE PROPOSITION / WHY MIAADI (لماذا تختار ميعادي) -->
 <section class="w-full px-margin-desktop py-space-xl max-w-7xl mx-auto">
-<div class="bg-primary text-on-primary rounded-3xl p-space-xl relative overflow-hidden shadow-xl">
+<div class="advantage-card bg-primary text-on-primary rounded-3xl p-space-xl relative overflow-hidden shadow-xl">
 <!-- Decorative geometric health grid lines -->
 <div class="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-primary-container/40 blur-2xl pointer-events-none"></div>
 <div class="relative z-10">
 <div class="max-w-2xl mb-space-lg">
-<span class="font-label-sm text-label-sm uppercase tracking-widest text-primary-fixed mb-1 inline-block">The Miaadi Advantage</span>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-primary/80 mb-1 inline-block">The Miaadi Advantage</span>
 <h2 class="font-display-lg text-display-lg text-on-primary font-bold mb-space-xs">لماذا تختار منصة ميعادي لرعايتك الصحية؟</h2>
-<p class="font-body-md text-body-md text-on-primary-container">
+<p class="font-body-md text-body-md text-on-primary/85">
             صممت المنصة بمعايير وطنية فائقة لتضع المريض في قلب المنظومة العلاجية، موفرة تجربة استشفاء ذكية تلغي أوقات الانتظار الورقية وتمنحك الثقة الكاملة.
           </p>
 </div>
@@ -565,7 +565,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="material-symbols-outlined text-[26px]">verified</span>
 </div>
 <h3 class="font-headline-sm text-headline-sm text-on-primary font-bold mb-1">اعتماد وزارة الصحة والضمان</h3>
-<p class="font-body-sm text-body-sm text-on-primary-container">
+<p class="font-body-sm text-body-sm text-on-primary">
               جميع الأطباء والمستشفيات مرخصون رسميًا، مع ربط مباشر لشبكات التأمين المعتمدة لدى مجلس الضمان الصحي (CCHI).
             </p>
 </div>
@@ -575,7 +575,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="material-symbols-outlined text-[26px]">fingerprint</span>
 </div>
 <h3 class="font-headline-sm text-headline-sm text-on-primary font-bold mb-1">ربط فوري وآمن عبر نفاذ</h3>
-<p class="font-body-sm text-body-sm text-on-primary-container">
+<p class="font-body-sm text-body-sm text-on-primary">
               تسجيل دخول موحد عبر النفاذ الوطني لحفظ ملفك وسجلك الصحي بأعلى بروتوكولات الأمان السيبراني المعتمدة NCA.
             </p>
 </div>
@@ -585,7 +585,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="material-symbols-outlined text-[26px]">airplane_ticket</span>
 </div>
 <h3 class="font-headline-sm text-headline-sm text-on-primary font-bold mb-1">تذكرة ذكية بدون انتظار</h3>
-<p class="font-body-sm text-body-sm text-on-primary-container">
+<p class="font-body-sm text-body-sm text-on-primary">
               تصريح دخول رقمي بباركود ذكي للمرور المباشر لعيادة الطبيب وتجاوز طوابير الاستقبال الورقية بالكامل.
             </p>
 </div>
@@ -595,7 +595,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <span class="material-symbols-outlined text-[26px]">video_chat</span>
 </div>
 <h3 class="font-headline-sm text-headline-sm text-on-primary font-bold mb-1">عيادات افتراضية 24/7</h3>
-<p class="font-body-sm text-body-sm text-on-primary-container">
+<p class="font-body-sm text-body-sm text-on-primary">
               استشارات طبية عالية الدقة صوت وصورة مع نخبة الأطباء من راحة منزلك، مع إصدار الوصفات الطبية الإلكترونية وصرفها فوراً.
             </p>
 </div>

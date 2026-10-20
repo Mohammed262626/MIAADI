@@ -4,12 +4,12 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <section class="w-full bg-surface-container-low py-space-sm px-margin-desktop shadow-sm">
 <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-space-sm">
 <nav class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md">
-<a class="hover:text-primary transition-colors flex items-center gap-1" href="#">
+<a class="hover:text-primary transition-colors flex items-center gap-1 min-h-11 lg:min-h-7 px-1 -mx-1" href="#">
 <span class="material-symbols-outlined text-[16px]">home</span>
 <span>الرئيسية</span>
 </a>
 <span class="material-symbols-outlined text-[14px]">chevron_left</span>
-<a class="hover:text-primary transition-colors" href="#" id="dp-crumb-spec">أمراض القلب والشرايين</a>
+<a class="inline-flex items-center min-h-11 lg:min-h-7 hover:text-primary transition-colors" href="#" id="dp-crumb-spec">أمراض القلب والشرايين</a>
 <span class="material-symbols-outlined text-[14px]">chevron_left</span>
 <span class="text-on-surface font-semibold" id="dp-crumb-name">د. طارق المنصور</span>
 </nav>
@@ -18,7 +18,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <span class="material-symbols-outlined text-[16px] text-tertiary">check_circle</span>
 <span>مقبول عبر نفاذ الوطني • Nafath Verified</span>
 </div>
-<button class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" type="button">
+<button class="flex items-center gap-1 min-h-11 px-1 -mx-1 rounded-lg text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" type="button">
 <span class="material-symbols-outlined text-[18px]">share</span>
 <span>مشاركة الملف</span>
 </button>
@@ -253,7 +253,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 </div>
 <div class="pt-space-xs mt-space-xs">
-<a class="inline-flex items-center gap-1.5 text-primary hover:text-primary-container font-label-md text-label-md font-semibold transition-colors" href="#" id="dp-map-link">
+<a class="inline-flex items-center gap-1.5 min-h-11 px-1 -mx-1 text-primary hover:text-primary-container font-label-md text-label-md font-semibold transition-colors" href="#" id="dp-map-link">
 <span>فتح الموقع في خرائط Google</span>
 <span class="material-symbols-outlined text-[16px]">open_in_new</span>
 </a>
@@ -387,10 +387,10 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <span id="dp-month-label">أكتوبر 2024 • October</span>
 </span>
 <div class="flex items-center gap-1">
-<button class="w-7 h-7 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface transition-colors" type="button">
+<button class="w-11 h-11 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface transition-colors" type="button">
 <span class="material-symbols-outlined text-[16px]" id="dp-days-back">chevron_right</span>
 </button>
-<button class="w-7 h-7 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface transition-colors" type="button">
+<button class="w-11 h-11 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface transition-colors" type="button">
 <span class="material-symbols-outlined text-[16px]" id="dp-days-fwd">chevron_left</span>
 </button>
 </div>
@@ -434,7 +434,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <!-- Morning Slots -->
 <div class="mb-space-sm">
 <div class="flex items-center gap-1.5 text-on-surface font-label-md text-label-md font-bold mb-2">
-<span class="material-symbols-outlined text-amber-500 text-[18px]">wb_sunny</span>
+<span class="material-symbols-outlined text-warning text-[18px]">wb_sunny</span>
 <span>الفترة الصباحية • Morning Slots</span>
 </div>
 <div class="grid grid-cols-4 gap-space-xs" id="morning-slots">
@@ -517,7 +517,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <span class="w-2 h-2 rounded-full bg-tertiary"></span>
 <span id="dp-insurer-name">شيكان للتأمين • الفئة الذهبية</span>
 </div>
-<button class="text-primary font-bold hover:underline" type="button" id="dp-insurer-change">تغيير</button>
+<button class="inline-flex items-center min-h-11 px-2 -mx-2 rounded-lg text-primary font-bold hover:underline" type="button" id="dp-insurer-change">تغيير</button>
 </div>
 </div>
 <!-- 6. Price Summary & Proceed CTA (inside the booking card) -->

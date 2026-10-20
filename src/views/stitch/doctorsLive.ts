@@ -172,7 +172,7 @@ ${doc.experience_years ? `<span class="flex items-center gap-1">
 </div>
 <div class="flex items-center gap-space-md pt-2 flex-wrap">
 <div class="flex items-center gap-1 bg-amber-50 text-amber-900 px-2.5 py-1 rounded-lg">
-<span class="material-symbols-outlined text-amber-500 text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-warning text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
 <span class="font-label-md text-label-md font-bold tabular-nums">${doc.rating === null ? "—" : doc.rating.toFixed(1)}</span>
 <span class="text-secondary font-label-sm text-label-sm mr-1 tabular-nums">(${escapeHtml(doc.reviews_count ?? 0)} مراجع)</span>
 </div>
@@ -195,7 +195,7 @@ ${doc.experience_years ? `<span class="flex items-center gap-1">
 ${chips.map((s) => {
   const conflict = slotConflict(doc, s);
   return `
-<button class="relative py-2 rounded-lg font-label-sm text-label-sm text-center shadow-xs transition-colors ${conflict ? "bg-error-container text-on-error-container ring-1 ring-error" : "bg-surface-container-lowest text-on-surface hover:bg-primary hover:text-on-primary"}" data-book-doctor="${escapeHtml(doc.id)}" type="button"${conflict ? ` title="${CONFLICT_NOTE[conflict]}"` : ""}>
+<button class="relative min-h-11 lg:min-h-8 py-2 rounded-lg font-label-sm text-label-sm text-center shadow-xs transition-colors ${conflict ? "bg-error-container text-on-error-container ring-1 ring-error" : "bg-surface-container-lowest text-on-surface hover:bg-primary hover:text-on-primary"}" data-book-doctor="${escapeHtml(doc.id)}" type="button"${conflict ? ` title="${CONFLICT_NOTE[conflict]}"` : ""}>
 ${escapeHtml(slotChipLabel(s, first!.available_date))}${conflict ? `<span class="absolute -top-1.5 -end-1.5 bg-error text-on-error p-0.5 rounded-full shadow" title="${CONFLICT_NOTE[conflict]}"><span class="material-symbols-outlined text-[12px]">error</span></span>` : ""}
 </button>`;
 }).join("")}
@@ -292,7 +292,7 @@ function activePills(root: ParentNode, f: Filters) {
   box.innerHTML = `<span class="font-label-sm text-label-sm text-secondary">الفلاتر النشطة:</span>${pills.map((p) => `
 <span class="inline-flex items-center gap-1 px-3 py-1 bg-surface-container-low text-on-surface rounded-full font-label-sm text-label-sm">
 ${escapeHtml(p.label)}
-<button class="material-symbols-outlined text-[14px] hover:text-error cursor-pointer" data-clear="${p.field}" type="button">close</button>
+<button class="material-symbols-outlined text-[14px] hover:text-error cursor-pointer grid place-items-center -my-3 -me-2 min-w-11 min-h-11 lg:min-w-6 lg:min-h-6" data-clear="${p.field}" type="button">close</button>
 </span>`).join("")}`;
 }
 
@@ -313,12 +313,12 @@ function render(root: HTMLElement, f: Filters) {
   const count = root.querySelector<HTMLElement>("#doc-count");
   if (count) count.textContent = `${rows.length} طبيب`;
   const sub = root.querySelector<HTMLElement>("#doc-count-sub");
-  if (sub) sub.textContent = `${rows.length} verified certified doctors ready for immediate booking`;
+  if (sub) sub.textContent = `متاح للحجز الآن • جميعهم موثّقون ومعتمدون`;
   const pag = root.querySelector<HTMLElement>("#doc-pagination");
   if (pag) {
     pag.className = rows.length > 10 ? "flex items-center justify-between bg-surface-container-lowest rounded-2xl px-space-lg py-space-md shadow-sm mt-space-sm" : "hidden items-center justify-between bg-surface-container-lowest rounded-2xl px-space-lg py-space-md shadow-sm mt-space-sm";
     pag.innerHTML = rows.length > visibleCount
-      ? `<span class="font-label-sm text-label-sm text-secondary tabular-nums">${rows.length - visibleCount} طبيب آخر</span><button id="doc-more" class="px-space-lg py-2 bg-primary hover:bg-primary-container text-on-primary rounded-full font-label-md text-label-md transition-all shadow-sm" type="button">عرض المزيد</button>`
+      ? `<span class="font-label-sm text-label-sm text-secondary tabular-nums">${rows.length - visibleCount} طبيب آخر</span><button id="doc-more" class="px-space-lg py-2 min-h-11 bg-primary hover:bg-primary-container text-on-primary rounded-full font-label-md text-label-md transition-all shadow-sm" type="button">عرض المزيد</button>`
       : "";
   }
   activePills(root, f);
@@ -344,7 +344,7 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
     ROWS = await getDoctorsDirectory(7);
   } catch {
     const list = appEl.querySelector<HTMLElement>("#doc-list");
-    if (list) list.innerHTML = `<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm text-center text-on-surface-variant font-body-md text-body-md">تعذّر تحميل الأطباء. حدّث الصفحة للمحاولة مرة أخرى.</div>`;
+    if (list) list.innerHTML = `<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm"><span>تعذّر تحميل الأطباء.</span><button class="min-h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md" data-path="doctors-and-specialties" type="button">إعادة المحاولة</button></div>`;
     return;
   }
 

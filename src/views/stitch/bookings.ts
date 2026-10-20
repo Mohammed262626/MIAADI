@@ -29,18 +29,18 @@ export const BOOKINGS_MAIN = `<div class="flex flex-col w-full">
 </h1>
 </div>
 <!-- Segmented Status Tabs -->
-<div class="flex items-center bg-surface-container-high/60 p-1.5 rounded-2xl shadow-inner max-w-full overflow-x-auto">
-<button class="booking-tab active flex items-center gap-space-xs px-space-lg py-2.5 rounded-xl font-label-md text-label-md bg-surface-container-lowest text-primary shadow-sm transition-all duration-200" id="tab-upcoming" onclick="switchBookingTab('upcoming')">
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-1 bg-surface-container-high/60 p-1.5 rounded-2xl shadow-inner">
+<button class="booking-tab active flex items-center justify-center gap-space-xs px-space-sm lg:px-space-lg py-2.5 min-h-11 rounded-xl font-label-md text-label-md bg-surface-container-lowest text-primary shadow-sm transition-all duration-200" id="tab-upcoming" onclick="switchBookingTab('upcoming')">
 <span class="material-symbols-outlined text-[18px]">event_available</span>
 <span>المواعيد القادمة</span>
 <span class="bg-primary text-on-primary rounded-full px-2 py-0.5 text-[11px] font-bold mr-1" id="bk-count-upcoming">2</span>
 </button>
-<button class="booking-tab flex items-center gap-space-xs px-space-lg py-2.5 rounded-xl font-label-md text-label-md text-secondary hover:text-on-surface transition-all duration-200" id="tab-past" onclick="switchBookingTab('past')">
+<button class="booking-tab flex items-center justify-center gap-space-xs px-space-sm lg:px-space-lg py-2.5 min-h-11 rounded-xl font-label-md text-label-md text-secondary hover:text-on-surface transition-all duration-200" id="tab-past" onclick="switchBookingTab('past')">
 <span class="material-symbols-outlined text-[18px]">history</span>
 <span>الاستشارات السابقة</span>
 <span class="bg-surface-container text-secondary rounded-full px-2 py-0.5 text-[11px] mr-1" id="bk-count-past">8</span>
 </button>
-<button class="booking-tab flex items-center gap-space-xs px-space-lg py-2.5 rounded-xl font-label-md text-label-md text-secondary hover:text-on-surface transition-all duration-200" id="tab-cancelled" onclick="switchBookingTab('cancelled')">
+<button class="booking-tab col-span-2 sm:col-span-1 flex items-center justify-center gap-space-xs px-space-sm lg:px-space-lg py-2.5 min-h-11 rounded-xl font-label-md text-label-md text-secondary hover:text-on-surface transition-all duration-200" id="tab-cancelled" onclick="switchBookingTab('cancelled')">
 <span class="material-symbols-outlined text-[18px]">event_busy</span>
 <span>المواعيد الملغاة</span>
 <span class="bg-surface-container text-secondary rounded-full px-2 py-0.5 text-[11px] mr-1" id="bk-count-cancelled">1</span>

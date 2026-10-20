@@ -307,7 +307,7 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
       return `<div class="py-2 px-1 text-center rounded-xl bg-surface-container text-secondary opacity-40 font-label-md text-label-md cursor-not-allowed line-through">${escapeHtml(formatTime(s.start_time))}</div>`;
     }
     const active = selected?.id === s.id;
-    return `<button class="time-slot py-2 px-1 text-center rounded-xl transition-all ${
+    return `<button class="time-slot py-2 px-1 min-h-11 text-center rounded-xl transition-all ${
       active
         ? "bg-primary text-on-primary font-label-md text-label-md shadow-sm font-bold flex items-center justify-center gap-1"
         : "bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md"

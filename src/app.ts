@@ -109,12 +109,12 @@ function render() {
   if (route.name === "admin" && !canAdmin && !demoMode) { location.hash = "#home"; return; }
 
   if (route.name === "admin" && !route.param) {
-    appEl.innerHTML = `<main class="w-full pt-20 bg-surface min-h-dvh"><div id="admin-boot" class="p-space-xl text-center text-secondary font-body-md text-body-md flex items-center justify-center gap-space-sm"><span class="material-symbols-outlined animate-spin">progress_activity</span> جاري تحميل لوحة العيادة…</div></main><div id="auth-mount"></div>`;
+    appEl.innerHTML = `<main class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"><div id="admin-boot" class="p-space-xl text-center text-secondary font-body-md text-body-md flex items-center justify-center gap-space-sm"><span class="material-symbols-outlined animate-spin">progress_activity</span> جاري تحميل لوحة العيادة…</div></main><div id="auth-mount"></div>`;
   } else {
     const staticHtml = STATIC_VIEWS[route.name];
     const mainOpen = staticHtml
-      ? `<main class="w-full pt-20 bg-surface min-h-dvh">${staticHtml}</main>`
-      : `<main id="main-root" class="w-full pt-20 bg-surface min-h-dvh"></main>`;
+      ? `<main class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh">${staticHtml}</main>`
+      : `<main id="main-root" class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"></main>`;
     appEl.innerHTML = `${renderSiteHeader(state.currentUser)}${mainOpen}${renderSiteFooter()}<div id="auth-mount"></div>`;
   }
 
@@ -190,14 +190,23 @@ function wireShell() {
     btn.id = "theme-toggle";
     btn.type = "button";
     btn.title = "الوضع الداكن";
-    btn.className = "w-9 h-9 rounded-full border border-outline-variant text-on-surface grid place-items-center hover:bg-surface-container-high transition-all";
+    btn.className = "shrink-0 w-11 h-11 rounded-full border border-outline-variant text-on-surface grid place-items-center hover:bg-surface-container-high transition-all";
     btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">dark_mode</span>';
+    btn.setAttribute("aria-label", "تبديل المظهر الداكن أو الفاتح");
     headRow.appendChild(btn);
+    const paintToggle = (mode: string) => {
+      btn.setAttribute("aria-pressed", String(mode === "dark"));
+      btn.title = mode === "dark" ? "المظهر الفاتح" : "المظهر الداكن";
+      const icon = btn.querySelector(".material-symbols-outlined");
+      if (icon) icon.textContent = mode === "dark" ? "light_mode" : "dark_mode";
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", mode === "dark" ? "#101416" : "#00685F");
+    };
+    paintToggle(document.documentElement.dataset.theme || "light");
     btn.addEventListener("click", () => {
       const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
       document.documentElement.dataset.theme = next;
       try { localStorage.setItem("miaadi.theme", next); } catch {}
-      btn.querySelector(".material-symbols-outlined")!.textContent = next === "dark" ? "light_mode" : "dark_mode";
+      paintToggle(next);
     });
   }
 
@@ -866,7 +875,11 @@ async function runHousekeeping() {
 
 async function init() {
   registerStitchGlobals();
-  state.currentUser = await getCurrentUser().catch(() => null);
+  // Cap the auth lookup so a stalled request can never hold the first paint.
+  state.currentUser = await Promise.race([
+    getCurrentUser().catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+  ]);
   state.route = parseRoute();
   appEl.addEventListener("click", handleClick);
   window.addEventListener("hashchange", () => {
@@ -885,9 +898,11 @@ async function init() {
       render();
     });
   } catch { /* ignore */ }
-  await refreshAll();
-  void runHousekeeping();
+  // Paint the shell and layout immediately; the catalog query can take
+  // several seconds and must never leave the viewport blank.
   render();
+  void refreshAll();
+  void runHousekeeping();
   try { subscribeToRealtimeUpdates(() => void refreshDoctors().then(render), () => void refreshAll().then(render)); } catch { /* ignore */ }
 }
 void init();

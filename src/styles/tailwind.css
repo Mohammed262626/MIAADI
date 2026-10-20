@@ -22,7 +22,7 @@
   --color-on-surface-variant: #3d4947;
   --color-inverse-surface: #2d3133;
   --color-inverse-on-surface: #eff1f3;
-  --color-outline: #6d7a77;
+  --color-outline: #5b6663;
   --color-outline-variant: #bcc9c6;
 
   --color-primary: #00685f;
@@ -100,47 +100,47 @@
   --font-body-sm: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
 
   /* ---- typography scale ---- */
-  --text-display-lg: 32px;
-  --text-display-lg--line-height: 40px;
+  --text-display-lg: 2rem;
+  --text-display-lg--line-height: 2.5rem;
   --text-display-lg--letter-spacing: -0.02em;
   --text-display-lg--font-weight: 700;
 
-  --text-headline-lg: 26px;
-  --text-headline-lg--line-height: 34px;
+  --text-headline-lg: 1.625rem;
+  --text-headline-lg--line-height: 2.125rem;
   --text-headline-lg--letter-spacing: -0.01em;
   --text-headline-lg--font-weight: 700;
 
-  --text-headline-md: 22px;
-  --text-headline-md--line-height: 30px;
+  --text-headline-md: 1.375rem;
+  --text-headline-md--line-height: 1.875rem;
   --text-headline-md--letter-spacing: -0.01em;
   --text-headline-md--font-weight: 600;
 
-  --text-headline-sm: 18px;
-  --text-headline-sm--line-height: 26px;
+  --text-headline-sm: 1.125rem;
+  --text-headline-sm--line-height: 1.625rem;
   --text-headline-sm--font-weight: 600;
 
-  --text-body-lg: 16px;
-  --text-body-lg--line-height: 24px;
+  --text-body-lg: 1rem;
+  --text-body-lg--line-height: 1.5rem;
   --text-body-lg--font-weight: 400;
 
-  --text-body-md: 14px;
-  --text-body-md--line-height: 22px;
+  --text-body-md: 0.875rem;
+  --text-body-md--line-height: 1.375rem;
   --text-body-md--font-weight: 400;
 
-  --text-body-sm: 12px;
-  --text-body-sm--line-height: 18px;
+  --text-body-sm: 0.75rem;
+  --text-body-sm--line-height: 1.125rem;
   --text-body-sm--font-weight: 400;
 
-  --text-label-lg: 15px;
-  --text-label-lg--line-height: 20px;
+  --text-label-lg: 0.9375rem;
+  --text-label-lg--line-height: 1.25rem;
   --text-label-lg--font-weight: 600;
 
-  --text-label-md: 13px;
-  --text-label-md--line-height: 18px;
+  --text-label-md: 0.8125rem;
+  --text-label-md--line-height: 1.125rem;
   --text-label-md--font-weight: 600;
 
-  --text-label-sm: 11px;
-  --text-label-sm--line-height: 14px;
+  --text-label-sm: 0.75rem;
+  --text-label-sm--line-height: 1rem;
   --text-label-sm--letter-spacing: 0.02em;
   --text-label-sm--font-weight: 600;
 }
@@ -168,6 +168,11 @@ body {
   direction: ltr;
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
   vertical-align: middle;
+  /* Keep icon boxes square even before the icon font loads, so a slow font
+     never renders ligature words or widens the layout. */
+  width: 1em;
+  height: 1em;
+  flex: none;
   -webkit-font-feature-settings: "liga";
   -webkit-font-smoothing: antialiased;
 }
@@ -192,12 +197,17 @@ html { scroll-behavior: smooth; }
 .modal-enter { animation: modal-pop 200ms ease-out; }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
 
 @media (max-width: 480px) {
   :root { --spacing-margin-desktop: 1rem; }
 }
+
+/* the brand panel keeps a dark surface in dark mode (bright teal would glare) */
+html[data-theme="dark"] .advantage-card { background: #005049; }
+html[data-theme="dark"] .advantage-card :is(h2, h3, p, .uppercase) { color: #f4fffc; }
 
 /* dark mode: only the tokens flip — every utility keeps working */
 html[data-theme="dark"] {

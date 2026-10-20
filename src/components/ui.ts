@@ -37,7 +37,7 @@ export function ratingInline(seed: string): string {
   return `<span class="inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant">${icon("star", {
     size: 15,
     filled: true,
-    className: "text-amber-500",
+    className: "text-warning",
   })}<span class="tabular-nums">${pseudoRating(seed).toFixed(1)}</span></span>`;
 }
 

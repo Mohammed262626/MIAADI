@@ -12,7 +12,7 @@ export const PROFILE_MAIN = `
         <span class="material-symbols-outlined text-[16px]">home</span>
         <span>الرئيسية</span>
       </a>
-      <span class="material-symbols-outlined text-[14px] text-outline-variant">chevron_left</span>
+      <span class="material-symbols-outlined text-[14px] text-outline">chevron_left</span>
       <span class="text-primary font-semibold">الملف الشخصي وإعدادات الحساب</span>
     </nav>
     <div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm bg-surface-container-low px-space-md py-1.5 rounded-full self-start sm:self-auto">

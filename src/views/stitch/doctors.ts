@@ -4,7 +4,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <section class="w-full px-margin-desktop py-space-md bg-surface-container-low">
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
 <div class="flex items-center gap-space-xs text-secondary font-label-md text-label-md">
-<a class="hover:text-primary transition-colors" href="#">الرئيسية</a>
+<a class="inline-flex items-center min-h-11 lg:min-h-7 px-1 -mx-1 hover:text-primary transition-colors" href="#">الرئيسية</a>
 <span class="material-symbols-outlined text-[16px]">chevron_left</span>
 <span class="text-on-surface font-semibold">دليل الأطباء والاستشاريين</span>
 <span class="mx-space-xs text-outline-variant">|</span>
@@ -30,7 +30,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <span class="material-symbols-outlined text-primary text-[22px]">tune</span>
 <h2 class="font-headline-sm text-headline-sm text-on-surface">فلترة النتائج</h2>
 </div>
-<button class="text-primary hover:text-primary-container font-label-sm text-label-sm transition-colors" id="reset-filters" type="button">
+<button class="inline-flex items-center min-h-11 lg:min-h-7 px-2 -mx-2 rounded-lg text-primary hover:text-primary-container font-label-sm text-label-sm transition-colors" id="reset-filters" type="button">
               إعادة تعيين الكل
             </button>
 </div>
@@ -39,7 +39,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <label class="font-label-md text-label-md text-on-surface font-semibold">البحث بالاسم أو العيادة</label>
 <div class="relative w-full">
 <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
-<input class="w-full pr-10 pl-space-md py-2.5 bg-surface-container-low rounded-xl text-on-surface font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all" id="doc-search" placeholder="ابحث عن طبيب، تخصص، مستشفى..." type="text"/>
+<input class="w-full pr-10 pl-space-md min-h-11 py-2.5 bg-surface-container-low rounded-xl text-on-surface font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all" id="doc-search" placeholder="ابحث عن طبيب، تخصص، مستشفى..." type="text"/>
 </div>
 </div>
 <!-- Location & City -->
@@ -47,7 +47,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <label class="font-label-md text-label-md text-on-surface font-semibold">المدينة والفرع</label>
 <div class="relative w-full">
 <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[20px]">location_on</span>
-<select class="w-full pr-10 pl-space-md py-2.5 bg-surface-container-low rounded-xl text-on-surface font-body-sm text-body-sm appearance-none focus:outline-none cursor-pointer" id="doc-city">
+<select class="w-full pr-10 pl-space-md min-h-11 py-2.5 bg-surface-container-low rounded-xl text-on-surface font-body-sm text-body-sm appearance-none focus:outline-none cursor-pointer" id="doc-city">
 <option selected="">الخرطوم (كافة الأحياء والمراكز)</option>
 <option>أم درمان</option>
 <option>الخرطوم بحري</option>
@@ -82,20 +82,20 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <div class="flex flex-col gap-space-xs">
 <label class="font-label-md text-label-md text-on-surface font-semibold">المواعيد المتاحة</label>
 <div class="flex flex-wrap gap-1.5" id="doc-avail">
-<button class="px-space-md py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm flex items-center gap-1" data-avail="any" type="button">
+<button class="px-space-md py-1.5 min-h-11 lg:min-h-7 rounded-full bg-primary text-on-primary font-label-sm text-label-sm flex items-center gap-1" data-avail="any" type="button">
 <span class="material-symbols-outlined text-[14px]">check</span>
 <span>الكل (أي موعد)</span>
 </button>
-<button class="px-space-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors" data-avail="today" type="button">
+<button class="px-space-md py-1.5 min-h-11 lg:min-h-7 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors" data-avail="today" type="button">
                 اليوم
               </button>
-<button class="px-space-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors" data-avail="tomorrow" type="button">
+<button class="px-space-md py-1.5 min-h-11 lg:min-h-7 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors" data-avail="tomorrow" type="button">
                 غداً
               </button>
-<button class="px-space-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors" data-avail="3days" type="button">
+<button class="px-space-md py-1.5 min-h-11 lg:min-h-7 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors" data-avail="3days" type="button">
                 خلال 3 أيام
               </button>
-<button class="px-space-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors" data-avail="7days" type="button">
+<button class="px-space-md py-1.5 min-h-11 lg:min-h-7 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors" data-avail="7days" type="button">
                 خلال 7 أيام
               </button>
 </div>
@@ -117,9 +117,9 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <div class="flex flex-col gap-space-xs">
 <label class="font-label-md text-label-md text-on-surface font-semibold">جنس الطبيب</label>
 <div class="grid grid-cols-3 gap-1 bg-surface-container-low p-1 rounded-xl text-center" id="doc-gender">
-<button class="py-1.5 rounded-lg bg-surface-container-lowest font-label-sm text-label-sm text-primary shadow-sm" data-gender="all" type="button">الكل</button>
-<button class="py-1.5 rounded-lg font-label-sm text-label-sm text-secondary hover:text-on-surface" data-gender="female" type="button">طبيبة (أنثى)</button>
-<button class="py-1.5 rounded-lg font-label-sm text-label-sm text-secondary hover:text-on-surface" data-gender="male" type="button">طبيب (ذكر)</button>
+<button class="min-h-11 lg:min-h-7 py-1.5 rounded-lg bg-surface-container-lowest font-label-sm text-label-sm text-primary shadow-sm" data-gender="all" type="button">الكل</button>
+<button class="min-h-11 lg:min-h-7 py-1.5 rounded-lg font-label-sm text-label-sm text-secondary hover:text-on-surface" data-gender="female" type="button">طبيبة (أنثى)</button>
+<button class="min-h-11 lg:min-h-7 py-1.5 rounded-lg font-label-sm text-label-sm text-secondary hover:text-on-surface" data-gender="male" type="button">طبيب (ذكر)</button>
 </div>
 </div>
 <!-- Insurance Provider Filter -->
@@ -129,7 +129,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <span class="text-tertiary font-label-sm text-label-sm">مباشر CCHI</span>
 </div>
 <div class="relative w-full">
-<select class="w-full pr-space-md pl-space-md py-2 bg-surface-container-low rounded-xl text-on-surface font-body-sm text-body-sm appearance-none focus:outline-none cursor-pointer" id="doc-insurance">
+<select class="w-full pr-space-md pl-space-md py-2 min-h-11 lg:min-h-7 bg-surface-container-low rounded-xl text-on-surface font-body-sm text-body-sm appearance-none focus:outline-none cursor-pointer" id="doc-insurance">
 <option selected="">كافة شركات التأمين المعتمدة</option>
 <option>شيكان للتأمين</option>
 <option>أتلاف للتأمين</option>
@@ -158,15 +158,15 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <div class="flex flex-col gap-space-xs">
 <label class="font-label-md text-label-md text-on-surface font-semibold">تقييم المرضى</label>
 <div class="flex items-center gap-2" id="doc-rating">
-<button class="flex-1 py-1.5 bg-surface-container-low hover:bg-surface-container rounded-lg flex items-center justify-center gap-1 font-label-sm text-label-sm text-on-surface" data-rating="0" type="button">
-<span class="material-symbols-outlined text-amber-500 text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<button class="flex-1 min-h-11 lg:min-h-7 py-1.5 bg-surface-container-low hover:bg-surface-container rounded-lg flex items-center justify-center gap-1 font-label-sm text-label-sm text-on-surface" data-rating="0" type="button">
+<span class="material-symbols-outlined text-warning text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
 <span>الكل</span>
 </button>
-<button class="flex-1 py-1.5 bg-surface-container-low hover:bg-surface-container rounded-lg flex items-center justify-center gap-1 font-label-sm text-label-sm text-on-surface" data-rating="4.8" type="button">
-<span class="material-symbols-outlined text-amber-500 text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<button class="flex-1 min-h-11 lg:min-h-7 py-1.5 bg-surface-container-low hover:bg-surface-container rounded-lg flex items-center justify-center gap-1 font-label-sm text-label-sm text-on-surface" data-rating="4.8" type="button">
+<span class="material-symbols-outlined text-warning text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
 <span>4.8+</span>
 </button>
-<button class="flex-1 py-1.5 bg-primary-container text-on-primary-container rounded-lg flex items-center justify-center gap-1 font-label-sm text-label-sm font-semibold" data-rating="4.5" type="button">
+<button class="flex-1 min-h-11 lg:min-h-7 py-1.5 bg-primary-container text-on-primary-container rounded-lg flex items-center justify-center gap-1 font-label-sm text-label-sm font-semibold" data-rating="4.5" type="button">
 <span class="material-symbols-outlined text-amber-300 text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
 <span>4.5+</span>
 </button>
@@ -188,7 +188,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <main class="lg:col-span-8 xl:col-span-9 flex flex-col gap-space-md">
 <!-- Mobile Filter Toggle Bar -->
 <div class="lg:hidden bg-surface-container-lowest rounded-2xl px-space-md py-space-xs shadow-sm flex items-center justify-between" id="filters-bar">
-<button class="flex items-center gap-space-xs px-space-md py-2 rounded-xl bg-surface-container-low text-on-surface font-label-md text-label-md font-semibold" id="filters-toggle" type="button">
+<button class="flex items-center gap-space-xs px-space-md py-2 min-h-11 rounded-xl bg-surface-container-low text-on-surface font-label-md text-label-md font-semibold" id="filters-toggle" type="button">
 <span class="material-symbols-outlined text-[18px]">tune</span>
 <span id="filters-toggle-label">فلترة النتائج</span>
 <span id="filters-badge" class="hidden min-w-5 h-5 px-1 grid place-items-center rounded-full bg-primary text-on-primary text-[11px] font-bold tabular-nums">0</span>
@@ -208,7 +208,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <div class="flex items-center gap-space-sm">
 <span class="font-label-sm text-label-sm text-secondary whitespace-nowrap">الترتيب حسب:</span>
 <div class="relative">
-<select class="pr-space-md pl-8 py-2 bg-surface-container-low rounded-xl text-on-surface font-label-md text-label-md appearance-none focus:outline-none cursor-pointer" id="doc-sort">
+<select class="min-h-11 lg:min-h-7 pr-space-md pl-8 py-2 bg-surface-container-low rounded-xl text-on-surface font-label-md text-label-md appearance-none focus:outline-none cursor-pointer" id="doc-sort">
 <option value="rating">الأعلى تقييماً (Top Rated)</option>
 <option value="earliest">أقرب موعد متاح (Earliest Slot)</option>
 <option value="price">الأقل سعراً (Lowest Price)</option>

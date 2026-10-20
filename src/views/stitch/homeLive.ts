@@ -83,7 +83,7 @@ function featuredCardHtml(doc: DoctorDirectoryRow, index: number): string {
       <span class="font-label-sm text-label-sm text-secondary">رسوم الكشف:</span>
       <span class="font-headline-sm text-headline-sm text-on-surface font-bold tabular-nums">${escapeHtml(money(doc.consultation_fee))}</span>
     </div>
-    <button class="px-space-md py-2.5 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-all shadow-sm" type="button" data-book-doctor="${escapeHtml(doc.id)}">
+    <button class="px-space-md py-2.5 min-h-11 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-all shadow-sm" type="button" data-book-doctor="${escapeHtml(doc.id)}">
       احجز موعداً
     </button>
   </div>
@@ -243,13 +243,21 @@ export async function wireHome(appEl: HTMLElement, user: HomeUser) {
 
   renderSpecialtyCounts(appEl, specializations);
 
-  try {
-    const docs = await getDoctorsDirectory(7);
-    renderFeaturedDoctors(appEl, docs);
-  } catch {
-    const grid = appEl.querySelector<HTMLElement>("#featured-doctors");
-    if (grid) grid.innerHTML = `<div class="col-span-full bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md">تعذّر تحميل الأطباء. حدّث الصفحة للمحاولة مرة أخرى.</div>`;
-  }
+  const loadFeatured = async () => {
+    try {
+      const docs = await getDoctorsDirectory(7);
+      renderFeaturedDoctors(appEl, docs);
+    } catch {
+      const grid = appEl.querySelector<HTMLElement>("#featured-doctors");
+      if (!grid) return;
+      grid.innerHTML = `<div class="col-span-full bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm"><span>تعذّر تحميل الأطباء.</span><button class="min-h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md" type="button" data-retry-featured>إعادة المحاولة</button></div>`;
+      grid.querySelector("[data-retry-featured]")?.addEventListener("click", () => {
+        grid.innerHTML = `<div class="col-span-full py-space-lg text-center text-on-surface-variant font-body-md text-body-md">جارٍ تحميل الأطباء…</div>`;
+        void loadFeatured();
+      });
+    }
+  };
+  await loadFeatured();
 
   const hero = appEl.querySelector<HTMLElement>("#home-next-appointment");
   if (hero) {
