@@ -13,7 +13,7 @@ web
 
 ## Product Purpose
 
-نبض العافية (PulseCare) lets patients book, view, cancel, and reschedule medical appointments end-to-end online, while clinic staff manage the same schedule from one admin panel. Success means a booking the patient makes is real: no double-booking under concurrency, correct state everywhere, and staff/patient always seeing the same truth.
+ميعادي (MIAADI) lets patients book, view, cancel, and reschedule medical appointments end-to-end online, while clinic staff manage the same schedule from one admin panel. Success means a booking the patient makes is real: no double-booking under concurrency, correct state everywhere, and staff/patient always seeing the same truth.
 
 ## Positioning
 
@@ -48,7 +48,7 @@ Technical constraints:
 
 ## Brand Commitments
 
-- Name is binding: **نَبْض العافية (PulseCare)**.
+- Name is binding: **ميعادي (MIAADI)** — used in the wordmark, metadata, and appointment reference codes (`MIA-…`). *(Confirmed with user, 2026-10-20 — supersedes the earlier PulseCare note.)*
 - Voice/language: Arabic-first, medical-care tone; UI text already localized in Arabic (MSA).
 - Identity assets (logo, colors, wordmark) are the incumbent implementation only: a teal/emerald + slate palette and activity-pulse mark, all CSS/CDN-based. No external brand kit has been provided.
 - The brand operates as a real clinic in Sudan; Sudanese Pound pricing is part of the product reality. *(Confirmed with user, 2026-10-20 — supersedes the earlier Saudi-market note.)*

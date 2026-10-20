@@ -109,14 +109,8 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     setText("#db-user-name", displayName);
     const specEl = panel("#db-user-spec");
     if (specEl) { specEl.textContent = profile ? specialtyLabel(profile.specialization) : "مشرف النظام"; specEl.classList.toggle("hidden", false); }
-    setText("#db-facility-name", profile ? (profile.hospital_name || (profile.telehealth ? "استشارات عن بُعد" : "بدون موقع مسجّل")) : "جميع العيادات");
+    setText("#db-facility-name", profile ? (profile.hospital_name || "بدون موقع مسجّل") : "جميع العيادات");
     setText("#db-facility-sub", profile ? `${specialtyLabel(profile.specialization)} • ${profile.city || "—"}` : "كل العيادات المسجّلة");
-    const badge = panel("#db-nav-tele");
-    if (badge) {
-      const remaining = rows.filter((r) => r.status === "booked" && toMin(r.start_time) >= nowMin()).length;
-      badge.textContent = String(remaining);
-      badge.classList.toggle("hidden", remaining === 0);
-    }
     const bell = panel("#db-bell-dot");
     if (bell) bell.classList.add("hidden");
     const now = new Date();
@@ -152,7 +146,7 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
           <div class="flex flex-wrap items-center gap-space-xs">
             <span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-md text-primary font-label-sm text-label-sm shadow-sm">
               <span class="w-2 h-2 rounded-full bg-tertiary-container animate-ping"></span>
-              <span>${escapeHtml(profile?.hospital_name || (profile?.telehealth ? "استشارات افتراضية عن بُعد" : "جميع العيادات"))}</span>
+              <span>${escapeHtml(profile?.hospital_name || "جميع العيادات")}</span>
             </span>
             <span class="inline-flex items-center gap-1 px-space-sm py-1 rounded-full bg-surface-container-lowest/80 text-secondary font-label-sm text-label-sm shadow-sm">
               <span class="material-symbols-outlined text-[16px] text-tertiary">verified</span>
@@ -550,8 +544,7 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     box.innerHTML = [
       item("التخصص", escapeHtml(specialtyLabel(profile.specialization))),
       item("الرسوم المعتمدة", escapeHtml(money(profile.consultation_fee)), true),
-      item("الموقع", escapeHtml(profile.hospital_name || "استشارات عن بُعد")),
-      item("استشارات الفيديو", profile.telehealth ? "متاحة ✓" : "غير متاحة"),
+      item("الموقع", escapeHtml(profile.hospital_name || "بدون موقع مسجّل")),
       item("التقييم", `<span class="tabular-nums">${profile.rating ? profile.rating.toFixed(1) : "—"}</span> <span class="text-secondary font-body-sm">(${profile.reviews_count} تقييم)</span>`),
       item("سنوات الخبرة", `<span class="tabular-nums">${profile.experience_years ?? "—"}</span>`),
       item("اللغات", escapeHtml(profile.languages.join(" • ") || "العربية")),

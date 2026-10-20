@@ -82,9 +82,7 @@ export const DASHBOARD_MAIN = `<div class="flex flex-col w-full gap-space-lg pb-
 <span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
 <span class="w-2 h-2 rounded-full bg-primary"></span> 12 حضوري عيادة
         </span>
-<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
-<span class="w-2 h-2 rounded-full bg-secondary"></span> 6 استشارة مرئية
-        </span>
+
 </div>
 </div>
 <!-- Stat 2: In Waiting Room -->
@@ -316,52 +314,6 @@ export const DASHBOARD_MAIN = `<div class="flex flex-col w-full gap-space-lg pb-
 </button>
 <button class="p-2 rounded-full bg-surface-container-low text-secondary hover:bg-surface-container transition-all" title="معاينة الملف" type="button">
 <span class="material-symbols-outlined text-[20px]">folder_open</span>
-</button>
-</div>
-</div>
-</div>
-<!-- Schedule Card: TELEHEALTH CONSULTATION (Virtual) -->
-<div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm transition-all hover:shadow-md flex flex-col gap-space-sm">
-<div class="flex flex-wrap items-center justify-between gap-space-xs">
-<div class="flex items-center gap-space-xs">
-<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-highest text-primary font-label-sm text-label-sm font-semibold">
-<span class="material-symbols-outlined text-[14px]">videocam</span>
-<span>استشارة مرئية عن بعد • Telehealth Call</span>
-</span>
-<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm">
-<span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
-<span>المريض متصل وفي غرفة الانتظار الافتراضية</span>
-</span>
-</div>
-<span class="font-label-md text-label-md font-bold text-secondary flex items-center gap-1">
-<span class="material-symbols-outlined text-[18px]">schedule</span>
-<span>11:15 ص (الموعد التالي)</span>
-</span>
-</div>
-<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md pt-space-xs">
-<div class="flex items-center gap-space-md">
-<div class="w-12 h-12 rounded-xl bg-secondary-container flex-shrink-0 flex items-center justify-center text-on-secondary-fixed">
-<span class="material-symbols-outlined text-[24px]">video_camera_front</span>
-</div>
-<div>
-<div class="flex items-center gap-space-sm">
-<h4 class="font-headline-sm text-headline-sm font-bold text-on-surface">
-                  فهد العتيبي (Fahd Al-Otaibi)
-                </h4>
-<span class="text-secondary font-label-sm text-label-sm">61 سنة • بورتسودان (عن بعد)</span>
-</div>
-<p class="font-body-md text-body-md text-secondary mt-0.5">
-                مراجعة قراءات هولتر ومستوى الكوليسترول • ملف: MIA-62019
-              </p>
-</div>
-</div>
-<div class="flex items-center gap-space-xs">
-<button class="inline-flex items-center gap-1 px-space-md py-2 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-all" type="button">
-<span class="material-symbols-outlined text-[18px]">video_call</span>
-<span>دخول المكالمة الطبية</span>
-</button>
-<button class="p-2 rounded-full bg-surface-container-low text-secondary hover:bg-surface-container transition-all" title="إرسال تذكير SMS" type="button">
-<span class="material-symbols-outlined text-[20px]">sms</span>
 </button>
 </div>
 </div>
@@ -574,7 +526,7 @@ export const DASHBOARD_MAIN = `<div class="flex flex-col w-full gap-space-lg pb-
 </div>
 </div>`;
 
-export const DASHBOARD_BODY = `<aside class="max-lg:hidden fixed top-0 start-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col"><div class="h-20 px-space-lg flex items-center justify-between"><div class="flex items-center gap-space-sm"><div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-sm"><span class="material-symbols-outlined text-[24px]">local_hospital</span></div><div class="flex flex-col"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-primary font-bold tracking-tight">ميعادي</span><span class="font-label-sm text-label-sm text-secondary font-medium">| Miaadi</span></div><span class="font-label-sm text-label-sm text-outline">المنصة الصحية الذكية</span></div></div></div><div class="px-space-md py-space-xs"><div class="bg-surface-container-low rounded-xl p-space-sm flex items-center justify-between cursor-pointer hover:bg-surface-container transition-colors"><div class="flex items-center gap-space-sm overflow-hidden"><div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary flex-shrink-0"><span class="material-symbols-outlined text-[18px]">apartment</span></div><div class="flex flex-col truncate"><span id="db-facility-name" class="font-label-md text-label-md text-on-surface truncate">م. رويال كير الدولي</span><span id="db-facility-sub" class="font-body-sm text-body-sm text-on-surface-variant truncate">عيادة القلب التخصصية</span></div></div><span class="material-symbols-outlined text-outline text-[18px] flex-shrink-0">unfold_more</span></div></div><nav class="flex flex-col gap-space-xs px-space-md mt-space-md" data-active-classes="bg-primary-container text-on-primary-container font-bold rounded-xl"><a aria-current="page" class="flex items-center justify-between px-space-md py-space-sm transition-all group bg-primary-container text-on-primary-container font-bold rounded-xl" data-path="dashboard-overview" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">dashboard</span><span class="font-label-lg text-label-lg">نظرة عامة ولوحة التحكم</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="appointments-schedule" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">calendar_clock</span><span class="font-label-lg text-label-lg">جدول المواعيد والعيادة</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="patients-emr" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">clinical_notes</span><span class="font-label-lg text-label-lg">سجلات المرضى (EMR)</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="telehealth-consultations" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">video_camera_front</span><span class="font-label-lg text-label-lg">الاستشارات الافتراضية</span></div><span id="db-nav-tele" class="px-space-xs py-0.5 rounded-full bg-error text-on-error font-label-sm text-label-sm font-semibold">3</span></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="prescriptions-reports" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">prescriptions</span><span class="font-label-lg text-label-lg">الوصفات والتقارير</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="billing-cchi-claims" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">receipt_long</span><span class="font-label-lg text-label-lg">الفواتير والتأمين CCHI</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="clinic-settings-availability" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">tune</span><span class="font-label-lg text-label-lg">الإعدادات وساعات العمل</span></div></a></nav></div><div class="p-space-md flex flex-col gap-space-sm"><div class="bg-surface-container-low rounded-xl p-space-md flex flex-col gap-space-xs"><div class="flex items-center justify-between"><span class="font-label-sm text-label-sm text-outline">حالة الاتصال والخدمة</span><span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span></div><span class="font-label-md text-label-md text-on-surface font-semibold">بوابة النفيس ومعتمد موصولة</span><span id="db-sync" class="font-body-sm text-body-sm text-on-surface-variant">آخر مزامنة قبل 3 دقائق</span></div><div class="flex items-center justify-between pt-space-xs text-on-surface-variant font-label-sm text-label-sm"><span class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[16px] text-tertiary">verified_user</span>معتمد من وزارة الصحة</span><span>v2.4.0</span></div></div></aside><div id="db-backdrop" class="hidden fixed inset-0 z-40 bg-black/40 lg:hidden"></div><div class="pe-0 ps-0 lg:ps-72 flex flex-col min-h-screen"><header class="fixed top-0 start-0 lg:start-72 end-0 h-20 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 px-space-md sm:px-space-lg flex items-center justify-between gap-space-md"><button id="db-menu-btn" class="lg:hidden shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors" type="button" aria-label="القائمة"><span class="material-symbols-outlined text-[22px]">menu</span></button><div class="min-w-0 flex-1 max-w-xl"><div class="relative flex items-center"><span class="material-symbols-outlined absolute start-space-md text-outline pointer-events-none text-[20px]">search</span><input class="w-full h-11 ps-11 pe-space-md rounded-full bg-surface-container-low text-on-surface placeholder:text-outline font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all" id="db-search" placeholder="ابحث في مواعيد اليوم باسم المريض أو رقم الجوال" type="text"/></div></div><div class="flex items-center gap-space-md flex-shrink-0"><div class="hidden lg:flex items-center bg-surface-container-low rounded-full p-1"><button class="px-space-sm py-1 rounded-full font-label-sm text-label-sm font-semibold bg-surface-container-lowest text-on-surface shadow-sm transition-all" type="button">العربية</button><button class="px-space-sm py-1 rounded-full font-label-sm text-label-sm font-medium text-on-surface-variant hover:text-on-surface transition-all" type="button">EN</button></div><button id="db-new-booking" class="inline-flex items-center justify-center gap-space-xs h-11 sm:h-10 w-11 sm:w-auto px-0 sm:px-space-md rounded-full bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md transition-all active:scale-98 shadow-sm" type="button"><span class="material-symbols-outlined text-[18px]">add</span><span class="sr-only sm:not-sr-only">حجز موعد جديد</span></button><button class="relative shrink-0 w-11 h-11 rounded-full bg-surface-container-low hover:bg-surface-container-high flex items-center justify-center text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span id="db-bell-dot" class="absolute top-2 end-2 w-2 h-2 rounded-full bg-error ring-2 ring-surface-container-lowest"></span></button><div class="hidden sm:flex items-center gap-space-sm ps-space-xs cursor-pointer group"><div class="relative"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><span class="absolute bottom-0 end-0 w-2.5 h-2.5 rounded-full bg-tertiary-container ring-2 ring-surface-container-lowest"></span></div><div class="hidden xl:flex flex-col items-start text-start"><div class="flex items-center gap-space-xs"><span id="db-user-name" class="font-label-md text-label-md text-on-surface font-semibold group-hover:text-primary transition-colors">د. طارق المنصور</span><span class="material-symbols-outlined text-outline text-[16px]">expand_more</span></div><span id="db-user-spec" class="font-body-sm text-body-sm text-on-surface-variant">استشاري أمراض وزراعة القلب</span></div></div></div></header><main class="flex-1 pt-[calc(5rem+env(safe-area-inset-top))] px-space-md sm:px-space-lg py-space-md bg-surface"><div id="db-content" class="flex flex-col w-full gap-space-lg pb-space-xl">
+export const DASHBOARD_BODY = `<aside class="max-lg:hidden fixed top-0 start-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col"><div class="h-20 px-space-lg flex items-center justify-between"><div class="flex items-center gap-space-sm"><div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-sm"><span class="material-symbols-outlined text-[24px]">local_hospital</span></div><div class="flex flex-col"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-primary font-bold tracking-tight">ميعادي</span><span class="font-label-sm text-label-sm text-secondary font-medium">| Miaadi</span></div><span class="font-label-sm text-label-sm text-outline">المنصة الصحية الذكية</span></div></div></div><div class="px-space-md py-space-xs"><div class="bg-surface-container-low rounded-xl p-space-sm flex items-center justify-between cursor-pointer hover:bg-surface-container transition-colors"><div class="flex items-center gap-space-sm overflow-hidden"><div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary flex-shrink-0"><span class="material-symbols-outlined text-[18px]">apartment</span></div><div class="flex flex-col truncate"><span id="db-facility-name" class="font-label-md text-label-md text-on-surface truncate">م. رويال كير الدولي</span><span id="db-facility-sub" class="font-body-sm text-body-sm text-on-surface-variant truncate">عيادة القلب التخصصية</span></div></div><span class="material-symbols-outlined text-outline text-[18px] flex-shrink-0">unfold_more</span></div></div><nav class="flex flex-col gap-space-xs px-space-md mt-space-md" data-active-classes="bg-primary-container text-on-primary-container font-bold rounded-xl"><a aria-current="page" class="flex items-center justify-between px-space-md py-space-sm transition-all group bg-primary-container text-on-primary-container font-bold rounded-xl" data-path="dashboard-overview" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">dashboard</span><span class="font-label-lg text-label-lg">نظرة عامة ولوحة التحكم</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="appointments-schedule" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">calendar_clock</span><span class="font-label-lg text-label-lg">جدول المواعيد والعيادة</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="patients-emr" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">clinical_notes</span><span class="font-label-lg text-label-lg">سجلات المرضى (EMR)</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="prescriptions-reports" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">prescriptions</span><span class="font-label-lg text-label-lg">الوصفات والتقارير</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="billing-cchi-claims" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">receipt_long</span><span class="font-label-lg text-label-lg">الفواتير والتأمين CCHI</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="clinic-settings-availability" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">tune</span><span class="font-label-lg text-label-lg">الإعدادات وساعات العمل</span></div></a></nav></div><div class="p-space-md flex flex-col gap-space-sm"><div class="bg-surface-container-low rounded-xl p-space-md flex flex-col gap-space-xs"><div class="flex items-center justify-between"><span class="font-label-sm text-label-sm text-outline">حالة الاتصال والخدمة</span><span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span></div><span class="font-label-md text-label-md text-on-surface font-semibold">بوابة النفيس ومعتمد موصولة</span><span id="db-sync" class="font-body-sm text-body-sm text-on-surface-variant">آخر مزامنة قبل 3 دقائق</span></div><div class="flex items-center justify-between pt-space-xs text-on-surface-variant font-label-sm text-label-sm"><span class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[16px] text-tertiary">verified_user</span>معتمد من وزارة الصحة</span><span>v2.4.0</span></div></div></aside><div id="db-backdrop" class="hidden fixed inset-0 z-40 bg-black/40 lg:hidden"></div><div class="pe-0 ps-0 lg:ps-72 flex flex-col min-h-screen"><header class="fixed top-0 start-0 lg:start-72 end-0 h-20 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 px-space-md sm:px-space-lg flex items-center justify-between gap-space-md"><button id="db-menu-btn" class="lg:hidden shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors" type="button" aria-label="القائمة"><span class="material-symbols-outlined text-[22px]">menu</span></button><div class="min-w-0 flex-1 max-w-xl"><div class="relative flex items-center"><span class="material-symbols-outlined absolute start-space-md text-outline pointer-events-none text-[20px]">search</span><input class="w-full h-11 ps-11 pe-space-md rounded-full bg-surface-container-low text-on-surface placeholder:text-outline font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all" id="db-search" placeholder="ابحث في مواعيد اليوم باسم المريض أو رقم الجوال" type="text"/></div></div><div class="flex items-center gap-space-md flex-shrink-0"><div class="hidden lg:flex items-center bg-surface-container-low rounded-full p-1"><button class="px-space-sm py-1 rounded-full font-label-sm text-label-sm font-semibold bg-surface-container-lowest text-on-surface shadow-sm transition-all" type="button">العربية</button><button class="px-space-sm py-1 rounded-full font-label-sm text-label-sm font-medium text-on-surface-variant hover:text-on-surface transition-all" type="button">EN</button></div><button id="db-new-booking" class="inline-flex items-center justify-center gap-space-xs h-11 sm:h-10 w-11 sm:w-auto px-0 sm:px-space-md rounded-full bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md transition-all active:scale-98 shadow-sm" type="button"><span class="material-symbols-outlined text-[18px]">add</span><span class="sr-only sm:not-sr-only">حجز موعد جديد</span></button><button class="relative shrink-0 w-11 h-11 rounded-full bg-surface-container-low hover:bg-surface-container-high flex items-center justify-center text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span id="db-bell-dot" class="absolute top-2 end-2 w-2 h-2 rounded-full bg-error ring-2 ring-surface-container-lowest"></span></button><div class="hidden sm:flex items-center gap-space-sm ps-space-xs cursor-pointer group"><div class="relative"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><span class="absolute bottom-0 end-0 w-2.5 h-2.5 rounded-full bg-tertiary-container ring-2 ring-surface-container-lowest"></span></div><div class="hidden xl:flex flex-col items-start text-start"><div class="flex items-center gap-space-xs"><span id="db-user-name" class="font-label-md text-label-md text-on-surface font-semibold group-hover:text-primary transition-colors">د. طارق المنصور</span><span class="material-symbols-outlined text-outline text-[16px]">expand_more</span></div><span id="db-user-spec" class="font-body-sm text-body-sm text-on-surface-variant">استشاري أمراض وزراعة القلب</span></div></div></div></header><main class="flex-1 pt-[calc(5rem+env(safe-area-inset-top))] px-space-md sm:px-space-lg py-space-md bg-surface"><div id="db-content" class="flex flex-col w-full gap-space-lg pb-space-xl">
 <!-- Live Clinical Hero Header -->
 <section class="relative overflow-hidden rounded-2xl bg-gradient-to-l from-primary via-primary-container to-surface-container-highest/20 p-space-lg shadow-sm">
 <div class="absolute -top-24 -end-24 w-80 h-80 rounded-full bg-primary-fixed-dim/20 blur-3xl pointer-events-none"></div>
@@ -657,9 +609,7 @@ export const DASHBOARD_BODY = `<aside class="max-lg:hidden fixed top-0 start-0 h
 <span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
 <span class="w-2 h-2 rounded-full bg-primary"></span> 12 حضوري عيادة
         </span>
-<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
-<span class="w-2 h-2 rounded-full bg-secondary"></span> 6 استشارة مرئية
-        </span>
+
 </div>
 </div>
 <!-- Stat 2: In Waiting Room -->
@@ -891,52 +841,6 @@ export const DASHBOARD_BODY = `<aside class="max-lg:hidden fixed top-0 start-0 h
 </button>
 <button class="p-2 rounded-full bg-surface-container-low text-secondary hover:bg-surface-container transition-all" title="معاينة الملف" type="button">
 <span class="material-symbols-outlined text-[20px]">folder_open</span>
-</button>
-</div>
-</div>
-</div>
-<!-- Schedule Card: TELEHEALTH CONSULTATION (Virtual) -->
-<div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm transition-all hover:shadow-md flex flex-col gap-space-sm">
-<div class="flex flex-wrap items-center justify-between gap-space-xs">
-<div class="flex items-center gap-space-xs">
-<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-highest text-primary font-label-sm text-label-sm font-semibold">
-<span class="material-symbols-outlined text-[14px]">videocam</span>
-<span>استشارة مرئية عن بعد • Telehealth Call</span>
-</span>
-<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm">
-<span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
-<span>المريض متصل وفي غرفة الانتظار الافتراضية</span>
-</span>
-</div>
-<span class="font-label-md text-label-md font-bold text-secondary flex items-center gap-1">
-<span class="material-symbols-outlined text-[18px]">schedule</span>
-<span>11:15 ص (الموعد التالي)</span>
-</span>
-</div>
-<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md pt-space-xs">
-<div class="flex items-center gap-space-md">
-<div class="w-12 h-12 rounded-xl bg-secondary-container flex-shrink-0 flex items-center justify-center text-on-secondary-fixed">
-<span class="material-symbols-outlined text-[24px]">video_camera_front</span>
-</div>
-<div>
-<div class="flex items-center gap-space-sm">
-<h4 class="font-headline-sm text-headline-sm font-bold text-on-surface">
-                  فهد العتيبي (Fahd Al-Otaibi)
-                </h4>
-<span class="text-secondary font-label-sm text-label-sm">61 سنة • بورتسودان (عن بعد)</span>
-</div>
-<p class="font-body-md text-body-md text-secondary mt-0.5">
-                مراجعة قراءات هولتر ومستوى الكوليسترول • ملف: MIA-62019
-              </p>
-</div>
-</div>
-<div class="flex items-center gap-space-xs">
-<button class="inline-flex items-center gap-1 px-space-md py-2 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-all" type="button">
-<span class="material-symbols-outlined text-[18px]">video_call</span>
-<span>دخول المكالمة الطبية</span>
-</button>
-<button class="p-2 rounded-full bg-surface-container-low text-secondary hover:bg-surface-container transition-all" title="إرسال تذكير SMS" type="button">
-<span class="material-symbols-outlined text-[20px]">sms</span>
 </button>
 </div>
 </div>

@@ -58,7 +58,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 </div>
 <!-- Submit Button -->
 <div class="lg:col-span-1 flex items-center justify-center h-full">
-<button class="w-full h-12 lg:h-14 rounded-2xl bg-primary text-on-primary hover:bg-primary-container flex items-center justify-center transition-all shadow-md active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest" type="submit" aria-label="ابحث عن طبيب">
+<button class="w-full h-12 lg:h-14 rounded-2xl bg-primary text-on-primary hover:bg-primary-container press flex items-center justify-center shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest" type="submit" aria-label="ابحث عن طبيب">
 <span class="material-symbols-outlined text-[24px]">search</span>
 </button>
 </div>
@@ -66,15 +66,11 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <!-- Fast Filter Pills -->
 <div class="mt-space-md pt-space-sm flex items-center flex-wrap gap-space-xs bg-surface-container-lowest">
 <span class="font-label-sm text-label-sm text-secondary me-2">خيارات سريعة:</span>
-<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 min-h-11 lg:min-h-8 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" type="button" data-quick="today">
+<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 min-h-11 lg:min-h-8 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" type="button" data-quick="today">
 <span class="material-symbols-outlined text-[16px] text-tertiary">today</span>
 <span>كشف عاجل اليوم</span>
 </button>
-<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 min-h-11 lg:min-h-8 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" type="button" data-quick="video">
-<span class="material-symbols-outlined text-[16px] text-primary">videocam</span>
-<span>استشارة مرئية</span>
-</button>
-<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 min-h-11 lg:min-h-8 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" type="button" data-quick="price">
+<button class="inline-flex items-center gap-1.5 px-space-md py-1.5 min-h-11 lg:min-h-8 rounded-full bg-surface-container-low hover:bg-primary-container/20 text-on-surface font-label-md text-label-md press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" type="button" data-quick="price">
 <span class="material-symbols-outlined text-[16px] text-secondary">payments</span>
 <span>الأقل سعراً</span>
 </button>
@@ -105,14 +101,14 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <h2 class="font-display-lg text-display-lg text-on-surface font-bold">التخصصات الطبية</h2>
 <p class="font-body-md text-body-md text-on-surface-variant">اختر التخصص لتتصفح الأطباء المتاحين فيه</p>
 </div>
-<a class="inline-flex items-center gap-1.5 min-h-11 py-1 text-primary font-label-md text-label-md hover:gap-2 transition-all group" href="#doctors">
+<a class="inline-flex items-center gap-1.5 min-h-11 py-1 text-primary font-label-md text-label-md group link-arrow" href="#doctors">
 <span>عرض جميع الأطباء</span>
-<span class="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-x-1">arrow_back</span>
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
 </a>
 </div>
 <!-- 8 Grid Cards -->
 <div id="home-specialties" class="grid grid-cols-2 md:grid-cols-4 gap-space-md">
-<button type="button" data-specialty-link="cardiology" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl transition-all shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
+<button type="button" data-specialty-link="cardiology" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl press shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
 <div class="flex items-center justify-between">
 <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
 <span class="material-symbols-outlined text-[28px]">cardiology</span>
@@ -124,7 +120,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <p class="font-label-sm text-label-sm text-secondary">Cardiology &amp; Vascular</p>
 </div>
 </button>
-<button type="button" data-specialty-link="dental" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl transition-all shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
+<button type="button" data-specialty-link="dental" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl press shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
 <div class="flex items-center justify-between">
 <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
 <span class="material-symbols-outlined text-[28px]">dentistry</span>
@@ -136,7 +132,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <p class="font-label-sm text-label-sm text-secondary">Dental &amp; Oral Care</p>
 </div>
 </button>
-<button type="button" data-specialty-link="pediatrics" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl transition-all shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
+<button type="button" data-specialty-link="pediatrics" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl press shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
 <div class="flex items-center justify-between">
 <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
 <span class="material-symbols-outlined text-[28px]">child_care</span>
@@ -148,7 +144,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <p class="font-label-sm text-label-sm text-secondary">Pediatrics &amp; Neonatal</p>
 </div>
 </button>
-<button type="button" data-specialty-link="dermatology" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl transition-all shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
+<button type="button" data-specialty-link="dermatology" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl press shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
 <div class="flex items-center justify-between">
 <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
 <span class="material-symbols-outlined text-[28px]">clean_hands</span>
@@ -160,7 +156,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <p class="font-label-sm text-label-sm text-secondary">Dermatology &amp; Laser</p>
 </div>
 </button>
-<button type="button" data-specialty-link="orthopedics" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl transition-all shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
+<button type="button" data-specialty-link="orthopedics" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl press shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
 <div class="flex items-center justify-between">
 <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
 <span class="material-symbols-outlined text-[28px]">skeleton</span>
@@ -172,7 +168,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <p class="font-label-sm text-label-sm text-secondary">Orthopedic Surgery</p>
 </div>
 </button>
-<button type="button" data-specialty-link="ophthalmology" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl transition-all shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
+<button type="button" data-specialty-link="ophthalmology" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl press shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
 <div class="flex items-center justify-between">
 <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
 <span class="material-symbols-outlined text-[28px]">visibility</span>
@@ -184,7 +180,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <p class="font-label-sm text-label-sm text-secondary">Ophthalmology</p>
 </div>
 </button>
-<button type="button" data-specialty-link="ent" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl transition-all shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
+<button type="button" data-specialty-link="ent" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl press shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
 <div class="flex items-center justify-between">
 <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
 <span class="material-symbols-outlined text-[28px]">hearing</span>
@@ -196,7 +192,7 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <p class="font-label-sm text-label-sm text-secondary">ENT Head &amp; Neck</p>
 </div>
 </button>
-<button type="button" data-specialty-link="internal" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl transition-all shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
+<button type="button" data-specialty-link="internal" class="group text-start bg-surface-container-lowest hover:bg-primary-container/10 p-space-md rounded-3xl press shadow-sm hover:shadow-md flex flex-col justify-between h-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
 <div class="flex items-center justify-between">
 <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
 <span class="material-symbols-outlined text-[28px]">vital_signs</span>
@@ -218,12 +214,12 @@ export const HOME_MAIN = `<div class="flex flex-col w-full">
 <h2 class="font-display-lg text-display-lg text-on-surface font-bold">أطباء متاحون للحجز الآن</h2>
 <p class="font-body-md text-body-md text-on-surface-variant">الأطباء الذين لديهم مواعيد متاحة فعلياً خلال الأسبوع القادم</p>
 </div>
-<a class="inline-flex items-center gap-1.5 min-h-11 py-1 text-primary font-label-md text-label-md hover:gap-2 transition-all group" href="#doctors">
+<a class="inline-flex items-center gap-1.5 min-h-11 py-1 text-primary font-label-md text-label-md group link-arrow" href="#doctors">
 <span>عرض الجميع</span>
-<span class="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-x-1">arrow_back</span>
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
 </a>
 </div>
-<div id="featured-doctors" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md" aria-live="polite">
+<div id="featured-doctors" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md" aria-busy="true">
 ${[0, 1, 2, 3].map(() => `
 <div class="bg-surface-container-lowest rounded-3xl p-space-md shadow-sm animate-pulse">
 <div class="flex items-start gap-space-sm mb-space-sm">
@@ -245,7 +241,7 @@ ${[0, 1, 2, 3].map(() => `
 <div class="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-primary-container/40 blur-2xl pointer-events-none"></div>
 <div class="relative z-10">
 <div class="max-w-2xl mb-space-lg">
-<h2 class="font-display-lg text-display-lg text-on-primary font-bold mb-space-xs">لماذا تحجز عبر نبض العافية؟</h2>
+<h2 class="font-display-lg text-display-lg text-on-primary font-bold mb-space-xs">لماذا تحجز عبر ميعادي؟</h2>
 <p class="font-body-md text-body-md text-on-primary/85">
             كل ما تراه في المنصة يأتي مباشرة من جدول العيادة — لا قوائم منفصلة ولا تأكيدات ورقية.
           </p>

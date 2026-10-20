@@ -5,14 +5,9 @@
  * `window` exactly like in the prototypes.
  */
 
-let currentMode: "clinic" | "telehealth" = "clinic";
 let selectedDateString = "الثلاثاء 15 أكتوبر 2024";
 let selectedTimeString = "10:15 صباحاً";
 
-const CLINIC_BTN_ACTIVE =
-  "flex flex-col items-center justify-center py-space-sm px-space-xs rounded-xl bg-primary text-on-primary shadow-sm transition-all text-center group";
-const CLINIC_BTN_IDLE =
-  "flex flex-col items-center justify-center py-space-sm px-space-xs rounded-xl bg-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all text-center group";
 const DATE_CELL_IDLE =
   "date-cell flex flex-col items-center py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container transition-all text-center";
 const DATE_CELL_ACTIVE =
@@ -25,26 +20,6 @@ const SLOT_ACTIVE =
 function updateSummaryDisplay() {
   const summaryElem = document.getElementById("summary-datetime-display");
   if (summaryElem) summaryElem.textContent = `${selectedDateString} • ${selectedTimeString}`;
-}
-
-function setConsultationMode(mode: "clinic" | "telehealth") {
-  currentMode = mode;
-  const clinicBtn = document.getElementById("btn-in-clinic");
-  const telehealthBtn = document.getElementById("btn-telehealth");
-  const ctaPriceElem = document.getElementById("cta-price-amount");
-  const ctaBtnText = document.getElementById("cta-button-text");
-
-  if (mode === "clinic") {
-    if (clinicBtn) clinicBtn.className = CLINIC_BTN_ACTIVE;
-    if (telehealthBtn) telehealthBtn.className = CLINIC_BTN_IDLE;
-    if (ctaPriceElem) ctaPriceElem.textContent = "3000";
-    if (ctaBtnText) ctaBtnText.textContent = "متابعة الحجز بالعيادة (3000 ج.س) | Proceed";
-  } else {
-    if (telehealthBtn) telehealthBtn.className = CLINIC_BTN_ACTIVE;
-    if (clinicBtn) clinicBtn.className = CLINIC_BTN_IDLE;
-    if (ctaPriceElem) ctaPriceElem.textContent = "2200";
-    if (ctaBtnText) ctaBtnText.textContent = "متابعة حجز استشارة الفيديو (2200 ج.س) | Proceed";
-  }
 }
 
 function selectDate(element: HTMLElement, dateStr: string) {
@@ -116,22 +91,13 @@ function switchBookingTab(tabKey: "upcoming" | "past" | "cancelled") {
 function rescheduleBooking(bookingId: string) {
   window.alert("إعادة جدولة الموعد " + bookingId + ": سيتم تحويلك إلى نافذة اختيار الأوقات المتاحة للدكتور.");
 }
-function joinTelehealthRoom() {
-  window.alert("جاري الاتصال الآمن بغرفة الاستشارة المرئية المشفرة لميعادي...");
-}
-function requestSickLeave() {
-  window.alert("جاري التحقق من ربط منصة صحتي (Sehhaty) لتحميل التقرير الصادر...");
-}
 
 export function registerStitchGlobals() {
   Object.assign(window, {
-    setConsultationMode,
     selectDate,
     selectTimeSlot,
     toggleInsuranceDetails,
     switchBookingTab,
     rescheduleBooking,
-    joinTelehealthRoom,
-    requestSickLeave,
   });
 }

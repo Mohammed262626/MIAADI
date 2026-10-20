@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "واجهة أمامية متكاملة (بدون خطوة بناء - CDN) مرتبطة مباشرة بقاعدة بيانات **Supabase (PostgreSQL)**، مع مصادقة آمنة وحجز مباشر عبر دوال الـ **RPC** وحماية كاملة عبر **RLS**.",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"

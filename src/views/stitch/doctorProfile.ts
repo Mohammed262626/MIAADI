@@ -357,28 +357,6 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <span class="material-symbols-outlined text-[24px]">event_available</span>
 </div>
 </div>
-<!-- 1. Consultation Mode Selector Tabs -->
-<div class="mt-space-sm">
-<label class="font-label-sm text-label-sm text-on-surface-variant font-semibold block mb-2">نوع الاستشارة المطلوبة | Consultation Type</label>
-<div class="grid grid-cols-2 gap-space-xs p-1 bg-surface-container-low rounded-2xl" id="consultation-tabs">
-<!-- Tab In-Clinic -->
-<button class="flex flex-col items-center justify-center py-space-sm px-space-xs rounded-xl bg-primary text-on-primary shadow-sm transition-all text-center group" id="btn-in-clinic" onclick="setConsultationMode('clinic')" type="button">
-<div class="flex items-center gap-1 font-label-md text-label-md font-bold">
-<span class="material-symbols-outlined text-[18px]">local_hospital</span>
-<span>زيارة العيادة</span>
-</div>
-<span class="text-[12px] opacity-90 mt-0.5 font-semibold" id="dp-fee-clinic">3000 ج.س • In-Clinic</span>
-</button>
-<!-- Tab Telehealth -->
-<button class="flex flex-col items-center justify-center py-space-sm px-space-xs rounded-xl bg-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all text-center group" id="btn-telehealth" onclick="setConsultationMode('telehealth')" type="button">
-<div class="flex items-center gap-1 font-label-md text-label-md font-bold">
-<span class="material-symbols-outlined text-[18px]">videocam</span>
-<span>استشارة فيديو</span>
-</div>
-<span class="text-[12px] text-secondary mt-0.5 font-semibold" id="dp-fee-telehealth">2200 ج.س • Video Call</span>
-</button>
-</div>
-</div>
 <!-- 2. Interactive Calendar Date Picker -->
 <div class="mt-space-md">
 <div class="flex items-center justify-between mb-2">

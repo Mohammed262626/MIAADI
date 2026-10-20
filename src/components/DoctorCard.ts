@@ -17,7 +17,7 @@ export function renderDoctorCard(doc: Doctor, variant: "list" | "rail" = "list")
     : `<span class="inline-flex items-center gap-1 text-[11px] font-bold text-on-surface-variant">${icon("event_busy", { size: 15 })}لا مواعيد قريبة</span>`;
 
   if (variant === "rail") {
-    return `<a href="#doctor/${escapeHtml(doc.id)}" class="panel shrink-0 w-[220px] p-4 flex flex-col gap-3 hover:shadow-[0_16px_40px_-20px_rgba(16,24,40,.25)] transition-shadow">
+    return `<a href="#doctor/${escapeHtml(doc.id)}" class="panel press shrink-0 w-[220px] p-4 flex flex-col gap-3 hover:shadow-[0_16px_40px_-20px_rgba(16,24,40,.25)]">
       <div class="flex items-center gap-3">
         ${avatar(doc.name, "sm")}
         <div class="min-w-0">
@@ -33,7 +33,7 @@ export function renderDoctorCard(doc: Doctor, variant: "list" | "rail" = "list")
     </a>`;
   }
 
-  return `<a href="#doctor/${escapeHtml(doc.id)}" class="panel p-4 flex gap-3.5 hover:shadow-[0_16px_40px_-20px_rgba(16,24,40,.22)] transition-shadow">
+  return `<a href="#doctor/${escapeHtml(doc.id)}" class="panel press p-4 flex gap-3.5 hover:shadow-[0_16px_40px_-20px_rgba(16,24,40,.22)]">
     ${avatar(doc.name, "md")}
     <div class="flex-1 min-w-0 flex flex-col gap-2">
       <div class="flex items-start justify-between gap-2">

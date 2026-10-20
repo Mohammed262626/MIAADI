@@ -89,7 +89,7 @@ export function renderProfileView(
           </div>
           <div class="flex gap-1 p-1 rounded-full bg-surface-container-low text-xs font-bold">
             <span class="h-8 px-3 grid place-items-center rounded-full bg-surface-container-lowest text-primary shadow-sm">العربية</span>
-            <button data-lang class="h-8 px-3 rounded-full text-on-surface-variant">EN</button>
+            <span class="h-8 px-3 grid place-items-center rounded-full text-on-surface-variant/60 cursor-not-allowed" aria-disabled="true" title="English — قريباً">EN</span>
           </div>
         </div>
         ${settingRow("notifications", "الإشعارات", "تذكير بالمواعيد", toggle("notif", true))}
@@ -142,7 +142,6 @@ export function renderProfileView(
   });
   root.querySelector("[data-admin]")?.addEventListener("click", () => opts.onAdmin());
   root.querySelector("[data-logout]")?.addEventListener("click", () => opts.onLogout());
-  root.querySelector("[data-lang]")?.addEventListener("click", () => showToast("دعم اللغة الإنجليزية قريباً", "info"));
   root.querySelectorAll<HTMLButtonElement>("[data-toggle]").forEach((b) =>
     b.addEventListener("click", () => {
       const on = b.getAttribute("aria-pressed") !== "true";

@@ -5,7 +5,8 @@
 // conditions, patient quotes, wayfinding line) come from specialtyContent.ts.
 // Booking is real: it writes through the book_appointment RPC.
 import { escapeHtml, formatArabicDate, formatDayNum, formatMonthShort, formatRelativeDay, formatTime, formatWeekdayShort, localDateISO, translateAuthError } from "../../lib/format";
-import { bookAppointmentRPC, getDoctorProfile, getDoctorProfileSlots, type DoctorProfileRow, type ProfileSlot } from "../../lib/supabase";
+import { bookAppointmentRPC, getDoctorProfile, getDoctorProfileSlots, rescheduleAppointmentRPC, type DoctorProfileRow, type ProfileSlot } from "../../lib/supabase";
+import { clearRescheduleIntent, getRescheduleIntent } from "../../lib/reschedule";
 import { initials, shortRef } from "../../components/ui";
 import { confirmSheet } from "../../components/ConfirmDialog";
 import { showToast } from "../../components/Toast";
@@ -15,8 +16,6 @@ type ProfileUser = {
   id?: string;
   profile?: { full_name?: string | null; phone?: string | null; role?: string | null } | null;
 } | null;
-
-type Mode = "clinic" | "telehealth";
 
 const WINDOW_DAYS = 5;
 const LOOKAHEAD_DAYS = 30;
@@ -77,8 +76,29 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
   }
 
   const content = contentOf(profile.specialization);
-  const modeLabel: Record<Mode, string> = { clinic: "زيارة العيادة", telehealth: "استشارة فيديو" };
   const fee = Number(profile.consultation_fee) || 0;
+
+  /* --------------------------- reschedule intent ---------------------------- */
+
+  const mainHost = appEl.querySelector<HTMLElement>("main");
+  let rescheduling = getRescheduleIntent();
+  if (rescheduling && mainHost) {
+    const banner = document.createElement("div");
+    banner.id = "dp-reschedule-banner";
+    banner.className = "px-margin-desktop pt-space-md";
+    banner.innerHTML = `<div class="max-w-7xl mx-auto rounded-2xl bg-primary-container text-on-primary-container px-space-md py-space-sm flex flex-col sm:flex-row sm:items-center gap-space-sm">
+      <span class="material-symbols-outlined text-[20px]">edit_calendar</span>
+      <p class="flex-1 font-label-md text-label-md">أنت تُعيد جدولة الموعد <span class="font-bold font-mono">${escapeHtml(rescheduling.ref)}</span> — اختر وقتاً جديداً وسيُستبدل الموعد القديم تلقائياً.</p>
+      <button type="button" data-cancel-reschedule class="h-9 px-space-md rounded-full bg-surface-container-lowest text-primary font-label-sm text-label-sm font-bold shrink-0">تراجع</button>
+    </div>`;
+    mainHost.prepend(banner);
+    banner.querySelector("[data-cancel-reschedule]")?.addEventListener("click", () => {
+      clearRescheduleIntent();
+      rescheduling = null;
+      banner.remove();
+      location.hash = "#appointments";
+    });
+  }
 
   /* ------------------------------- static parts ------------------------------ */
 
@@ -120,7 +140,7 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
   setText("dp-hospital", profile.hospital_name || "استشارة افتراضية عن بُعد (Telehealth)");
   setText("dp-hospital-city", profile.hospital_name ? `• ${profile.hospital_city || profile.city || ""}` : "• عبر الفيديو | Video");
   const hospIcon = el("dp-hospital")?.parentElement?.querySelector<HTMLElement>(".material-symbols-outlined");
-  if (hospIcon && !profile.hospital_name) hospIcon.textContent = "videocam";
+  if (hospIcon && !profile.hospital_name) hospIcon.textContent = "local_hospital";
 
   const creds = el("dp-credentials");
   if (creds) {
@@ -228,15 +248,10 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
 
   /* ------------------------------ booking engine ----------------------------- */
 
-  let mode: Mode = "clinic";
   let windowStart = 0;
   let selectedDate = "";
   let selected: ProfileSlot | null = null;
 
-  const btnClinic = el<HTMLButtonElement>("btn-in-clinic");
-  const btnTele = el<HTMLButtonElement>("btn-telehealth");
-  const feeClinic = el("dp-fee-clinic");
-  const feeTele = el("dp-fee-telehealth");
   const dateRow = el("date-picker-row");
   const morningRow = el("morning-slots");
   const eveningRow = el("evening-slots");
@@ -245,31 +260,7 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
   const cta = el<HTMLButtonElement>("dp-cta");
   const ctaText = el("cta-button-text");
 
-  const telehealthOk = Boolean(profile.telehealth);
-
-  btnClinic?.removeAttribute("onclick");
-  btnTele?.removeAttribute("onclick");
-
-  function applyMode() {
-    if (btnClinic) {
-      btnClinic.className = `flex flex-col items-center justify-center py-space-sm px-space-xs rounded-xl transition-all text-center group ${
-        mode === "clinic" ? "bg-primary text-on-primary shadow-sm" : "bg-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
-      }`;
-    }
-    if (btnTele) {
-      const base = "flex flex-col items-center justify-center py-space-sm px-space-xs rounded-xl transition-all text-center group";
-      btnTele.className = `${base} ${!telehealthOk ? "opacity-40 cursor-not-allowed" : mode === "telehealth" ? "bg-primary text-on-primary shadow-sm" : "bg-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-container"}`;
-    }
-    if (feeClinic) {
-      feeClinic.className = `text-[12px] mt-0.5 font-semibold ${mode === "clinic" ? "opacity-90" : "text-secondary"}`;
-      feeClinic.textContent = `${fee.toLocaleString("en-US")} ج.س • In-Clinic`;
-    }
-    if (feeTele) {
-      feeTele.className = `text-[12px] mt-0.5 font-semibold ${mode === "telehealth" ? "opacity-90" : "text-secondary"}`;
-      feeTele.textContent = telehealthOk ? `${fee.toLocaleString("en-US")} ج.س • Video Call` : "غير متاح • Unavailable";
-    }
-    if (priceEl) priceEl.textContent = fee.toLocaleString("en-US");
-  }
+  if (priceEl) priceEl.textContent = fee.toLocaleString("en-US");
 
   function cellHtml(date: string): string {
     const count = freeOn(date).length;
@@ -329,7 +320,7 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
       summary.textContent = "لم يتم تحديد موعد بعد";
       return;
     }
-    summary.textContent = `${formatArabicDate(selected.available_date)} • ${formatTime(selected.start_time)} • ${modeLabel[mode]}`;
+    summary.textContent = `${formatArabicDate(selected.available_date)} • ${formatTime(selected.start_time)} • زيارة العيادة`;
   }
 
   function selectFirstInWindow() {
@@ -338,11 +329,6 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
     selected = day ? freeOn(day)[0] || null : null;
   }
 
-  btnClinic?.addEventListener("click", () => { mode = "clinic"; applyMode(); renderSummary(); });
-  btnTele?.addEventListener("click", () => {
-    if (!telehealthOk) { showToast("الاستشارة المرئية غير متاحة لهذا الطبيب", "info"); return; }
-    mode = "telehealth"; applyMode(); renderSummary();
-  });
 
   dateRow?.addEventListener("click", (e) => {
     const cell = (e.target as HTMLElement).closest<HTMLElement>("[data-dp-date]");
@@ -409,10 +395,10 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
     if (!cta) return;
     cta.disabled = loading;
     cta.classList.toggle("opacity-60", loading);
-    if (ctaText) ctaText.textContent = loading ? "جارٍ تأكيد الحجز…" : "تأكيد الحجز | Confirm Booking";
+    if (ctaText) ctaText.textContent = loading ? "جارٍ تأكيد الحجز…" : rescheduling ? "تأكيد الموعد الجديد" : "تأكيد الحجز | Confirm Booking";
   }
 
-  function showSuccess(ref: string) {
+  function showSuccess(ref: string, message = "تم تأكيد الحجز") {
     const block = cta?.closest<HTMLElement>(".mt-space-lg");
     if (!block?.parentElement) return;
     block.parentElement.querySelector("#dp-booking-ok")?.remove();
@@ -420,7 +406,7 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
     ok.id = "dp-booking-ok";
     ok.className = "mt-space-md p-space-sm rounded-2xl bg-tertiary-fixed/40 flex items-center gap-space-xs font-label-md text-label-md text-on-surface";
     ok.innerHTML = `<span class="material-symbols-outlined text-tertiary">check_circle</span>
-      <span class="flex-1">تم تأكيد الحجز — رمز الحجز <span class="font-bold tabular-nums">${escapeHtml(ref)}</span></span>
+      <span class="flex-1">${escapeHtml(message)} — رمز الحجز <span class="font-bold tabular-nums">${escapeHtml(ref)}</span></span>
       <a href="#appointments" class="text-primary font-bold hover:underline shrink-0">عرض مواعيدي</a>`;
     block.parentElement.insertBefore(ok, block);
   }
@@ -435,10 +421,11 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
       location.hash = "#profile";
       return;
     }
+    const isReschedule = !!rescheduling;
     const confirmed = await confirmSheet({
-      title: "تأكيد حجز الموعد",
-      body: `${profile?.name} — ${formatArabicDate(selected.available_date)} في ${formatTime(selected.start_time)} (${modeLabel[mode]}) • ${fee.toLocaleString("en-US")} ج.س`,
-      confirmLabel: "تأكيد الحجز",
+      title: isReschedule ? "تأكيد إعادة الجدولة" : "تأكيد حجز الموعد",
+      body: `${profile?.name} — ${formatArabicDate(selected.available_date)} في ${formatTime(selected.start_time)} (زيارة العيادة) • ${fee.toLocaleString("en-US")} ج.س${isReschedule ? ` • الموعد الحالي ${rescheduling?.ref} سيُستبدل` : ""}`,
+      confirmLabel: isReschedule ? "تأكيد الموعد الجديد" : "تأكيد الحجز",
       cancelLabel: "تراجع",
       tone: "primary",
       iconName: "event_available",
@@ -446,12 +433,21 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
     if (!confirmed) return;
     setCtaLoading(true);
     try {
-      const appointment = (await bookAppointmentRPC({ scheduleId: selected.id, patientName, patientPhone })) as
-        | { appointment_id?: string; id?: string }
-        | null;
-      const ref = shortRef(appointment?.appointment_id || appointment?.id || selected.id);
-      showToast(`تم تأكيد حجزك بنجاح — رمز ${ref}`, "success");
-      showSuccess(ref);
+      if (isReschedule && rescheduling) {
+        await rescheduleAppointmentRPC({ appointmentId: rescheduling.id, newScheduleId: selected.id });
+        showToast("تمت إعادة جدولة موعدك", "success");
+        showSuccess(rescheduling.ref, "تم تعديل موعدك");
+        clearRescheduleIntent();
+        rescheduling = null;
+        document.getElementById("dp-reschedule-banner")?.remove();
+      } else {
+        const appointment = (await bookAppointmentRPC({ scheduleId: selected.id, patientName, patientPhone })) as
+          | { appointment_id?: string; id?: string }
+          | null;
+        const ref = shortRef(appointment?.appointment_id || appointment?.id || selected.id);
+        showToast(`تم تأكيد حجزك بنجاح — رمز ${ref}`, "success");
+        showSuccess(ref);
+      }
       slots = await getDoctorProfileSlots(doctorId, localDateISO(0), localDateISO(LOOKAHEAD_DAYS));
       selectFirstInWindow();
       renderDateStrip();
@@ -464,7 +460,7 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
     }
   });
 
-  applyMode();
+  if (rescheduling && ctaText) ctaText.textContent = "تأكيد الموعد الجديد";
   renderInsurer();
   selectFirstInWindow();
   renderDateStrip();

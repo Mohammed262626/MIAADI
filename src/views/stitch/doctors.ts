@@ -64,20 +64,6 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">expand_more</span>
 </div>
 </div>
-<!-- Consultation Type -->
-<div class="flex flex-col gap-space-xs">
-<label class="font-label-md text-label-md text-on-surface font-semibold">نوع الاستشارة</label>
-<div class="grid grid-cols-2 gap-space-xs bg-surface-container-low p-1 rounded-xl" id="doc-consult">
-<button class="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-surface-container-lowest text-primary shadow-sm font-label-sm text-label-sm transition-all" data-consult="clinic" type="button">
-<span class="material-symbols-outlined text-[16px]">apartment</span>
-<span>زيارة عيادة</span>
-</button>
-<button class="flex items-center justify-center gap-1.5 py-2 rounded-lg text-secondary hover:text-on-surface font-label-sm text-label-sm transition-all" data-consult="video" type="button">
-<span class="material-symbols-outlined text-[16px]">videocam</span>
-<span>استشارة فيديو</span>
-</button>
-</div>
-</div>
 <!-- Availability Quick Chips -->
 <div class="flex flex-col gap-space-xs">
 <label class="font-label-md text-label-md text-on-surface font-semibold">المواعيد المتاحة</label>

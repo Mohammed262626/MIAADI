@@ -8,6 +8,8 @@
 import { escapeHtml, formatArabicDate, formatRelativeDay, formatTime, localDateISO, translateAuthError } from "../../lib/format";
 import { cancelAppointmentRPC, getPatientAppointments } from "../../lib/supabase";
 import { initials, money, statusMeta } from "../../components/ui";
+import { qrSvg } from "../../components/qr";
+import { setRescheduleIntent } from "../../lib/reschedule";
 import { confirmSheet } from "../../components/ConfirmDialog";
 import { showToast } from "../../components/Toast";
 import { contentOf, specialtyLabel } from "./specialtyContent";
@@ -53,6 +55,41 @@ function visitDateLine(v: Visit): string {
   return `${rel === "اليوم" || rel === "غداً" ? rel + "، " : ""}${formatArabicDate(v.date)}`;
 }
 
+function loadingSkeletonHtml(): string {
+  const bar = "rounded-full bg-surface-container-high";
+  return `<div class="w-full flex flex-col xl:flex-row gap-space-xl animate-pulse" aria-hidden="true">
+    <div class="xl:w-2/3 w-full">
+      <div class="bg-surface-container-lowest rounded-3xl shadow-sm overflow-hidden">
+        <div class="h-16 bg-surface-container-high"></div>
+        <div class="p-space-xl flex flex-col gap-space-lg">
+          <div class="flex items-center gap-space-md">
+            <div class="w-20 h-20 rounded-2xl bg-surface-container-high shrink-0"></div>
+            <div class="flex flex-col gap-2 flex-1">
+              <div class="h-4 w-2/5 ${bar}"></div>
+              <div class="h-3 w-3/5 rounded-full bg-surface-container"></div>
+              <div class="h-3 w-2/5 rounded-full bg-surface-container"></div>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+            <div class="h-20 rounded-2xl bg-surface-container-low"></div>
+            <div class="h-20 rounded-2xl bg-surface-container-low"></div>
+          </div>
+          <div class="h-14 rounded-2xl bg-surface-container"></div>
+        </div>
+      </div>
+      <div class="mt-space-xl bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm">
+        <div class="h-4 w-1/3 ${bar} mb-space-md"></div>
+        <div class="h-20 rounded-2xl bg-surface-container-low"></div>
+      </div>
+    </div>
+    <div class="xl:w-1/3 w-full flex flex-col gap-space-lg">
+      <div class="h-56 rounded-3xl bg-surface-container-high"></div>
+      <div class="h-40 rounded-3xl bg-surface-container-low"></div>
+    </div>
+  </div>
+  <span class="sr-only">جارٍ تحميل مواعيدك…</span>`;
+}
+
 export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Promise<void> {
   const el = <T extends HTMLElement = HTMLElement>(id: string): T | null => appEl.querySelector<T>(`#${id}`);
   const setText = (id: string, text: string) => { const n = el(id); if (n) n.textContent = text; };
@@ -61,6 +98,30 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
   let past: Visit[] = [];
   let cancelled: Visit[] = [];
   let primary: Visit | null = null;
+  let selectedId: string | null = null;
+
+  function switchTab(key: string): void {
+    ["upcoming", "past", "cancelled"].forEach((k) => {
+      const btn = el(`tab-${k}`);
+      const view = el(`view-${k}`);
+      const active = k === key;
+      if (btn) {
+        btn.classList.toggle("bg-surface-container-lowest", active);
+        btn.classList.toggle("text-primary", active);
+        btn.classList.toggle("shadow-sm", active);
+        btn.classList.toggle("text-secondary", !active);
+        btn.classList.toggle("active", active);
+        btn.setAttribute("aria-selected", String(active));
+      }
+      if (view) {
+        view.classList.toggle("hidden", !active);
+        if (k !== "upcoming") view.classList.toggle("flex", active);
+      }
+    });
+  }
+  appEl.querySelectorAll<HTMLElement>("[data-bk-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => switchTab(btn.dataset.bkTab || "upcoming"));
+  });
 
   async function fetchVisits(): Promise<void> {
     let rows: unknown[] = [];
@@ -101,7 +162,8 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
     upcoming = all.filter((v) => OPEN_STATUSES.has(v.status) && v.date >= today).sort(byDateTime);
     past = all.filter((v) => v.status === "completed").sort((a, b) => byDateTime(b, a));
     cancelled = all.filter((v) => CANCELLED_STATUSES.has(v.status)).sort((a, b) => byDateTime(b, a));
-    primary = upcoming[0] || null;
+    primary = (selectedId && upcoming.find((v) => v.id === selectedId)) || upcoming[0] || null;
+    if (!primary) selectedId = null;
   }
 
   function renderTabs(): void {
@@ -112,22 +174,19 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
     const badge = el("bk-file-no");
     if (badge) {
       if (!user?.id) badge.textContent = "زائر غير مسجّل";
-      else badge.textContent = `هوية مريض رقم ${user.id.replace(/-/g, "").slice(-4).toUpperCase()}-KSA`;
+      else badge.textContent = `ملف المريض #${user.id.replace(/-/g, "").slice(-4).toUpperCase()}`;
     }
   }
 
   function renderPrimary(): void {
     const pass = el("bk-pass");
-    const mapCard = el("bk-map-address")?.closest<HTMLElement>(".rounded-3xl") || null;
     const navCard = el("bk-nav")?.closest<HTMLElement>(".rounded-2xl") || null;
     const empty = el("bk-empty");
     const mainCol = el("bk-col-main");
-    const sideCol = el("bk-col-side");
 
     if (!primary) {
       empty?.classList.remove("hidden");
       mainCol?.classList.add("hidden");
-      sideCol?.classList.add("hidden");
       if (empty) {
         empty.innerHTML = user
           ? emptyCard({
@@ -149,13 +208,12 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
 
     empty?.classList.add("hidden");
     mainCol?.classList.remove("hidden");
-    sideCol?.classList.remove("hidden");
     pass?.classList.remove("hidden");
 
     setText("bk-pass-ref", `رمز الحجز: ${bookingRef(primary.id)}`);
     setText("bk-pass-doctor", primary.doctorName);
     setText("bk-pass-specialty", primary.specialization || specialtyLabel(primary.specialization));
-    setText("bk-pass-hospital", primary.hospital || "استشارة مرئية عن بعد (Telehealth)");
+    setText("bk-pass-hospital", primary.hospital || "—");
 
     const avatar = el("bk-pass-avatar");
     if (avatar) avatar.textContent = initials(primary.doctorName);
@@ -169,27 +227,18 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
 
     const hex = primary.id.replace(/-/g, "").toUpperCase();
     setText("bk-pass-token", `TOKEN: ${hex.slice(0, 4)}-${hex.slice(4, 8)}-MIAADI`);
-    setText("bk-pass-paid", primary.hospital
-      ? `رسوم الاستشارة: ${money(primary.fee)} — الدفع عند الحضور`
-      : `استشارة مرئية — تُسدد قبل بدء الجلسة (${money(primary.fee)})`);
+    const qr = el("bk-pass-qr");
+    if (qr) qr.innerHTML = qrSvg(bookingRef(primary.id));
+    setText("bk-pass-paid", `رسوم الاستشارة: ${money(primary.fee)} — الدفع عند الحضور`);
 
-    // hospital-specific surroundings
-    if (primary.hospital) {
-      mapCard?.classList.remove("hidden");
-      navCard?.classList.remove("hidden");
-      setText("bk-map-address", primary.hospital);
-      const bg = el("bk-map-bg");
-      bg?.setAttribute("data-location", primary.hospital);
-    } else {
-      mapCard?.classList.add("hidden");
-      navCard?.classList.add("hidden");
-    }
+    setText("bk-pass-address", primary.hospital || "—");
+    navCard?.classList.toggle("hidden", !primary.hospital);
 
     renderSecondary();
   }
 
   function renderSecondary(): void {
-    const rest = upcoming.slice(1);
+    const rest = upcoming.filter((v) => v.id !== primary?.id);
     const card = el("bk-secondary-card");
     const note = el("bk-secondary-note");
     if (!card) return;
@@ -214,7 +263,7 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
               </div>
               <div class="flex items-center gap-space-xs text-secondary font-body-sm text-body-sm mt-1">
                 <span class="material-symbols-outlined text-[16px]">location_on</span>
-                <span>${escapeHtml(v.hospital || "استشارة مرئية عن بعد")}</span>
+                <span>${escapeHtml(v.hospital || "زيارة عيادة")}</span>
               </div>
               <div class="flex items-center gap-space-md text-on-surface font-label-md text-label-md mt-2 flex-wrap">
                 <span class="flex items-center gap-1 text-primary"><span class="material-symbols-outlined text-[16px]">calendar_month</span>${escapeHtml(formatArabicDate(v.date))}</span>
@@ -224,17 +273,31 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
             </div>
           </div>
           <div class="flex items-center gap-space-sm self-end md:self-center flex-shrink-0">
-            <a href="#doctor/${escapeHtml(v.doctorId)}" class="px-space-md py-space-xs bg-primary-container text-on-primary-container hover:bg-primary font-label-md text-label-md rounded-full transition-all shadow-sm flex items-center gap-1">
+            <button type="button" data-pass-id="${escapeHtml(v.id)}" class="px-space-md py-space-xs bg-primary-container text-on-primary-container hover:bg-primary font-label-md text-label-md rounded-full transition-all shadow-sm flex items-center gap-1">
               <span class="material-symbols-outlined text-[16px]">confirmation_number</span>
               <span>عرض التذكرة</span>
-            </a>
-            <a href="#doctor/${escapeHtml(v.doctorId)}" class="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface transition-colors" title="إعادة الجدولة">
+            </button>
+            <button type="button" data-resched-id="${escapeHtml(v.id)}" data-resched-doc="${escapeHtml(v.doctorId)}" class="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface transition-colors" title="إعادة جدولة هذا الموعد">
               <span class="material-symbols-outlined text-[18px]">edit_calendar</span>
-            </a>
+            </button>
           </div>
         </div>
       </div>`)
       .join("");
+    card.querySelectorAll<HTMLElement>("[data-pass-id]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedId = btn.dataset.passId || null;
+        primary = upcoming.find((v) => v.id === selectedId) || upcoming[0] || null;
+        renderPrimary();
+        el("bk-pass")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+    card.querySelectorAll<HTMLElement>("[data-resched-id]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const visit = upcoming.find((v) => v.id === btn.dataset.reschedId);
+        if (visit) startReschedule(visit);
+      });
+    });
   }
 
   function renderPast(): void {
@@ -251,11 +314,11 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
         <div>
           <div class="flex items-center justify-between text-secondary font-label-sm text-label-sm mb-space-xs">
             <span>${escapeHtml(formatArabicDate(v.date))}</span>
-            <span class="text-tertiary font-bold">${escapeHtml(v.hospital ? "مكتمل" : "مكتمل (مرئي)")}</span>
+            <span class="text-tertiary font-bold">مكتمل</span>
           </div>
           <h4 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(v.doctorName)}</h4>
           <p class="font-body-sm text-body-sm text-secondary mt-1">${escapeHtml(specialtyLabel(v.specialization))}</p>
-          <p class="font-body-sm text-body-sm text-outline mt-space-sm">${escapeHtml(v.hospital || "استشارة مرئية عن بعد Telehealth")}</p>
+          <p class="font-body-sm text-body-sm text-outline mt-space-sm">${escapeHtml(v.hospital || "زيارة عيادة")}</p>
           <p class="font-body-sm text-body-sm text-outline">${escapeHtml(formatTime(v.time))}</p>
         </div>
         <div class="mt-space-md pt-space-sm border-t border-surface-container flex items-center justify-between">
@@ -286,7 +349,7 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
             <div>
               <span class="font-label-sm text-label-sm text-error font-bold">${escapeHtml(reason)} • ${escapeHtml(statusMeta(v.status).label)}</span>
               <h4 class="font-headline-sm text-headline-sm text-on-surface font-bold mt-1">${escapeHtml(v.doctorName)} • ${escapeHtml(specialtyLabel(v.specialization))}</h4>
-              <p class="font-body-sm text-body-sm text-secondary">${escapeHtml(v.hospital || "استشارة مرئية عن بعد")}</p>
+              <p class="font-body-sm text-body-sm text-secondary">${escapeHtml(v.hospital || "زيارة عيادة")}</p>
               <p class="font-body-sm text-body-sm text-secondary">كان الموعد: ${escapeHtml(formatArabicDate(v.date))} • ${escapeHtml(formatTime(v.time))}</p>
             </div>
           </div>
@@ -296,32 +359,19 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
       .join("");
   }
 
-  function renderSide(): void {
-    const last = past[0] || null;
-    setText("bk-sick-last", last ? `${formatArabicDate(last.date)} • ${last.doctorName}` : "لا توجد إجازات صادرة حتى الآن");
-    setText("bk-rx-count", past.length ? `عرض الكل (${past.length})` : "لا توجد وصفات");
-
-    const rxDoctor = el("bk-rx-doctor");
-    if (rxDoctor) {
-      if (last) rxDoctor.textContent = `${last.doctorName} • سارية للصرف`;
-      else rxDoctor.closest<HTMLElement>(".p-space-md")?.classList.add("hidden");
-    }
-    const labDate = el("bk-rx-lab-date");
-    if (labDate) {
-      if (last) labDate.textContent = `نتائج جاهزة • ${formatArabicDate(last.date)}`;
-      else labDate.closest<HTMLElement>(".p-space-md")?.classList.add("hidden");
-    }
-    setText("bk-insurance", primary ? (primary.hospital ? `الدفع عند الحضور — ${money(primary.fee)}` : `استشارة مرئية — ${money(primary.fee)}`) : "لا يوجد موعد قادم");
-    setText("bk-insurance-ref", primary ? bookingRef(primary.id) : "—");
-  }
-
   async function load(): Promise<void> {
+    const empty = el("bk-empty");
+    el("bk-col-main")?.classList.add("hidden");
+    el("bk-col-side")?.classList.add("hidden");
+    if (empty) {
+      empty.classList.remove("hidden");
+      empty.innerHTML = loadingSkeletonHtml();
+    }
     await fetchVisits();
     renderTabs();
     renderPrimary();
     renderPast();
     renderCancelled();
-    renderSide();
   }
 
   /* --------------------------------- actions -------------------------------- */
@@ -345,23 +395,32 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
     const start = new Date(`${primary.date}T${primary.time || "09:00"}:00`);
     const end = new Date(`${primary.date}T${primary.endTime || primary.time || "09:30"}:00`);
     const stamp = (d: Date) => d.toISOString().replace(/[-:]|\.\d{3}/g, "");
-    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`موعد طبي: ${primary.doctorName}`)}&details=${encodeURIComponent(`${primary.specialization} • رمز الحجز ${bookingRef(primary.id)}`)}&location=${encodeURIComponent(primary.hospital || "استشارة مرئية")}&dates=${stamp(start)}/${stamp(end)}`;
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`موعد طبي: ${primary.doctorName}`)}&details=${encodeURIComponent(`${primary.specialization} • رمز الحجز ${bookingRef(primary.id)}`)}&location=${encodeURIComponent(primary.hospital || "العيادة")}&dates=${stamp(start)}/${stamp(end)}`;
     window.open(url, "_blank", "noreferrer");
   });
 
   bindOnce(el("bk-directions"), "directions", () => {
-    if (!primary?.hospital) { showToast("هذا الموعد استشارة مرئية — لا يلزم الحضور", "info"); return; }
+    if (!primary?.hospital) { showToast("لا يتوفر عنوان لهذا الموعد", "info"); return; }
     window.open(mapsUrl(primary.hospital), "_blank", "noreferrer");
   });
   bindOnce(el("bk-nav"), "nav", () => {
-    if (!primary?.hospital) { showToast("هذا الموعد استشارة مرئية — لا يلزم الحضور", "info"); return; }
+    if (!primary?.hospital) { showToast("لا يتوفر عنوان لهذا الموعد", "info"); return; }
     window.open(mapsUrl(primary.hospital), "_blank", "noreferrer");
   });
 
+  function startReschedule(v: Visit): void {
+    if (!v.doctorId) {
+      showToast("لا يمكن إعادة جدولة هذا الموعد من هنا — تواصل مع العيادة", "warning");
+      return;
+    }
+    setRescheduleIntent({ id: v.id, ref: bookingRef(v.id) });
+    showToast("اختر الوقت الجديد لموعدك من صفحة الطبيب", "info");
+    location.hash = `#doctor/${v.doctorId}`;
+  }
+
   bindOnce(el("bk-reschedule"), "reschedule", () => {
     if (!primary) { showToast("لا يوجد موعد لإعادة جدولته", "info"); return; }
-    showToast("اختر الوقت الجديد من صفحة الطبيب", "info");
-    location.hash = `#doctor/${primary.doctorId}`;
+    startReschedule(primary);
   });
 
   bindOnce(el("bk-cancel"), "cancel", async () => {

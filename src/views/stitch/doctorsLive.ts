@@ -3,7 +3,6 @@ import { getDoctorsDirectory, getPatientAppointments, type DoctorDirectoryRow, t
 import { SPECIALTIES, countSpecialties, specialtyKeyOf, type SpecialtyKey } from "../../lib/specialties";
 import { initials, money } from "../../components/ui";
 
-type Consult = "clinic" | "video";
 type Avail = "any" | "today" | "tomorrow" | "3days" | "7days";
 type Gender = "all" | "female" | "male";
 type SortKey = "rating" | "earliest" | "price" | "experience";
@@ -11,7 +10,6 @@ type SortKey = "rating" | "earliest" | "price" | "experience";
 type Filters = {
   q: string;
   city: string;
-  consult: Consult;
   avail: Avail;
   specs: Set<SpecialtyKey>;
   gender: Gender;
@@ -72,7 +70,6 @@ export type DoctorsSeed = {
   q?: string;
   city?: string;
   insurance?: string;
-  consult?: Consult;
   avail?: Avail;
   sort?: SortKey;
   specialty?: string;
@@ -83,7 +80,7 @@ export function seedDoctorsFilters(seed: DoctorsSeed) {
 }
 
 function emptyFilters(): Filters {
-  return { q: "", city: "", consult: "clinic", avail: "any", specs: new Set<SpecialtyKey>(), gender: "all", insurance: "", maxPrice: 8000, minRating: 4.5, sort: "rating" };
+  return { q: "", city: "", avail: "any", specs: new Set<SpecialtyKey>(), gender: "all", insurance: "", maxPrice: 8000, minRating: 4.5, sort: "rating" };
 }
 
 function daysFromToday(date: string): number {
@@ -102,8 +99,8 @@ function apply(rows: DoctorDirectoryRow[], f: Filters): DoctorDirectoryRow[] {
   const q = f.q.trim().toLowerCase();
   let out = rows.filter((d) => {
     if (f.city && (d.hospital_city || d.city) !== f.city) return false;
-    if (f.consult === "video" && !d.telehealth) return false;
-    if (f.consult === "clinic" && d.telehealth && !d.hospital_name) return false;
+    // clinic-only product: hide doctors that exist solely for (removed) video consultations
+    if (d.telehealth && !d.hospital_name) return false;
     if (f.gender !== "all" && d.gender !== f.gender) return false;
     if (d.consultation_fee > f.maxPrice) return false;
     if (f.minRating > 0 && (d.rating ?? 0) < f.minRating) return false;
@@ -152,7 +149,7 @@ function doctorRowHtml(doc: DoctorDirectoryRow): string {
   const first = doc.available_schedules[0] || null;
   const chips = doc.available_schedules.slice(0, 3);
   const today = daysFromToday(first ? first.available_date : "9999-12-31") === 0;
-  const hospital = doc.hospital_name || (doc.telehealth ? "استشارة مرئية عن بُعد" : "العيادة الخاصة");
+  const hospital = doc.hospital_name || "العيادة الخاصة";
   const coverage = doc.insurances.length ? `مغطى بالتأمين (${doc.insurances.slice(0, 3).join("، ")})` : "دفع مباشر";
   return `
 <article class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm hover:shadow-md transition-shadow flex flex-col xl:flex-row gap-space-lg justify-between" data-doctor-row="${escapeHtml(doc.id)}">
@@ -172,7 +169,7 @@ ${doctorAvatar(doc)}
 <p class="font-body-md text-body-md text-primary font-semibold mb-1">${escapeHtml(doc.specialization)}</p>
 <div class="flex items-center gap-space-md text-secondary font-body-sm text-body-sm flex-wrap mb-2">
 <span class="flex items-center gap-1">
-<span class="material-symbols-outlined text-[16px] text-primary">${doc.hospital_name ? "local_hospital" : "videocam"}</span>
+<span class="material-symbols-outlined text-[16px] text-primary">local_hospital</span>
 <span>${escapeHtml(hospital)}</span>
 </span>
 <span class="flex items-center gap-1">
@@ -234,8 +231,6 @@ ${escapeHtml(slotChipLabel(s, first!.available_date))}${conflict ? `<span class=
 
 /* ------------------------------ control painting ------------------------------ */
 
-const CONSULT_ACTIVE = "flex items-center justify-center gap-1.5 py-2 rounded-lg bg-surface-container-lowest text-primary shadow-sm font-label-sm text-label-sm transition-all";
-const CONSULT_IDLE = "flex items-center justify-center gap-1.5 py-2 rounded-lg text-secondary hover:text-on-surface font-label-sm text-label-sm transition-all";
 const CHIP_ACTIVE = "px-space-md py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm flex items-center gap-1";
 const CHIP_IDLE = "px-space-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors";
 const GENDER_ACTIVE = "py-1.5 rounded-lg bg-surface-container-lowest font-label-sm text-label-sm text-primary shadow-sm";
@@ -251,9 +246,6 @@ function paintSpecialties(root: ParentNode, f: Filters) {
 }
 
 function paintControls(root: ParentNode, f: Filters) {
-  root.querySelectorAll<HTMLButtonElement>("#doc-consult [data-consult]").forEach((b) => {
-    b.className = b.dataset.consult === f.consult ? CONSULT_ACTIVE : CONSULT_IDLE;
-  });
   root.querySelectorAll<HTMLButtonElement>("#doc-avail [data-avail]").forEach((b) => {
     const on = b.dataset.avail === f.avail;
     b.className = on ? CHIP_ACTIVE : CHIP_IDLE;
@@ -284,7 +276,6 @@ function activePills(root: ParentNode, f: Filters) {
   const pills: { field: string; label: string }[] = [];
   if (f.q) pills.push({ field: "q", label: `بحث: ${f.q}` });
   if (f.city) pills.push({ field: "city", label: f.city });
-  if (f.consult !== DEFAULTS.consult) pills.push({ field: "consult", label: f.consult === "video" ? "استشارة فيديو" : "زيارة عيادة" });
   if (f.avail !== "any") pills.push({ field: "avail", label: `متاح ${root.querySelector(`#doc-avail [data-avail="${f.avail}"]`)?.textContent?.trim() || f.avail}` });
   const defaultSpecs = DEFAULTS.specs.size;
   if (f.specs.size !== defaultSpecs) pills.push({ field: "specs", label: `${f.specs.size} تخصص` });
@@ -376,7 +367,6 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
     if (seed.q) f.q = seed.q;
     if (seed.city) f.city = seed.city;
     if (seed.insurance) f.insurance = seed.insurance;
-    if (seed.consult) f.consult = seed.consult;
     if (seed.avail) f.avail = seed.avail;
     if (seed.sort) f.sort = seed.sort;
     if (seed.specialty && SPECIALTIES.some((s) => s.key === seed.specialty)) {
@@ -435,8 +425,6 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
     rerender();
   });
 
-  appEl.querySelectorAll<HTMLElement>("#doc-consult [data-consult]").forEach((b) =>
-    b.addEventListener("click", () => { f.consult = b.dataset.consult as Consult; paintControls(appEl, f); rerender(); }));
   appEl.querySelectorAll<HTMLElement>("#doc-avail [data-avail]").forEach((b) =>
     b.addEventListener("click", () => { f.avail = b.dataset.avail as Avail; paintControls(appEl, f); rerender(); }));
   appEl.querySelectorAll<HTMLElement>("#doc-gender [data-gender]").forEach((b) =>
@@ -456,7 +444,6 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
     switch (btn.dataset.clear) {
       case "q": f.q = ""; if (search) search.value = ""; break;
       case "city": f.city = ""; break;
-      case "consult": f.consult = DEFAULTS.consult; break;
       case "avail": f.avail = "any"; break;
       case "specs": f.specs = new Set(DEFAULTS.specs); break;
       case "gender": f.gender = "all"; break;

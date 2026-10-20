@@ -1,4 +1,4 @@
-# نبض العافية — PulseCare
+# ميعادي — MIAADI
 
 نظام حجز مواعيد طبية (عربي RTL) — Vite + TypeScript + Tailwind v4 + Supabase.
 

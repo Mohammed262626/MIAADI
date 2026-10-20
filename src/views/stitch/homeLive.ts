@@ -1,8 +1,8 @@
-import qrcode from "qrcode-generator";
 import { escapeHtml, formatArabicDate, formatRelativeDay, formatTime, localDateISO } from "../../lib/format";
 import { getDoctorSpecializations, getDoctorsDirectory, getPatientAppointments, type DoctorDirectoryRow } from "../../lib/supabase";
 import { countSpecialties } from "../../lib/specialties";
 import { initials, money, shortRef } from "../../components/ui";
+import { qrSvg } from "../../components/qr";
 import { seedDoctorsFilters } from "./doctorsLive";
 
 type HomeUser = { id?: string; profile?: { full_name?: string | null; role?: string | null } | null } | null;
@@ -39,9 +39,9 @@ function featuredCardHtml(doc: DoctorDirectoryRow, index: number): string {
   const next = nextSlotLabel(doc);
   const coverage = doc.insurances.length
     ? doc.insurances.slice(0, 3).join("، ")
-    : (doc.telehealth ? "استشارة مرئية" : "دفع مباشر");
+    : "دفع مباشر";
   return `
-<div class="bg-surface-container-lowest rounded-3xl p-space-md shadow-sm hover:shadow-xl transition-all flex flex-col justify-between" data-doctor-card="${escapeHtml(doc.id)}">
+<div class="bg-surface-container-lowest rounded-3xl p-space-md shadow-sm hover:shadow-xl press flex flex-col justify-between" data-doctor-card="${escapeHtml(doc.id)}">
   <div>
     <div class="flex items-start gap-space-sm mb-space-sm">
       ${doctorPhoto(doc)}
@@ -61,7 +61,7 @@ function featuredCardHtml(doc: DoctorDirectoryRow, index: number): string {
     <div class="bg-surface-container-low rounded-2xl p-space-sm mb-space-sm flex flex-col gap-1.5">
       <div class="flex items-center gap-1.5 text-secondary font-body-sm text-body-sm">
         <span class="material-symbols-outlined text-[16px] text-primary">apartment</span>
-        <span class="truncate">${escapeHtml(doc.hospital_name || (doc.telehealth ? "استشارة مرئية عن بُعد" : "العيادة الخاصة"))}</span>
+        <span class="truncate">${escapeHtml(doc.hospital_name || "العيادة الخاصة")}</span>
       </div>
       <div class="flex items-center gap-1.5 text-secondary font-body-sm text-body-sm">
         <span class="material-symbols-outlined text-[16px] text-primary">location_on</span>
@@ -85,7 +85,7 @@ function featuredCardHtml(doc: DoctorDirectoryRow, index: number): string {
       <span class="font-label-sm text-label-sm text-secondary">رسوم الكشف:</span>
       <span class="font-headline-sm text-headline-sm text-on-surface font-bold tabular-nums">${escapeHtml(money(doc.consultation_fee))}</span>
     </div>
-    <button class="px-space-md py-2.5 min-h-11 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md transition-all shadow-sm" type="button" data-book-doctor="${escapeHtml(doc.id)}">
+    <button class="press px-space-md py-2.5 min-h-11 rounded-full bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md shadow-sm" type="button" data-book-doctor="${escapeHtml(doc.id)}">
       احجز موعداً
     </button>
   </div>
@@ -110,15 +110,18 @@ function featuredLoadingHtml(): string {
 function renderFeaturedDoctors(root: HTMLElement, docs: DoctorDirectoryRow[]) {
   const grid = root.querySelector<HTMLElement>("#featured-doctors");
   if (!grid) return;
+  grid.setAttribute("aria-busy", "false");
   if (!docs.length) {
-    grid.innerHTML = `<div class="col-span-full bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm">
+    grid.innerHTML = `<div class="col-span-full rise-in bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm">
       <span class="material-symbols-outlined text-[28px] text-outline">event_busy</span>
       <span>لا يوجد أطباء لديهم مواعيد متاحة خلال الأسبوع القادم.</span>
-      <a href="#doctors" class="min-h-11 px-space-lg inline-flex items-center rounded-full bg-primary text-on-primary font-label-md text-label-md">تصفح جميع الأطباء</a>
+      <a href="#doctors" class="press min-h-11 px-space-lg inline-flex items-center rounded-full bg-primary text-on-primary font-label-md text-label-md">تصفح جميع الأطباء</a>
     </div>`;
     return;
   }
-  grid.innerHTML = docs.slice(0, 8).map(featuredCardHtml).join("");
+  grid.innerHTML = docs.slice(0, 8)
+    .map((doc, i) => `<div class="rise-in" style="animation-delay:${i * 50}ms">${featuredCardHtml(doc, i)}</div>`)
+    .join("");
 }
 
 /* ------------------------------ specialty counts ------------------------------ */
@@ -168,7 +171,6 @@ function wireHeroControls(root: HTMLElement) {
     btn.addEventListener("click", () => {
       switch (btn.dataset.quick) {
         case "today": seedDoctorsFilters({ avail: "today" }); break;
-        case "video": seedDoctorsFilters({ consult: "video" }); break;
         case "price": seedDoctorsFilters({ sort: "price" }); break;
         default: return;
       }
@@ -187,13 +189,6 @@ function wireHeroControls(root: HTMLElement) {
 }
 
 /* ---------------------------- next appointment hero ---------------------------- */
-
-function qrSvg(text: string): string {
-  const qr = qrcode(0, "M");
-  qr.addData(text);
-  qr.make();
-  return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }).replace("<svg ", '<svg class="w-full h-full" ');
-}
 
 type AppointmentRow = {
   id: string;
@@ -227,7 +222,7 @@ function emptyHeroHtml(loggedIn: boolean): string {
   const cta = loggedIn ? "تصفح الأطباء" : "تسجيل الدخول";
   const icon = loggedIn ? "event_busy" : "login";
   return `
-<div class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-lg relative overflow-hidden">
+<div class="rise-in bg-surface-container-lowest rounded-3xl p-space-lg shadow-lg relative overflow-hidden">
   <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary via-primary-container to-tertiary"></div>
   <div class="flex flex-col lg:flex-row items-center justify-between gap-space-lg">
     <div class="flex items-center gap-space-md">
@@ -239,7 +234,7 @@ function emptyHeroHtml(loggedIn: boolean): string {
         <p class="font-body-md text-body-md text-on-surface-variant">${escapeHtml(body)}</p>
       </div>
     </div>
-    <button type="button" data-hero-cta="${loggedIn ? "#doctors" : "auth"}" class="w-full sm:w-auto px-space-lg py-3 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-all shadow-sm shrink-0">
+    <button type="button" data-hero-cta="${loggedIn ? "#doctors" : "auth"}" class="press w-full sm:w-auto px-space-lg py-3 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container shadow-sm shrink-0">
       ${escapeHtml(cta)}
     </button>
   </div>
@@ -253,18 +248,18 @@ function bookingHeroHtml(appt: AppointmentRow): string {
   const pass = `MIA-${code.slice(0, 4)}-${code.slice(4, 8)}`;
   const spec = shortSpecialty(String(doc.specialization || ""));
   const place = doc.hospitals?.name ? `${spec} • ${doc.hospitals.name}` : spec;
-  const mode = doc.telehealth ? "استشارة مرئية" : "حضور بالعيادة";
+  const mode = "حضور بالعيادة";
   const when = `${formatRelativeDay(String(sch.available_date || ""))}، ${formatArabicDate(String(sch.available_date || ""))}`;
   const at = formatTime(String(sch.start_time || ""));
   const shareText = [
-    "موعدي في نبض العافية",
+    "موعدي في ميعادي",
     `الطبيب: ${String(doc.name || "").trim() || "—"}`,
     `التاريخ: ${when}`,
     `الوقت: ${at} (${mode})`,
     `رقم المرجع: ${pass}`,
   ].join("\n");
   return `
-<div class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-lg relative overflow-hidden">
+<div class="rise-in bg-surface-container-lowest rounded-3xl p-space-lg shadow-lg relative overflow-hidden">
   <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary via-primary-container to-tertiary"></div>
   <div class="flex flex-col lg:flex-row items-stretch justify-between gap-space-lg">
     <div class="flex flex-col sm:flex-row items-start sm:items-center gap-space-md flex-1">
@@ -302,11 +297,11 @@ function bookingHeroHtml(appt: AppointmentRow): string {
         </div>
       </div>
       <div class="flex items-center gap-space-xs w-full sm:w-auto">
-        <button type="button" data-hero-cta="#appointments" class="flex-1 sm:flex-initial px-space-md py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-all flex items-center justify-center gap-1.5 shadow-sm">
+        <button type="button" data-hero-cta="#appointments" class="press flex-1 sm:flex-initial px-space-md py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container flex items-center justify-center gap-1.5 shadow-sm">
           <span class="material-symbols-outlined text-[18px]">calendar_month</span>
           <span>عرض بطاقة الدخول</span>
         </button>
-        <a href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener noreferrer" class="p-2.5 min-h-11 min-w-11 rounded-full bg-surface-container-lowest text-on-surface hover:bg-surface-container-high transition-colors inline-flex items-center justify-center" aria-label="مشاركة تفاصيل الموعد على واتساب" title="مشاركة على واتساب">
+        <a href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener noreferrer" class="press p-2.5 min-h-11 min-w-11 rounded-full bg-surface-container-lowest text-on-surface hover:bg-surface-container-high inline-flex items-center justify-center" aria-label="مشاركة تفاصيل الموعد على واتساب" title="مشاركة على واتساب">
           <span class="material-symbols-outlined text-[20px]">chat</span>
         </a>
       </div>
@@ -337,13 +332,15 @@ export async function wireHome(appEl: HTMLElement, user: HomeUser) {
   const renderFeaturedFailure = () => {
     const grid = appEl.querySelector<HTMLElement>("#featured-doctors");
     if (!grid) return;
-    grid.innerHTML = `<div class="col-span-full bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm">
+    grid.innerHTML = `<div class="col-span-full rise-in bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm">
+      <span class="material-symbols-outlined text-[28px] text-outline">cloud_off</span>
       <span>تعذّر تحميل الأطباء.</span>
-      <button class="min-h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md" type="button" data-retry-featured>إعادة المحاولة</button>
+      <button class="press inline-flex items-center gap-1.5 min-h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md" type="button" data-retry-featured><span class="material-symbols-outlined text-[18px]">refresh</span>إعادة المحاولة</button>
     </div>`;
+    grid.setAttribute("aria-busy", "false");
     grid.querySelector("[data-retry-featured]")?.addEventListener("click", async () => {
       const gridNow = appEl.querySelector<HTMLElement>("#featured-doctors");
-      if (gridNow) gridNow.innerHTML = featuredLoadingHtml();
+      if (gridNow) { gridNow.innerHTML = featuredLoadingHtml(); gridNow.setAttribute("aria-busy", "true"); }
       try {
         const rows = await getDoctorsDirectory(7);
         populateHeroFilters(appEl, rows);

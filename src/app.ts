@@ -89,7 +89,6 @@ const PATH_ROUTES: Record<string, string> = {
   home: "#home",
   "doctors-and-specialties": "#doctors",
   "hospitals-and-centers": "#doctors",
-  "telehealth-consultations": "#doctors",
   "my-bookings": "#appointments",
   "instant-consultation": "#doctors",
   profile: "#profile",
@@ -115,7 +114,7 @@ function render() {
     const mainOpen = staticHtml
       ? `<main class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh">${staticHtml}</main>`
       : `<main id="main-root" class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"></main>`;
-    appEl.innerHTML = `${renderSiteHeader(state.currentUser)}${mainOpen}${renderSiteFooter()}<div id="auth-mount"></div>`;
+    appEl.innerHTML = `${renderSiteHeader(state.currentUser, route)}${mainOpen}${renderSiteFooter()}<div id="auth-mount"></div>`;
   }
 
   wireShell();
@@ -182,7 +181,6 @@ function render() {
 
 function wireShell() {
   appEl.querySelectorAll<HTMLElement>('[data-action="open-auth"]').forEach((b) => b.addEventListener("click", () => authModal?.open()));
-  appEl.querySelectorAll<HTMLElement>('[data-action="lang"]').forEach((b) => b.addEventListener("click", () => showToast("دعم اللغة الإنجليزية قريباً", "info")));
 
   const headRow = appEl.querySelector<HTMLElement>("header > div");
   if (headRow && !document.getElementById("theme-toggle")) {
@@ -212,15 +210,18 @@ function wireShell() {
 
   const menu = appEl.querySelector<HTMLElement>("#mobile-menu");
   const menuIcon = appEl.querySelector<HTMLElement>("#mobile-menu-icon");
-  appEl.querySelector<HTMLButtonElement>("#mobile-menu-btn")?.addEventListener("click", () => {
+  const menuBtn = appEl.querySelector<HTMLButtonElement>("#mobile-menu-btn");
+  menuBtn?.addEventListener("click", () => {
     if (!menu) return;
     const nowHidden = menu.classList.toggle("hidden");
     if (menuIcon) menuIcon.textContent = nowHidden ? "menu" : "close";
+    menuBtn.setAttribute("aria-expanded", String(!nowHidden));
   });
   menu?.addEventListener("click", (e) => {
     if (!(e.target as HTMLElement).closest("[data-path]")) return;
     menu.classList.add("hidden");
     if (menuIcon) menuIcon.textContent = "menu";
+    menuBtn?.setAttribute("aria-expanded", "false");
   });
 }
 
@@ -231,7 +232,11 @@ function handleClick(e: MouseEvent) {
   const pathEl = target.closest<HTMLElement>("[data-path]");
   if (pathEl) {
     const dest = PATH_ROUTES[pathEl.dataset.path || ""];
-    if (dest) { e.preventDefault(); go(dest); return; }
+    if (dest) {
+      e.preventDefault();
+      go(dest);
+      return;
+    }
   }
 
   const anchor = target.closest<HTMLAnchorElement>('a[href="#"]');
