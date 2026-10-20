@@ -8,7 +8,7 @@ web
 
 ## Users
 
-- **Patients (primary):** individuals in Saudi Arabia booking outpatient visits at the clinic via desktop or mobile web, in Arabic (RTL). Their job: find a doctor, pick a free slot, book/cancel/reschedule it themselves, and get a reliable record of the appointment.
+- **Patients (primary):** individuals in Sudan booking outpatient visits at the clinic via desktop or mobile web, in Arabic (RTL). Their job: find a doctor, pick a free slot, book/cancel/reschedule it themselves, and get a reliable record of the appointment.
 - **Clinic staff:** doctors and an administrator/ receptionist use the management panel to view all bookings for their schedules and update appointment state (completed / no-show / cancelled by clinic).
 
 ## Product Purpose
@@ -21,8 +21,8 @@ A single relational source of truth (Postgres behind Supabase) with race-conditi
 
 ## Operating Context
 
-- Patients authenticate (email + password) and use the browser UI; RTL Arabic throughout.
-- Diets/Rates are shown in Saudi Riyal (ر.س) with a per-doctor consultation fee.
+- Patients authenticate (email + password) and use the browser UI; RTL Arabic throughout, serving الخرطوم، أم درمان، وبورتسودان.
+- Fees are shown in Sudanese Pounds (ج.س) with a per-doctor consultation fee.
 - Patients can share an appointment reminder via WhatsApp, common in the Saudi consumer context.
 - Clinic staff/doctors sign in with a role on their profile and use the admin tab to mark appointments completed or no-show.
 - The app runs as a static site served over HTTP (ES modules + CDN libs: Tailwind, Lucide, supabase-js) — `file://` is not supported.
@@ -51,11 +51,11 @@ Technical constraints:
 - Name is binding: **نَبْض العافية (PulseCare)**.
 - Voice/language: Arabic-first, medical-care tone; UI text already localized in Arabic (MSA).
 - Identity assets (logo, colors, wordmark) are the incumbent implementation only: a teal/emerald + slate palette and activity-pulse mark, all CSS/CDN-based. No external brand kit has been provided.
-- The brand operates as a real clinic in Saudi Arabia; SAR pricing is part of the product reality. *(Confirmed with user.)*
+- The brand operates as a real clinic in Sudan; Sudanese Pound pricing is part of the product reality. *(Confirmed with user, 2026-10-20 — supersedes the earlier Saudi-market note.)*
 
 ## Evidence on Hand
 
-- Working schema and UI are the evidence of the booking mechanism (see `schema.sql`, `index.html`, `app.js`, `supabase-service.js`).
+- Working schema and UI are the evidence of the booking mechanism (see `schema.sql`, `src/views/stitch/`, `src/lib/supabase.ts`, `src/app.ts`).
 - Seed/sample data only: 4 example doctors (fixed UUIDs, SAR fees) and generated future slots. No real patient data, doctor names, clinic location, photos, testimonials, or legal/press assets exist yet.
 - Future work must not fabricate patient records, testimonials, or clinic claims; obtaining real production assets is pending.
 

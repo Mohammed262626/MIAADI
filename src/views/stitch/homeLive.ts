@@ -1,7 +1,9 @@
+import qrcode from "qrcode-generator";
 import { escapeHtml, formatArabicDate, formatRelativeDay, formatTime, localDateISO } from "../../lib/format";
 import { getDoctorSpecializations, getDoctorsDirectory, getPatientAppointments, type DoctorDirectoryRow } from "../../lib/supabase";
 import { countSpecialties } from "../../lib/specialties";
 import { initials, money, shortRef } from "../../components/ui";
+import { seedDoctorsFilters } from "./doctorsLive";
 
 type HomeUser = { id?: string; profile?: { full_name?: string | null; role?: string | null } | null } | null;
 
@@ -90,11 +92,30 @@ function featuredCardHtml(doc: DoctorDirectoryRow, index: number): string {
 </div>`;
 }
 
+function featuredLoadingHtml(): string {
+  return [0, 1, 2, 3].map(() => `
+<div class="bg-surface-container-lowest rounded-3xl p-space-md shadow-sm animate-pulse">
+  <div class="flex items-start gap-space-sm mb-space-sm">
+    <div class="w-16 h-16 rounded-2xl bg-surface-container-high shrink-0"></div>
+    <div class="flex flex-col gap-2 flex-1 pt-1">
+      <div class="h-3 w-2/3 rounded-full bg-surface-container-high"></div>
+      <div class="h-3 w-1/2 rounded-full bg-surface-container"></div>
+    </div>
+  </div>
+  <div class="h-24 rounded-2xl bg-surface-container-low mb-space-sm"></div>
+  <div class="h-4 w-1/2 rounded-full bg-surface-container"></div>
+</div>`).join("");
+}
+
 function renderFeaturedDoctors(root: HTMLElement, docs: DoctorDirectoryRow[]) {
   const grid = root.querySelector<HTMLElement>("#featured-doctors");
   if (!grid) return;
   if (!docs.length) {
-    grid.innerHTML = `<div class="col-span-full bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md">لا يوجد أطباء متاحون للحجز حالياً. حدّث الصفحة للمحاولة مرة أخرى.</div>`;
+    grid.innerHTML = `<div class="col-span-full bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm">
+      <span class="material-symbols-outlined text-[28px] text-outline">event_busy</span>
+      <span>لا يوجد أطباء لديهم مواعيد متاحة خلال الأسبوع القادم.</span>
+      <a href="#doctors" class="min-h-11 px-space-lg inline-flex items-center rounded-full bg-primary text-on-primary font-label-md text-label-md">تصفح جميع الأطباء</a>
+    </div>`;
     return;
   }
   grid.innerHTML = docs.slice(0, 8).map(featuredCardHtml).join("");
@@ -104,28 +125,85 @@ function renderFeaturedDoctors(root: HTMLElement, docs: DoctorDirectoryRow[]) {
 
 function renderSpecialtyCounts(root: HTMLElement, specializations: string[]) {
   const counts = countSpecialties(specializations);
-  root.querySelectorAll<HTMLElement>("[data-specialty-count]").forEach((el) => {
-    const n = counts[el.dataset.specialtyCount || ""] ?? 0;
-    el.textContent = n > 0 ? `${n} طبيب` : "قريباً";
+  root.querySelectorAll<HTMLButtonElement>("[data-specialty-link]").forEach((btn) => {
+    const key = btn.dataset.specialtyLink || "";
+    const n = counts[key] ?? 0;
+    const badge = btn.querySelector<HTMLElement>(`[data-specialty-count="${key}"]`);
+    if (badge) badge.textContent = n > 0 ? `${n} طبيب` : "قريباً";
+    const off = n === 0;
+    btn.disabled = off;
+    btn.classList.toggle("opacity-50", off);
+    btn.classList.toggle("cursor-not-allowed", off);
+  });
+}
+
+/* ------------------------------ hero search deck ------------------------------ */
+
+function fillHeroSelect(sel: HTMLSelectElement | null, values: string[], allLabel: string) {
+  if (!sel) return;
+  sel.innerHTML = `<option value="">${escapeHtml(allLabel)}</option>` +
+    values.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+}
+
+function populateHeroFilters(root: HTMLElement, docs: DoctorDirectoryRow[]) {
+  const cities = [...new Set(docs.map((d) => d.hospital_city || d.city).filter((c): c is string => Boolean(c)))].sort();
+  const insurers = [...new Set(docs.flatMap((d) => d.insurances))].sort();
+  fillHeroSelect(root.querySelector<HTMLSelectElement>("#hero-city"), cities, "كافة المدن");
+  fillHeroSelect(root.querySelector<HTMLSelectElement>("#hero-insurance"), insurers, "كافة شركات التأمين");
+}
+
+function wireHeroControls(root: HTMLElement) {
+  root.querySelector<HTMLFormElement>("#hero-search")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const val = (sel: string) => (root.querySelector(sel) as HTMLInputElement | HTMLSelectElement | null)?.value.trim() || "";
+    seedDoctorsFilters({
+      q: val("#hero-q"),
+      city: val("#hero-city"),
+      insurance: val("#hero-insurance"),
+    });
+    location.hash = "#doctors";
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-quick]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      switch (btn.dataset.quick) {
+        case "today": seedDoctorsFilters({ avail: "today" }); break;
+        case "video": seedDoctorsFilters({ consult: "video" }); break;
+        case "price": seedDoctorsFilters({ sort: "price" }); break;
+        default: return;
+      }
+      location.hash = "#doctors";
+    });
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-specialty-link]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const specialty = btn.dataset.specialtyLink;
+      if (!specialty) return;
+      seedDoctorsFilters({ specialty });
+      location.hash = "#doctors";
+    });
   });
 }
 
 /* ---------------------------- next appointment hero ---------------------------- */
 
-const QR_SVG = `<svg class="w-full h-full text-on-surface" fill="currentColor" viewBox="0 0 100 100">
-<rect height="30" rx="4" width="30" x="0" y="0"></rect><rect fill="white" height="18" rx="2" width="18" x="6" y="6"></rect><rect height="10" rx="1" width="10" x="10" y="10"></rect>
-<rect height="30" rx="4" width="30" x="70" y="0"></rect><rect fill="white" height="18" rx="2" width="18" x="76" y="6"></rect><rect height="10" rx="1" width="10" x="80" y="10"></rect>
-<rect height="30" rx="4" width="30" x="0" y="70"></rect><rect fill="white" height="18" rx="2" width="18" x="6" y="76"></rect><rect height="10" rx="1" width="10" x="10" y="80"></rect>
-<rect height="20" rx="2" width="10" x="40" y="10"></rect><rect height="20" rx="2" width="20" x="40" y="40"></rect><rect height="10" rx="2" width="10" x="70" y="40"></rect>
-<rect height="10" rx="2" width="15" x="15" y="40"></rect><rect height="15" rx="2" width="20" x="40" y="70"></rect><rect height="25" rx="2" width="25" x="70" y="70"></rect>
-</svg>`;
+function qrSvg(text: string): string {
+  const qr = qrcode(0, "M");
+  qr.addData(text);
+  qr.make();
+  return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }).replace("<svg ", '<svg class="w-full h-full" ');
+}
 
 type AppointmentRow = {
   id: string;
   status: string;
   doctor_schedules?: {
     available_date?: string; start_time?: string; end_time?: string;
-    doctors?: { id?: string; name?: string; specialization?: string; hospitals?: { name?: string } | null } | null;
+    doctors?: {
+      id?: string; name?: string; specialization?: string; telehealth?: boolean;
+      hospitals?: { name?: string } | null;
+    } | null;
   } | null;
 };
 
@@ -145,7 +223,7 @@ function emptyHeroHtml(loggedIn: boolean): string {
   const title = loggedIn ? "لا توجد مواعيد قادمة" : "سجّل الدخول لعرض موعدك القادم";
   const body = loggedIn
     ? "اختر طبيبك المناسب واحجز موعدك في أقل من دقيقة."
-    : "تابع مواعيدك، بطاقة الدخول الذكية، وتذكيراتك فور حجزك.";
+    : "تابع مواعيدك ورقم مرجع الحجز لمشاركته مع من يرافقك.";
   const cta = loggedIn ? "تصفح الأطباء" : "تسجيل الدخول";
   const icon = loggedIn ? "event_busy" : "login";
   return `
@@ -175,6 +253,16 @@ function bookingHeroHtml(appt: AppointmentRow): string {
   const pass = `MIA-${code.slice(0, 4)}-${code.slice(4, 8)}`;
   const spec = shortSpecialty(String(doc.specialization || ""));
   const place = doc.hospitals?.name ? `${spec} • ${doc.hospitals.name}` : spec;
+  const mode = doc.telehealth ? "استشارة مرئية" : "حضور بالعيادة";
+  const when = `${formatRelativeDay(String(sch.available_date || ""))}، ${formatArabicDate(String(sch.available_date || ""))}`;
+  const at = formatTime(String(sch.start_time || ""));
+  const shareText = [
+    "موعدي في نبض العافية",
+    `الطبيب: ${String(doc.name || "").trim() || "—"}`,
+    `التاريخ: ${when}`,
+    `الوقت: ${at} (${mode})`,
+    `رقم المرجع: ${pass}`,
+  ].join("\n");
   return `
 <div class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-lg relative overflow-hidden">
   <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary via-primary-container to-tertiary"></div>
@@ -189,39 +277,38 @@ function bookingHeroHtml(appt: AppointmentRow): string {
       <div class="flex flex-col min-w-0">
         <div class="inline-flex items-center gap-2 mb-1">
           <span class="px-2 py-0.5 rounded-md bg-secondary-container font-label-sm text-label-sm text-on-secondary-container font-bold">موعدك القادم المؤكد</span>
-          <span class="text-tertiary font-label-sm text-label-sm flex items-center gap-0.5">
-            <span class="material-symbols-outlined text-[14px]">verified</span>
-            موافق عليه تأمينياً
-          </span>
         </div>
         <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(String(doc.name || "—"))}</h3>
         <p class="font-body-md text-body-md text-on-surface-variant">${escapeHtml(place)}</p>
         <div class="flex items-center gap-space-md mt-2 flex-wrap">
           <div class="flex items-center gap-1 text-primary font-label-md text-label-md">
             <span class="material-symbols-outlined text-[18px]">calendar_today</span>
-            <span>${escapeHtml(formatRelativeDay(String(sch.available_date || "")))}، ${escapeHtml(formatArabicDate(String(sch.available_date || "")))}</span>
+            <span>${escapeHtml(when)}</span>
           </div>
           <div class="flex items-center gap-1 text-primary font-label-md text-label-md">
             <span class="material-symbols-outlined text-[18px]">schedule</span>
-            <span>${escapeHtml(formatTime(String(sch.start_time || "")))} (حضور بالعيادة)</span>
+            <span>${escapeHtml(at)} (${escapeHtml(mode)})</span>
           </div>
         </div>
       </div>
     </div>
     <div class="flex flex-col sm:flex-row items-center gap-space-md bg-surface-container-low rounded-2xl p-space-md shrink-0 justify-between">
       <div class="flex items-center gap-space-md">
-        <div class="w-16 h-16 bg-surface-container-lowest p-1.5 rounded-xl flex items-center justify-center shadow-sm">${QR_SVG}</div>
+        <div class="w-16 h-16 bg-white p-1.5 rounded-xl flex items-center justify-center shadow-sm" role="img" aria-label="رمز الاستجابة السريعة لرقم مرجع الموعد">${qrSvg(pass)}</div>
         <div class="flex flex-col">
-          <span class="font-label-sm text-label-sm text-secondary">رقم بطاقة الوصول الذكية</span>
+          <span class="font-label-sm text-label-sm text-secondary">رقم مرجع الموعد</span>
           <span class="font-headline-sm text-headline-sm text-on-surface font-mono tracking-wider font-bold tabular-nums">${escapeHtml(pass)}</span>
-          <span class="font-body-sm text-body-sm text-tertiary">دخول مباشر بدون انتظار الاستقبال</span>
+          <span class="font-body-sm text-body-sm text-tertiary">احتفظ به لمراجعة موعدك</span>
         </div>
       </div>
       <div class="flex items-center gap-space-xs w-full sm:w-auto">
         <button type="button" data-hero-cta="#appointments" class="flex-1 sm:flex-initial px-space-md py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-all flex items-center justify-center gap-1.5 shadow-sm">
-          <span class="material-symbols-outlined text-[18px]">qr_code_scanner</span>
+          <span class="material-symbols-outlined text-[18px]">calendar_month</span>
           <span>عرض بطاقة الدخول</span>
         </button>
+        <a href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener noreferrer" class="p-2.5 min-h-11 min-w-11 rounded-full bg-surface-container-lowest text-on-surface hover:bg-surface-container-high transition-colors inline-flex items-center justify-center" aria-label="مشاركة تفاصيل الموعد على واتساب" title="مشاركة على واتساب">
+          <span class="material-symbols-outlined text-[20px]">chat</span>
+        </a>
       </div>
     </div>
   </div>
@@ -231,47 +318,46 @@ function bookingHeroHtml(appt: AppointmentRow): string {
 /* ---------------------------------- wiring ---------------------------------- */
 
 export async function wireHome(appEl: HTMLElement, user: HomeUser) {
-  const gridEl = appEl.querySelector<HTMLElement>("#featured-doctors");
-  if (gridEl) gridEl.innerHTML = `<div class="col-span-full py-space-lg text-center text-on-surface-variant font-body-md text-body-md">جارٍ تحميل الأطباء…</div>`;
   const heroEl = appEl.querySelector<HTMLElement>("#home-next-appointment");
-  if (heroEl) heroEl.innerHTML = `<div class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm text-center text-on-surface-variant font-body-md text-body-md">جارٍ التحميل…</div>`;
 
-  const [specializations, appointments] = await Promise.all([
+  const [specializations, appointments, directory] = await Promise.all([
     getDoctorSpecializations().catch(() => [] as string[]),
     user ? getPatientAppointments().catch(() => [] as unknown[]).then((r) => r as AppointmentRow[]) : Promise.resolve([] as AppointmentRow[]),
+    getDoctorsDirectory(7).catch(() => null),
   ]);
 
   renderSpecialtyCounts(appEl, specializations);
+  wireHeroControls(appEl);
 
-  const loadFeatured = async () => {
-    try {
-      const docs = await getDoctorsDirectory(7);
-      renderFeaturedDoctors(appEl, docs);
-    } catch {
-      const grid = appEl.querySelector<HTMLElement>("#featured-doctors");
-      if (!grid) return;
-      grid.innerHTML = `<div class="col-span-full bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm"><span>تعذّر تحميل الأطباء.</span><button class="min-h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md" type="button" data-retry-featured>إعادة المحاولة</button></div>`;
-      grid.querySelector("[data-retry-featured]")?.addEventListener("click", () => {
-        grid.innerHTML = `<div class="col-span-full py-space-lg text-center text-on-surface-variant font-body-md text-body-md">جارٍ تحميل الأطباء…</div>`;
-        void loadFeatured();
-      });
-    }
-  };
-  await loadFeatured();
-
-  const hero = appEl.querySelector<HTMLElement>("#home-next-appointment");
-  if (hero) {
+  if (heroEl) {
     const next = pickNextAppointment(appointments);
-    hero.innerHTML = next ? bookingHeroHtml(next) : emptyHeroHtml(Boolean(user));
-    hero.querySelectorAll<HTMLElement>("[data-hero-cta]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const dest = btn.dataset.heroCta || "";
-        if (dest === "auth") {
-          appEl.querySelector<HTMLElement>('[data-action="open-auth"]')?.click();
-        } else if (dest) {
-          location.hash = dest;
-        }
-      });
+    heroEl.innerHTML = next ? bookingHeroHtml(next) : emptyHeroHtml(Boolean(user));
+  }
+
+  const renderFeaturedFailure = () => {
+    const grid = appEl.querySelector<HTMLElement>("#featured-doctors");
+    if (!grid) return;
+    grid.innerHTML = `<div class="col-span-full bg-surface-container-lowest rounded-3xl p-space-lg text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm">
+      <span>تعذّر تحميل الأطباء.</span>
+      <button class="min-h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md" type="button" data-retry-featured>إعادة المحاولة</button>
+    </div>`;
+    grid.querySelector("[data-retry-featured]")?.addEventListener("click", async () => {
+      const gridNow = appEl.querySelector<HTMLElement>("#featured-doctors");
+      if (gridNow) gridNow.innerHTML = featuredLoadingHtml();
+      try {
+        const rows = await getDoctorsDirectory(7);
+        populateHeroFilters(appEl, rows);
+        renderFeaturedDoctors(appEl, rows);
+      } catch {
+        renderFeaturedFailure();
+      }
     });
+  };
+
+  if (directory) {
+    populateHeroFilters(appEl, directory);
+    renderFeaturedDoctors(appEl, directory);
+  } else {
+    renderFeaturedFailure();
   }
 }

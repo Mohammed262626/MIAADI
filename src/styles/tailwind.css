@@ -87,17 +87,17 @@
   --spacing-gutter-sm: 0.75rem;
 
   /* ---- typography families ---- */
-  --font-sans: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
-  --font-display-lg: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
-  --font-headline-lg: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
-  --font-headline-md: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
-  --font-headline-sm: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
-  --font-label-lg: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
-  --font-label-md: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
-  --font-label-sm: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
-  --font-body-lg: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
-  --font-body-md: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
-  --font-body-sm: "Plus Jakarta Sans", "Cairo", ui-sans-serif, system-ui;
+  --font-sans: "Cairo", ui-sans-serif, system-ui;
+  --font-display-lg: "Cairo", ui-sans-serif, system-ui;
+  --font-headline-lg: "Cairo", ui-sans-serif, system-ui;
+  --font-headline-md: "Cairo", ui-sans-serif, system-ui;
+  --font-headline-sm: "Cairo", ui-sans-serif, system-ui;
+  --font-label-lg: "Cairo", ui-sans-serif, system-ui;
+  --font-label-md: "Cairo", ui-sans-serif, system-ui;
+  --font-label-sm: "Cairo", ui-sans-serif, system-ui;
+  --font-body-lg: "Cairo", ui-sans-serif, system-ui;
+  --font-body-md: "Cairo", ui-sans-serif, system-ui;
+  --font-body-sm: "Cairo", ui-sans-serif, system-ui;
 
   /* ---- typography scale ---- */
   --text-display-lg: 2rem;

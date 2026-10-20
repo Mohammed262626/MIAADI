@@ -67,6 +67,21 @@ const CONFLICT_NOTE = { same: "لديك موعد آخر مع نفس الطبيب
 let DEFAULTS: Filters = emptyFilters();
 let visibleCount = 30;
 
+/* Filters handed over from another view (e.g. the home search deck). Consumed once. */
+export type DoctorsSeed = {
+  q?: string;
+  city?: string;
+  insurance?: string;
+  consult?: Consult;
+  avail?: Avail;
+  sort?: SortKey;
+  specialty?: string;
+};
+let PENDING_SEED: DoctorsSeed | null = null;
+export function seedDoctorsFilters(seed: DoctorsSeed) {
+  PENDING_SEED = seed;
+}
+
 function emptyFilters(): Filters {
   return { q: "", city: "", consult: "clinic", avail: "any", specs: new Set<SpecialtyKey>(), gender: "all", insurance: "", maxPrice: 8000, minRating: 4.5, sort: "rating" };
 }
@@ -354,6 +369,21 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
   DEFAULTS = { ...emptyFilters(), specs: new Set(SPECIALTIES.filter((s) => (counts[s.key] || 0) > 0).map((s) => s.key)) };
   f.specs = new Set(DEFAULTS.specs);
 
+  // Apply any filters handed over from the home page (search deck / quick pills / specialty tiles).
+  const seed = PENDING_SEED;
+  PENDING_SEED = null;
+  if (seed) {
+    if (seed.q) f.q = seed.q;
+    if (seed.city) f.city = seed.city;
+    if (seed.insurance) f.insurance = seed.insurance;
+    if (seed.consult) f.consult = seed.consult;
+    if (seed.avail) f.avail = seed.avail;
+    if (seed.sort) f.sort = seed.sort;
+    if (seed.specialty && SPECIALTIES.some((s) => s.key === seed.specialty)) {
+      f.specs = new Set([seed.specialty as SpecialtyKey]);
+    }
+  }
+
   const specsBox = appEl.querySelector<HTMLElement>("#doc-specs");
   if (specsBox) {
     specsBox.innerHTML = SPECIALTIES.map((sp) => `
@@ -393,6 +423,7 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
   insSelect?.addEventListener("change", () => { f.insurance = insSelect.value; rerender(); });
   const sortSelect = appEl.querySelector<HTMLSelectElement>("#doc-sort");
   sortSelect?.addEventListener("change", () => { f.sort = sortSelect.value as SortKey; rerender(); });
+  if (search && f.q) search.value = f.q;
   const price = appEl.querySelector<HTMLInputElement>("#doc-price");
   price?.addEventListener("input", () => { f.maxPrice = Number(price.value); rerender(); });
 

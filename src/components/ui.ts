@@ -64,16 +64,6 @@ export function statusPill(status: string): string {
   return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${m.cls}"><span class="w-1.5 h-1.5 rounded-full ${m.dot}"></span>${escapeHtml(m.label)}</span>`;
 }
 
-export function qrPattern(seed: string, cols = 9): string {
-  const cells: string[] = [];
-  for (let i = 0; i < cols * cols; i++) {
-    const h = hash(`${seed}:${i}`);
-    const on = h % 100 > 46;
-    cells.push(`<span class="${on ? "bg-on-surface" : "bg-transparent"} rounded-[1.5px]"></span>`);
-  }
-  return `<div class="grid gap-[2px] w-full aspect-square" style="grid-template-columns:repeat(${cols},1fr)">${cells.join("")}</div>`;
-}
-
 export function shortRef(id: string): string {
   return String(id || "").replace(/-/g, "").slice(0, 8).toUpperCase();
 }

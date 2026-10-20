@@ -214,7 +214,7 @@ export async function adminDeleteAppointmentRPC(appointmentId: string) {
 }
 export async function getPatientAppointments() {
   const c = getClient(); const { data: { user } } = await c.auth.getUser(); if (!user) return [];
-  const { data, error } = await c.from("appointments").select(`id,schedule_id,patient_id,patient_name,patient_phone,status,doctor_schedules(id,available_date,start_time,end_time,doctors(id,name,specialization,consultation_fee,hospitals(name)))`).eq("patient_id", user.id).order("id", { ascending: false });
+  const { data, error } = await c.from("appointments").select(`id,schedule_id,patient_id,patient_name,patient_phone,status,doctor_schedules(id,available_date,start_time,end_time,doctors(id,name,specialization,consultation_fee,telehealth,hospitals(name)))`).eq("patient_id", user.id).order("id", { ascending: false });
   if (error) throw error; return data || [];
 }
 export function subscribeToRealtimeUpdates(onSchedule: (p: unknown)=>void, onAppointment: (p: unknown)=>void) {

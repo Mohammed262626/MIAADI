@@ -243,14 +243,22 @@ function handleClick(e: MouseEvent) {
     if (id) { e.preventDefault(); go(`#doctor/${id}`); return; }
   }
 
+  const heroCta = target.closest<HTMLElement>("[data-hero-cta]");
+  if (heroCta) {
+    const dest = heroCta.dataset.heroCta;
+    e.preventDefault();
+    if (!dest || dest === "auth") authModal?.open();
+    else go(dest);
+    return;
+  }
+
   const clickable = target.closest<HTMLElement>("button, a");
   if (!clickable) return;
   const label = (clickable.textContent || "").replace(/\s+/g, " ").trim();
   if (!label) return;
 
   if (label.includes("عرض بطاقة الدخول")) { go("#appointments"); return; }
-  if (/متابعة الحجز/.test(label)) { showToast("قريباً: ربط الحجز والدفع بقاعدة البيانات", "info"); return; }
-  if (/احجز موعداً|حجز باقة|حجز الباقة|احجز الآن مع خدمة المنزل/.test(label)) { go("#doctors"); }
+  if (/احجز موعداً/.test(label)) { go("#doctors"); }
 }
 
 /* ----------------------------------- views ---------------------------------- */

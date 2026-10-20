@@ -14,7 +14,8 @@
   "type": "module",
   "dependencies": {
     "@dietrichgebert/ponytail": "^5.2.0",
-    "@supabase/supabase-js": "^2.117.3"
+    "@supabase/supabase-js": "^2.117.3",
+    "qrcode-generator": "^2.0.4"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
