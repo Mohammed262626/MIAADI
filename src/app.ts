@@ -96,7 +96,7 @@ const PATH_ROUTES: Record<string, string> = {
   "doctors-and-specialties": "#doctors",
   "hospitals-and-centers": "#doctors",
   "my-bookings": "#appointments",
-  "instant-consultation": "#doctors",
+  "book-now": "#doctors",
   profile: "#profile",
   "dashboard-overview": "#admin",
   "appointments-schedule": "#admin/manage",
@@ -208,7 +208,14 @@ function render() {
 
 /* --------------------------------- shell ---------------------------------- */
 
+// Document-level drawer listeners only live while the drawer is open; this holds
+// the teardown so a re-render can never stack them.
+let teardownMobileMenu: (() => void) | null = null;
+
 function wireShell() {
+  teardownMobileMenu?.();
+  teardownMobileMenu = null;
+
   appEl.querySelectorAll<HTMLElement>('[data-action="open-auth"]').forEach((b) => b.addEventListener("click", () => authModal?.open()));
 
   const headRow = appEl.querySelector<HTMLElement>("#db-actions") || appEl.querySelector<HTMLElement>("header > div");
@@ -217,8 +224,8 @@ function wireShell() {
     btn.id = "theme-toggle";
     btn.type = "button";
     btn.title = "الوضع الداكن";
-    btn.className = "grid h-10 w-10 shrink-0 place-items-center rounded-lg text-on-surface transition-colors hover:bg-surface-container";
-    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">dark_mode</span>';
+    btn.className = "press grid h-10 w-10 shrink-0 place-items-center rounded-lg text-on-surface transition-colors hover:bg-surface-container";
+    btn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined text-[18px]">dark_mode</span>';
     btn.setAttribute("aria-label", "تبديل المظهر الداكن أو الفاتح");
     headRow.appendChild(btn);
     const paintToggle = (mode: string) => {
@@ -240,17 +247,55 @@ function wireShell() {
   const menu = appEl.querySelector<HTMLElement>("#mobile-menu");
   const menuIcon = appEl.querySelector<HTMLElement>("#mobile-menu-icon");
   const menuBtn = appEl.querySelector<HTMLButtonElement>("#mobile-menu-btn");
-  menuBtn?.addEventListener("click", () => {
+
+  const closeMenu = () => {
     if (!menu) return;
-    const nowHidden = menu.classList.toggle("hidden");
-    if (menuIcon) menuIcon.textContent = nowHidden ? "menu" : "close";
-    menuBtn.setAttribute("aria-expanded", String(!nowHidden));
-  });
-  menu?.addEventListener("click", (e) => {
-    if (!(e.target as HTMLElement).closest("[data-path]")) return;
     menu.classList.add("hidden");
+    menu.classList.remove("drawer-in");
     if (menuIcon) menuIcon.textContent = "menu";
     menuBtn?.setAttribute("aria-expanded", "false");
+    teardownMobileMenu?.();
+    teardownMobileMenu = null;
+  };
+
+  const openMenu = () => {
+    if (!menu) return;
+    menu.classList.remove("hidden");
+    // Restart the entrance if the drawer is re-opened quickly.
+    menu.classList.remove("drawer-in");
+    void menu.offsetWidth;
+    menu.classList.add("drawer-in");
+    if (menuIcon) menuIcon.textContent = "close";
+    menuBtn?.setAttribute("aria-expanded", "true");
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      closeMenu();
+      menuBtn?.focus();
+    };
+    // A tap anywhere outside the drawer dismisses it, like any light-dismiss surface.
+    const onOutside = (e: PointerEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("#mobile-menu, #mobile-menu-btn")) return;
+      closeMenu();
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onOutside);
+    teardownMobileMenu = () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onOutside);
+    };
+  };
+
+  menuBtn?.addEventListener("click", () => {
+    if (!menu) return;
+    if (menu.classList.contains("hidden")) openMenu();
+    else closeMenu();
+  });
+
+  menu?.addEventListener("click", (e) => {
+    if (!(e.target as HTMLElement).closest("[data-path]")) return;
+    closeMenu();
   });
 }
 
