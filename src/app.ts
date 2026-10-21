@@ -839,9 +839,6 @@ const dayIssue = (d: DayDraft): string => {
   }
   return "";
 };
-/** Next calendar date (ISO) that falls on the given weekday, today included. */
-const nextDowDate = (dow: number) => localDateISO((dow - new Date().getDay() + 7) % 7);
-
 async function renderSchedules(root: HTMLElement, doctorId: string) {
   root.classList.remove("hidden");
   root.innerHTML = `<p class="py-space-lg text-center font-body-md text-body-md text-secondary">جاري تحميل الجدول…</p>`;
@@ -906,127 +903,121 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
     </div>`;
 
     root.innerHTML = `
-      <div class="flex flex-wrap items-end justify-between gap-3">
+      <div class="flex flex-wrap items-end justify-between gap-2">
         <div class="min-w-0">
           <p class="text-[12px] font-medium text-on-surface-variant">جدولي وساعات العمل</p>
-          <h2 class="mt-0.5 text-[20px] font-bold text-on-surface">${escapeHtml(heading)}</h2>
+          <h2 class="mt-0.5 text-[19px] font-bold text-on-surface">${escapeHtml(heading)}</h2>
         </div>
-        <p class="text-[12px] text-on-surface-variant">التغييرات تُحفظ على أيام الأسبوع — ثم تُولّد المواعيد منها.</p>
       </div>
 
-      <div class="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4">
+      <div class="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4">
         ${stat("أيام العمل أسبوعياً", String(enabledRules.length ? rulesByDay.size : 0))}
         ${stat("مواعيد الأسبوع", String(weekCapacity))}
         ${stat("مواعيد متاحة قادمة", String(upcoming.length))}
         ${stat("أقرب موعد متاح", nearest ? formatArabicDate(nearest) : "—")}
       </div>
 
-      <div class="mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
-        <section class="rounded-xl border border-line bg-surface-container-lowest p-4">
+      <div class="mt-3 grid grid-cols-1 items-start gap-3 xl:grid-cols-[1.5fr_1fr]">
+        <section class="rounded-xl border border-line bg-surface-container-lowest p-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <h3 class="flex items-center gap-1.5 text-[15px] font-semibold text-on-surface">
-              <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">schedule</span>أوقات العمل الأسبوعية
+            <h3 class="flex items-center gap-1.5 text-[14px] font-semibold text-on-surface">
+              <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">schedule</span>أوقات العمل الأسبوعية
             </h3>
-            <label class="flex items-center gap-2 text-[12px] text-on-surface-variant">مدة الموعد
-              <select id="wk-slot" class="h-8 rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface">
-                ${[15, 20, 30, 45, 60].map((m) => `<option value="${m}"${String(m) === slotFromRule ? " selected" : ""}>${m} دقيقة</option>`).join("")}
+            <label class="flex items-center gap-1.5 text-[12px] text-on-surface-variant">مدة الموعد
+              <select id="wk-slot" class="h-7 rounded-md border border-line bg-surface-container-lowest px-1.5 text-start text-[12px] text-on-surface">
+                ${[15, 20, 30, 45, 60].map((m) => `<option value="${m}"${String(m) === slotFromRule ? " selected" : ""}>${m} د</option>`).join("")}
               </select>
             </label>
           </div>
 
-          <div id="day-rows" class="mt-3 flex flex-col divide-y divide-line"></div>
+          <div id="day-rows" class="mt-1 flex flex-col divide-y divide-line"></div>
 
-          <div class="mt-3 flex flex-wrap items-center gap-2">
-            <button id="apply-all" type="button" class="inline-flex h-8 items-center gap-1 rounded-lg border border-line px-2.5 text-[12px] font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">
-              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">content_copy</span>طبّق فترات أول يوم على الباقي
-            </button>
+          <div class="mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-2">
             <p id="av-preview" class="text-[12px] text-on-surface-variant"></p>
-          </div>
-
-          <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
-            <p class="text-[12px] text-on-surface-variant">الفترة الثانية للدوام المقسوم — الاستراحة فارغة = بدون استراحة.</p>
-            <button id="save-availability" type="button" class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50">
-              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">save</span>حفظ أوقات العمل
+            <button id="apply-all" type="button" class="inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-[11px] font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">
+              <span class="material-symbols-outlined text-[15px]" aria-hidden="true">content_copy</span>طبّق أول يوم على الباقي
+            </button>
+            <button id="save-availability" type="button" class="ms-auto inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[12px] font-semibold text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50">
+              <span class="material-symbols-outlined text-[17px]" aria-hidden="true">save</span>حفظ
             </button>
           </div>
         </section>
 
-        <div class="flex flex-col gap-4">
-          <section class="rounded-xl border border-line bg-surface-container-lowest p-4">
-            <h3 class="flex items-center gap-1.5 text-[15px] font-semibold text-on-surface">
-              <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">auto_awesome</span>توليد المواعيد
+        <div class="flex flex-col gap-3">
+          <section class="rounded-xl border border-line bg-surface-container-lowest p-3">
+            <h3 class="flex items-center gap-1.5 text-[14px] font-semibold text-on-surface">
+              <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">auto_awesome</span>توليد المواعيد
             </h3>
-            <p class="mt-1 text-[12px] text-on-surface-variant">تُبنى المواعيد من أوقات العمل المحفوظة لـ٩٠ يوماً قادمة.</p>
-            <label class="mt-3 block text-[12px] text-on-surface-variant">طريقة التوليد
-              <select id="gen-mode" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface">
-                <option value="add">أضف المواعيد الناقصة فقط</option>
-                <option value="replace">استبدل كل المواعيد الفارغة</option>
+            <p class="mt-0.5 text-[11px] text-on-surface-variant">من أوقات العمل المحفوظة، ٩٠ يوماً قادمة.</p>
+            <div class="mt-2 flex flex-wrap items-center gap-1.5">
+              <select id="gen-mode" class="h-8 min-w-0 flex-1 rounded-md border border-line bg-surface-container-lowest px-1.5 text-start text-[12px] text-on-surface">
+                <option value="add">أضف الناقص فقط</option>
+                <option value="replace">استبدل الفارغ</option>
               </select>
-            </label>
-            <button id="generate-schedule" type="button" class="mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-4 text-[13px] font-semibold text-primary transition-colors hover:bg-primary/20">
-              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">event_repeat</span>توليد (٩٠ يوماً)
-            </button>
+              <button id="generate-schedule" type="button" class="inline-flex h-8 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2.5 text-[12px] font-semibold text-primary transition-colors hover:bg-primary/20">
+                <span class="material-symbols-outlined text-[16px]" aria-hidden="true">event_repeat</span>توليد
+              </button>
+            </div>
           </section>
 
-          <section class="rounded-xl border border-line bg-surface-container-lowest p-4">
-            <h3 class="flex items-center gap-1.5 text-[15px] font-semibold text-on-surface">
-              <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">beach_access</span>إجازات وأيام مغلقة
+          <section class="rounded-xl border border-line bg-surface-container-lowest p-3">
+            <h3 class="flex items-center gap-1.5 text-[14px] font-semibold text-on-surface">
+              <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">beach_access</span>إجازات وأيام مغلقة
             </h3>
-            <p class="mt-1 text-[12px] text-on-surface-variant">إغلاق نطاق يحذف المواعيد الفارغة فيه ويمنع توليدها.</p>
-            <div class="mt-3 grid grid-cols-2 gap-2">
-              <label class="text-[12px] text-on-surface-variant">من
-                <input id="block-start" type="date" min="${today}" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
+            <div class="mt-2 grid grid-cols-3 gap-1.5">
+              <label class="text-[11px] text-on-surface-variant">من
+                <input id="block-start" type="date" min="${today}" class="mt-0.5 h-8 w-full rounded-md border border-line bg-surface-container-lowest px-1 text-start text-[12px] text-on-surface" />
               </label>
-              <label class="text-[12px] text-on-surface-variant">إلى
-                <input id="block-end" type="date" min="${today}" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
+              <label class="text-[11px] text-on-surface-variant">إلى
+                <input id="block-end" type="date" min="${today}" class="mt-0.5 h-8 w-full rounded-md border border-line bg-surface-container-lowest px-1 text-start text-[12px] text-on-surface" />
               </label>
-              <label class="col-span-2 text-[12px] text-on-surface-variant">السبب
-                <input id="block-reason" placeholder="إجازة" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-[13px] text-on-surface" />
+              <label class="text-[11px] text-on-surface-variant">السبب
+                <input id="block-reason" placeholder="إجازة" class="mt-0.5 h-8 w-full rounded-md border border-line bg-surface-container-lowest px-1 text-[12px] text-on-surface" />
               </label>
             </div>
-            <button id="add-blocked" type="button" class="mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-error-container/60 px-4 text-[13px] font-semibold text-on-error-container transition-colors hover:bg-error-container">
-              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">lock</span>إغلاق التواريخ
+            <button id="add-blocked" type="button" class="mt-2 inline-flex h-8 w-full items-center justify-center gap-1 rounded-md bg-error-container/60 px-3 text-[12px] font-semibold text-on-error-container transition-colors hover:bg-error-container">
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">lock</span>إغلاق التواريخ
             </button>
-            <div class="mt-3 flex flex-col divide-y divide-line">
+            <div class="mt-1 flex flex-col divide-y divide-line">
               ${blocked.length ? blocked.map((b) => `
-                <div class="flex items-center justify-between gap-2 py-2 text-[13px] text-on-surface">
+                <div class="flex items-center justify-between gap-2 py-1.5 text-[12px] text-on-surface">
                   <span class="min-w-0 truncate"><span class="tabular-nums">${escapeHtml(formatArabicDate(b.start_date))}${b.start_date !== b.end_date ? " – " + escapeHtml(formatArabicDate(b.end_date)) : ""}</span> · ${escapeHtml(b.reason || "إجازة")}</span>
-                  <button data-unblock="${escapeHtml(b.id)}" type="button" class="shrink-0 rounded-lg px-2 py-1 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">إلغاء</button>
-                </div>`).join("") : `<p class="py-2 text-[12px] text-on-surface-variant">لا توجد إجازات مسجّلة.</p>`}
+                  <button data-unblock="${escapeHtml(b.id)}" type="button" class="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">إلغاء</button>
+                </div>`).join("") : `<p class="py-1.5 text-[11px] text-on-surface-variant">لا توجد إجازات مسجّلة.</p>`}
             </div>
           </section>
 
-          <section class="rounded-xl border border-line bg-surface-container-lowest p-4">
-            <h3 class="flex items-center gap-1.5 text-[15px] font-semibold text-on-surface">
-              <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">add_task</span>نوبات ليوم واحد
+          <section class="rounded-xl border border-line bg-surface-container-lowest p-3">
+            <h3 class="flex items-center gap-1.5 text-[14px] font-semibold text-on-surface">
+              <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">add_task</span>نوبات ليوم واحد
             </h3>
-            <p class="mt-1 text-[12px] text-on-surface-variant">تُقسَّم الفترة حسب مدة الموعد المحفوظة لذلك اليوم.</p>
-            <form id="add-schedule" class="mt-3 grid grid-cols-2 gap-2">
-              <label class="col-span-2 text-[12px] text-on-surface-variant">التاريخ
-                <input id="sch-date" type="date" min="${today}" required class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
+            <form id="add-schedule" class="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-[1.2fr_1fr_1fr_auto] sm:items-end">
+              <label class="col-span-2 text-[11px] text-on-surface-variant sm:col-span-1">التاريخ
+                <input id="sch-date" type="date" min="${today}" required class="mt-0.5 h-8 w-full rounded-md border border-line bg-surface-container-lowest px-1 text-start text-[12px] text-on-surface" />
               </label>
-              <label class="text-[12px] text-on-surface-variant">من
-                <input id="sch-start" type="time" required class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
+              <label class="text-[11px] text-on-surface-variant">من
+                <input id="sch-start" type="time" required class="mt-0.5 h-8 w-full rounded-md border border-line bg-surface-container-lowest px-1 text-start text-[12px] text-on-surface" />
               </label>
-              <label class="text-[12px] text-on-surface-variant">إلى
-                <input id="sch-end" type="time" required class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
+              <label class="text-[11px] text-on-surface-variant">إلى
+                <input id="sch-end" type="time" required class="mt-0.5 h-8 w-full rounded-md border border-line bg-surface-container-lowest px-1 text-start text-[12px] text-on-surface" />
               </label>
-              <button type="submit" class="col-span-2 mt-1 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-line px-4 text-[13px] font-semibold text-on-surface transition-colors hover:bg-surface-container-low">
-                <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">add</span>إضافة النوبات
+              <button type="submit" class="col-span-2 inline-flex h-8 items-center justify-center gap-1 rounded-md border border-line px-2.5 text-[12px] font-semibold text-on-surface transition-colors hover:bg-surface-container-low sm:col-span-1">
+                <span class="material-symbols-outlined text-[16px] text-primary" aria-hidden="true">add</span>إضافة
               </button>
             </form>
+            <p class="mt-1 text-[11px] text-on-surface-variant">تُقسَّم الفترة حسب مدة الموعد.</p>
           </section>
         </div>
       </div>
 
-      <section class="mt-4 rounded-xl border border-line bg-surface-container-lowest">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
-          <h3 class="flex items-center gap-1.5 text-[15px] font-semibold text-on-surface">
-            <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">event_available</span>المواعيد المتاحة
-            <span id="slot-count" class="text-[13px] font-normal tabular-nums text-on-surface-variant"></span>
+      <section class="mt-3 rounded-xl border border-line bg-surface-container-lowest">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
+          <h3 class="flex items-center gap-1.5 text-[14px] font-semibold text-on-surface">
+            <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">event_available</span>المواعيد المتاحة
+            <span id="slot-count" class="text-[12px] font-normal tabular-nums text-on-surface-variant"></span>
           </h3>
-          <div id="slot-range" class="flex items-center gap-0.5 rounded-lg bg-surface-container-low p-0.5" role="group" aria-label="نطاق المواعيد">
-            ${[["7", "٧ أيام"], ["30", "٣٠ يوماً"], ["all", "الكل"]].map(([v, l]) => `<button data-range="${v}" type="button" class="h-7 rounded-md px-2.5 text-[12px] transition-colors">${l}</button>`).join("")}
+          <div id="slot-range" class="flex items-center gap-0.5 rounded-md bg-surface-container-low p-0.5" role="group" aria-label="نطاق المواعيد">
+            ${[["7", "٧ أيام"], ["30", "٣٠ يوماً"], ["all", "الكل"]].map(([v, l]) => `<button data-range="${v}" type="button" class="h-6 rounded px-2 text-[11px] transition-colors">${l}</button>`).join("")}
           </div>
         </div>
         <div id="slot-groups"></div>
@@ -1035,80 +1026,88 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
     const val = (sel: string) => (root.querySelector(sel) as HTMLInputElement | HTMLSelectElement | null)?.value || "";
     const slotNow = () => Number(val("#wk-slot")) || 30;
 
-    const shiftRowHtml = (day: number, si: number, s: ShiftDraft, canRemove: boolean) => `
-      <div class="mt-1.5 rounded-lg border border-line bg-surface-container-lowest p-2">
-        <div class="flex flex-wrap items-center gap-1.5">
-          <span class="text-[12px] text-on-surface-variant">من</span>
-          <input type="time" data-f="${day}-${si}-start" value="${escapeHtml(s.start)}" class="h-8 w-[84px] rounded-md border border-line bg-surface-container-lowest px-1 text-[12px] tabular-nums text-on-surface" />
-          <span class="text-[12px] text-on-surface-variant">إلى</span>
-          <input type="time" data-f="${day}-${si}-end" value="${escapeHtml(s.end)}" class="h-8 w-[84px] rounded-md border border-line bg-surface-container-lowest px-1 text-[12px] tabular-nums text-on-surface" />
-          <details class="ms-auto">
-            <summary class="cursor-pointer list-none rounded-md px-1.5 py-0.5 text-[11px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">استراحات${s.b1s || s.b2s ? " •" : ""}</summary>
-            <div class="mt-1.5 flex flex-wrap items-center gap-1">
-              <span class="text-[11px] text-on-surface-variant">١</span>
-              <input type="time" data-f="${day}-${si}-b1s" value="${escapeHtml(s.b1s)}" class="h-7 w-[74px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
-              <span class="text-[11px] text-on-surface-variant">–</span>
-              <input type="time" data-f="${day}-${si}-b1e" value="${escapeHtml(s.b1e)}" class="h-7 w-[74px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
-              <span class="ms-1 text-[11px] text-on-surface-variant">٢</span>
-              <input type="time" data-f="${day}-${si}-b2s" value="${escapeHtml(s.b2s)}" class="h-7 w-[74px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
-              <span class="text-[11px] text-on-surface-variant">–</span>
-              <input type="time" data-f="${day}-${si}-b2e" value="${escapeHtml(s.b2e)}" class="h-7 w-[74px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
-            </div>
-          </details>
-          ${canRemove ? `<button type="button" data-del-shift="${day}-${si}" aria-label="حذف الفترة" class="grid h-6 w-6 place-items-center rounded-md text-on-surface-variant transition-colors hover:bg-error-container/60 hover:text-on-error-container"><span class="material-symbols-outlined text-[15px]" aria-hidden="true">close</span></button>` : ""}
-        </div>
-        ${shiftIssue(s) ? `<p class="mt-1 text-[11px] font-medium text-error">${escapeHtml(shiftIssue(s))}</p>` : ""}
+    let expanded: string | null = null;
+
+    const shiftChip = (day: number, si: number, s: ShiftDraft) => {
+      const key = `${day}-${si}`;
+      const open = expanded === key;
+      return `<button type="button" data-shift="${key}" aria-expanded="${open}" class="inline-flex h-7 items-center gap-1 rounded-md border px-2 text-[12px] tabular-nums transition-colors ${open ? "border-primary bg-primary/10 text-primary" : "border-line text-on-surface hover:bg-surface-container-low"}">
+        ${escapeHtml(s.start)}–${escapeHtml(s.end)}
+        <span data-chip-count="${key}" class="text-[11px] ${open ? "text-primary/70" : "text-on-surface-variant"}">${shiftSlots(s, slotNow()).length}</span>
+        ${s.b1s || s.b2s ? `<span class="material-symbols-outlined text-[12px]" aria-hidden="true" title="بها استراحة">free_breakfast</span>` : ""}
+      </button>`;
+    };
+
+    const shiftEditor = (day: number, si: number, s: ShiftDraft, canRemove: boolean) => {
+      const issue = shiftIssue(s);
+      return `<div data-strip="${day}-${si}" class="flex flex-wrap items-center gap-1.5 border-s-2 border-primary/50 bg-surface-container-low px-2 py-1.5">
+        <input type="time" data-f="${day}-${si}-start" value="${escapeHtml(s.start)}" aria-label="من" class="h-7 w-[76px] rounded-md border border-line bg-surface-container-lowest px-1 text-[12px] tabular-nums text-on-surface" />
+        <span class="text-[11px] text-on-surface-variant">–</span>
+        <input type="time" data-f="${day}-${si}-end" value="${escapeHtml(s.end)}" aria-label="إلى" class="h-7 w-[76px] rounded-md border border-line bg-surface-container-lowest px-1 text-[12px] tabular-nums text-on-surface" />
+        <details class="min-w-0">
+          <summary class="cursor-pointer list-none rounded px-1 py-0.5 text-[11px] text-on-surface-variant transition-colors hover:text-on-surface">استراحات${s.b1s || s.b2s ? " •" : ""}</summary>
+          <div class="mt-1 flex flex-wrap items-center gap-1">
+            <span class="text-[11px] text-on-surface-variant">١</span>
+            <input type="time" data-f="${day}-${si}-b1s" value="${escapeHtml(s.b1s)}" aria-label="استراحة ١ من" class="h-7 w-[70px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
+            <span class="text-[11px] text-on-surface-variant">–</span>
+            <input type="time" data-f="${day}-${si}-b1e" value="${escapeHtml(s.b1e)}" aria-label="استراحة ١ إلى" class="h-7 w-[70px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
+            <span class="ms-1 text-[11px] text-on-surface-variant">٢</span>
+            <input type="time" data-f="${day}-${si}-b2s" value="${escapeHtml(s.b2s)}" aria-label="استراحة ٢ من" class="h-7 w-[70px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
+            <span class="text-[11px] text-on-surface-variant">–</span>
+            <input type="time" data-f="${day}-${si}-b2e" value="${escapeHtml(s.b2e)}" aria-label="استراحة ٢ إلى" class="h-7 w-[70px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
+          </div>
+        </details>
+        <span data-status class="ms-auto text-[11px] ${issue ? "font-medium text-error" : "text-on-surface-variant"}">${issue ? escapeHtml(issue) : `${shiftSlots(s, slotNow()).length} موعداً`}</span>
+        ${canRemove ? `<button type="button" data-del-shift="${day}-${si}" aria-label="حذف الفترة" class="grid h-6 w-6 place-items-center rounded text-on-surface-variant transition-colors hover:bg-error-container/60 hover:text-on-error-container"><span class="material-symbols-outlined text-[15px]" aria-hidden="true">delete</span></button>` : ""}
+        <button type="button" data-close-shift class="rounded px-1 text-[11px] text-on-surface-variant transition-colors hover:text-on-surface" aria-label="إغلاق التعديل">تم</button>
       </div>`;
+    };
 
     const renderDayRows = () => {
       const rows = root.querySelector("#day-rows") as HTMLElement;
-      rows.innerHTML = drafts.map((d, day) => `
-        <div class="py-3">
-          <div class="flex flex-wrap items-center gap-2">
+      rows.innerHTML = drafts.map((d, day) => {
+        const openIdx = expanded && expanded.startsWith(`${day}-`) ? Number(expanded.split("-")[1]) : -1;
+        const openShift = openIdx >= 0 ? d.shifts[openIdx] : null;
+        return `<div class="py-1.5">
+          <div class="flex flex-wrap items-center gap-1.5">
             <button type="button" data-day-toggle="${day}" role="switch" aria-checked="${d.on}" aria-label="${SCHED_DAYS[day]}"
               class="relative h-5 w-9 shrink-0 rounded-full transition-colors ${d.on ? "bg-primary" : "bg-line"}">
               <span class="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${d.on ? "start-0.5" : "end-0.5"}"></span>
             </button>
-            <span class="w-16 text-[13px] font-semibold ${d.on ? "text-on-surface" : "text-on-surface-variant"}">${SCHED_DAYS[day]}</span>
-            ${d.on ? `<span data-daycount="${day}" class="text-[12px] text-on-surface-variant"></span>
-              <button type="button" data-add-shift="${day}" class="ms-auto inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/10">
-                <span class="material-symbols-outlined text-[15px]" aria-hidden="true">add</span>فترة
-              </button>`
-              : `<span class="ms-auto text-[12px] text-on-surface-variant">مغلق</span>`}
+            <span class="w-14 text-[12px] font-semibold ${d.on ? "text-on-surface" : "text-on-surface-variant"}">${SCHED_DAYS[day]}</span>
+            ${d.on
+              ? `${d.shifts.map((s, si) => shiftChip(day, si, s)).join("")}
+                <button type="button" data-add-shift="${day}" aria-label="إضافة فترة" class="grid h-7 w-7 place-items-center rounded-md border border-dashed border-line text-on-surface-variant transition-colors hover:border-primary hover:text-primary"><span class="material-symbols-outlined text-[15px]" aria-hidden="true">add</span></button>`
+              : `<span class="text-[12px] text-on-surface-variant">مغلق</span>`}
           </div>
-          ${d.on ? d.shifts.map((s, si) => shiftRowHtml(day, si, s, d.shifts.length > 1)).join("") : ""}
-          <div data-preview="${day}" class="mt-1.5 flex flex-wrap items-center gap-1"></div>
-        </div>`).join("");
-      paintPreviews();
+          ${d.on && openShift ? shiftEditor(day, openIdx, openShift, d.shifts.length > 1) : ""}
+        </div>`;
+      }).join("");
+      preview();
     };
 
-    const paintRow = (day: number) => {
-      const box = root.querySelector<HTMLElement>(`[data-preview="${day}"]`);
-      const countEl = root.querySelector<HTMLElement>(`[data-daycount="${day}"]`);
-      const d = drafts[day];
-      if (!d.on) { if (box) box.innerHTML = ""; return; }
-      const issue = dayIssue(d);
-      if (countEl && !issue) countEl.textContent = `${daySlots(d, slotNow()).length} موعداً`;
-      else if (countEl) countEl.textContent = "";
-      if (!box) return;
-      if (issue) { box.innerHTML = `<span class="text-[12px] font-medium text-error">${escapeHtml(issue)}</span>`; return; }
-      const slot = slotNow();
-      const cells = daySlots(d, slot);
-      if (!cells.length) { box.innerHTML = `<span class="text-[12px] font-medium text-error">المدة (${slot} د) لا تتيح أي موعد</span>`; return; }
-      box.innerHTML = `<span class="text-[12px] text-on-surface-variant">${escapeHtml(formatArabicDate(nextDowDate(day)))} · ${cells.length} موعداً</span>`
-        + cells.slice(0, 6).map((t) => `<span class="inline-flex h-6 items-center rounded-md bg-primary/10 px-1.5 text-[11px] font-medium tabular-nums text-primary">${clock(t)}</span>`).join("")
-        + (cells.length > 6 ? `<span class="text-[11px] text-on-surface-variant">+${cells.length - 6}</span>` : "");
+    const paintStrip = (day: number, si: number) => {
+      const shift = drafts[day]?.shifts[si];
+      if (!shift) return;
+      const strip = root.querySelector<HTMLElement>(`[data-strip="${day}-${si}"]`);
+      const issue = shiftIssue(shift);
+      const status = strip?.querySelector<HTMLElement>("[data-status]");
+      if (status) {
+        status.textContent = issue || `${shiftSlots(shift, slotNow()).length} موعداً`;
+        status.className = `ms-auto text-[11px] ${issue ? "font-medium text-error" : "text-on-surface-variant"}`;
+      }
+      const chipCount = root.querySelector<HTMLElement>(`[data-chip-count="${day}-${si}"]`);
+      if (chipCount) chipCount.textContent = String(shiftSlots(shift, slotNow()).length);
+      preview();
     };
 
     const preview = () => {
       const on = drafts.filter((d) => d.on);
       const total = on.reduce((sum, d) => sum + daySlots(d, slotNow()).length, 0);
       const el = root.querySelector("#av-preview") as HTMLElement | null;
-      if (el) el.textContent = on.length ? `${on.length} أيام · ${total} موعداً أسبوعياً` : "لم تُفعّل أي يوم — لن يعمل الجدول.";
+      if (el) el.textContent = on.length ? `${on.length} أيام · ${total} موعداً أسبوعياً` : "لم تُفعّل أي يوم.";
       (root.querySelector("#save-availability") as HTMLButtonElement).disabled = drafts.some((d) => d.on && !!dayIssue(d));
     };
-
-    const paintPreviews = () => { drafts.forEach((_, day) => paintRow(day)); preview(); };
 
     const dayRows = root.querySelector("#day-rows") as HTMLElement;
     dayRows.addEventListener("click", (e) => {
@@ -1118,15 +1117,25 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
         const day = Number(toggle.dataset.dayToggle);
         drafts[day].on = !drafts[day].on;
         if (drafts[day].on && !drafts[day].shifts.length) drafts[day].shifts = [emptyShift()];
+        expanded = drafts[day].on ? `${day}-0` : null;
+        renderDayRows();
+        return;
+      }
+      const chip = t.closest<HTMLElement>("[data-shift]");
+      if (chip) {
+        const key = chip.dataset.shift!;
+        expanded = expanded === key ? null : key;
         renderDayRows();
         return;
       }
       const add = t.closest<HTMLElement>("[data-add-shift]");
       if (add) {
-        const d = drafts[Number(add.dataset.addShift)];
+        const day = Number(add.dataset.addShift);
+        const d = drafts[day];
         const last = d.shifts[d.shifts.length - 1];
         const start = last ? clock(Math.min(toMinutes(last.end) + 60, 23 * 60)) : "16:00";
         d.shifts.push(emptyShift(start, clock(Math.min(toMinutes(start) + 120, 23 * 60 + 59))));
+        expanded = `${day}-${d.shifts.length - 1}`;
         renderDayRows();
         return;
       }
@@ -1134,6 +1143,12 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
       if (del) {
         const [day, si] = (del.dataset.delShift || "").split("-").map(Number);
         drafts[day].shifts.splice(si, 1);
+        expanded = null;
+        renderDayRows();
+        return;
+      }
+      if (t.closest<HTMLElement>("[data-close-shift]")) {
+        expanded = null;
         renderDayRows();
       }
     });
@@ -1146,8 +1161,7 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
       const shift = drafts[day]?.shifts[si];
       if (!shift) return;
       if (field === "start" || field === "end" || field === "b1s" || field === "b1e" || field === "b2s" || field === "b2e") shift[field] = el.value;
-      paintRow(day);
-      preview();
+      paintStrip(day, si);
     });
     (root.querySelector("#wk-slot") as HTMLSelectElement).addEventListener("change", () => { renderDayRows(); });
 
@@ -1158,6 +1172,7 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
         if (!d.on) return;
         d.shifts = source.shifts.map((s) => ({ ...s }));
       });
+      expanded = null;
       renderDayRows();
       showToast("نُسخت فترات أول يوم على كل الأيام المفعّلة", "success");
     });
@@ -1280,11 +1295,11 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
       slotGroups.innerHTML = [...byDate.entries()].map(([date, list]) => {
         const booked = list.filter((s) => s.is_booked).length;
         return `<details class="group border-b border-line last:border-0" open>
-          <summary class="flex cursor-pointer items-center justify-between gap-2 px-4 py-2.5 text-[13px]">
+          <summary class="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-[13px]">
             <span class="font-semibold text-on-surface">${escapeHtml(formatArabicDate(date))}</span>
             <span class="text-[12px] text-on-surface-variant"><span class="tabular-nums">${list.length}</span> موعد${booked ? ` · <span class="tabular-nums">${booked}</span> محجوز` : ""}</span>
           </summary>
-          <div class="flex flex-wrap gap-1.5 px-4 pb-3">
+          <div class="flex flex-wrap gap-1.5 px-3 pb-2">
             ${list.map((s) => {
               const t = formatTime(s.start_time);
               return s.is_booked
