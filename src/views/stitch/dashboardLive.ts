@@ -303,7 +303,14 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
     try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* private mode */ }
     paintNav();
     (Object.keys(VIEW_HOSTS) as DashView[]).forEach((k) => appEl.querySelector<HTMLElement>(VIEW_HOSTS[k])?.classList.toggle("hidden", k !== view));
-    appEl.querySelector<HTMLElement>("#db-search-wrap")?.classList.toggle("hidden", view !== "overview");
+    // Keep the wrapper's flex space so the topbar actions stay on the left in
+    // every view; the field itself is inert and invisible outside the overview.
+    const searchWrap = appEl.querySelector<HTMLElement>("#db-search-wrap");
+    if (searchWrap) {
+      searchWrap.classList.toggle("invisible", view !== "overview");
+      searchWrap.classList.toggle("pointer-events-none", view !== "overview");
+      searchWrap.classList.toggle("hidden", false);
+    }
     const target = appEl.querySelector<HTMLElement>(VIEW_HOSTS[view]);
     if (!target) return;
     const pendingLabel: Record<DashView, string> = {
