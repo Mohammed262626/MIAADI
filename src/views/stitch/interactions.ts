@@ -13,9 +13,9 @@ const DATE_CELL_IDLE =
 const DATE_CELL_ACTIVE =
   "date-cell active-date flex flex-col items-center rounded-lg bg-primary px-1 py-2.5 text-center text-on-primary transition-colors";
 const SLOT_IDLE =
-  "time-slot rounded-lg bg-surface-container-low px-1 py-2 text-center text-[13px] text-on-surface transition-colors hover:bg-surface-container";
+  "time-slot whitespace-nowrap rounded-lg bg-surface-container-low px-1 py-2 text-center text-[13px] text-on-surface transition-colors hover:bg-surface-container";
 const SLOT_ACTIVE =
-  "time-slot selected-slot flex items-center justify-center gap-1 rounded-lg bg-primary px-1 py-2 text-center text-[13px] font-semibold text-on-primary transition-colors";
+  "time-slot selected-slot flex items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-primary px-1 py-2 text-center text-[13px] font-semibold text-on-primary transition-colors";
 
 function updateSummaryDisplay() {
   const summaryElem = document.getElementById("summary-datetime-display");

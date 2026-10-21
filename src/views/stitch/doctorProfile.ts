@@ -15,7 +15,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </nav>
 <button class="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-[13px] text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface" type="button">
 <span class="material-symbols-outlined text-[16px]" aria-hidden="true">share</span>
-<span>مشاركة</span>
+<span class="hidden sm:inline">مشاركة</span>
 </button>
 </div>
 </section>
@@ -24,8 +24,8 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <div class="mx-auto w-full max-w-[1280px] px-4 sm:px-6">
 <div class="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
 <!-- Doctor Avatar & Identity -->
-<div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-<div class="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-28 md:w-28">
+<div class="flex items-start gap-3 sm:items-center">
+<div class="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container sm:h-24 sm:w-24 md:h-28 md:w-28">
 <div class="grid h-full w-full place-items-center whitespace-nowrap bg-primary text-[28px] font-bold leading-none text-on-primary" id="dp-avatar" aria-hidden="true"></div>
 </div>
 <div class="flex min-w-0 flex-col">
@@ -81,7 +81,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <main class="w-full max-w-7xl mx-auto px-margin-desktop py-space-xl">
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-start">
 <!-- Right Column: Doctor Dossier & Clinical Information (7 Cols on LG) -->
-<div class="lg:col-span-7 flex flex-col gap-space-xl">
+<div class="order-2 flex flex-col gap-space-xl lg:order-none lg:col-span-7">
 <!-- 1. About Section -->
 <article class="bg-surface-container-lowest rounded-xl p-space-xl">
 <div class="flex items-center justify-between mb-space-md">
@@ -89,7 +89,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <div class="w-8 h-8 rounded-lg bg-primary-fixed-dim/40 flex items-center justify-center text-primary">
 <span class="material-symbols-outlined text-[20px]">badge</span>
 </div>
-<h2 class="font-headline-md text-headline-md text-on-surface font-bold">نبذة عن الطبيب والتخصص</h2>
+<h2 class="text-[18px] font-bold leading-snug text-on-surface sm:text-[24px]">نبذة عن الطبيب والتخصص</h2>
 </div>
 </div>
 <p class="font-body-lg text-body-lg text-on-surface leading-relaxed mb-space-md" id="dp-bio-1">
@@ -125,7 +125,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <div class="w-8 h-8 rounded-lg bg-tertiary-fixed-dim/40 flex items-center justify-center text-tertiary">
 <span class="material-symbols-outlined text-[20px]" id="dp-services-icon">cardiology</span>
 </div>
-<h2 class="font-headline-md text-headline-md text-on-surface font-bold">الحالات المعالجة والخدمات التخصصية</h2>
+<h2 class="text-[18px] font-bold leading-snug text-on-surface sm:text-[24px]">الخدمات التخصصية</h2>
 </div>
 </div>
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md" id="dp-services">
@@ -178,7 +178,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <div class="w-8 h-8 rounded-lg bg-secondary-container flex items-center justify-center text-secondary">
 <span class="material-symbols-outlined text-[20px]">location_on</span>
 </div>
-<h2 class="font-headline-md text-headline-md text-on-surface font-bold">موقع العيادة ومسار الوصول</h2>
+<h2 class="text-[18px] font-bold leading-snug text-on-surface sm:text-[24px]">موقع العيادة</h2>
 </div>
 </div>
 <div class="flex flex-col items-stretch gap-4 md:flex-row md:items-center">
@@ -222,7 +222,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <div class="w-8 h-8 rounded-lg bg-primary-fixed-dim/40 flex items-center justify-center text-primary">
 <span class="material-symbols-outlined text-[20px]">reviews</span>
 </div>
-<h2 class="font-headline-md text-headline-md text-on-surface font-bold">تقييمات المراجعين الموثقة عبر نفاذ</h2>
+<h2 class="text-[18px] font-bold leading-snug text-on-surface sm:text-[24px]">تقييمات المراجعين</h2>
 </div>
 <div class="flex items-center gap-1 text-on-surface font-bold text-headline-sm">
 <span class="material-symbols-outlined text-warning text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
@@ -299,7 +299,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </article>
 </div>
 <!-- Left Column: Booking Engine Box (5 Cols on LG) -->
-<aside class="w-full max-w-md mx-auto lg:col-span-5 lg:mx-0 lg:max-w-none flex flex-col gap-space-md">
+<aside class="order-1 mx-auto flex w-full max-w-md flex-col gap-space-md lg:order-none lg:col-span-5 lg:mx-0 lg:max-w-none">
 <div class="relative overflow-hidden rounded-xl border border-line bg-surface-container-lowest p-space-lg">
 <!-- Box Header -->
 <div class="flex items-center justify-between gap-space-sm pb-space-sm">

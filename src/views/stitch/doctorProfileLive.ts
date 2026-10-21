@@ -295,7 +295,7 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
       return `<div class="rounded-lg bg-surface-container px-1 py-2 text-center text-[13px] text-on-surface-variant/70 line-through">${escapeHtml(formatTime(s.start_time))}</div>`;
     }
     const active = selected?.id === s.id;
-    return `<button class="time-slot min-h-11 rounded-lg px-1 py-2 text-center text-[13px] transition-colors ${
+    return `<button class="time-slot min-h-11 whitespace-nowrap rounded-lg px-1 py-2 text-center text-[13px] transition-colors ${
  active
  ?"flex items-center justify-center gap-1 bg-primary font-semibold text-on-primary"
         : "bg-surface-container-low text-on-surface hover:bg-surface-container"
