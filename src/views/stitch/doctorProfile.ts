@@ -181,19 +181,19 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <h2 class="text-[18px] font-bold leading-snug text-on-surface sm:text-[24px]">موقع العيادة</h2>
 </div>
 </div>
-<div class="flex flex-col items-stretch gap-4 md:flex-row md:items-center">
+<div class="flex flex-col gap-4">
 <!-- Location panel -->
-<div class="relative h-56 w-full overflow-hidden rounded-xl border border-line bg-surface-container-low md:w-1/2">
-<div class="grid h-full w-full place-items-center" id="dp-map" data-location="المستشفى، الخرطوم، السودان">
-<div class="flex flex-col items-center gap-1 px-6 text-center">
-<span class="material-symbols-outlined text-[26px] text-primary" aria-hidden="true">location_on</span>
-<span class="text-[14px] font-semibold text-on-surface" id="dp-gate">موقع العيادة</span>
-<span class="text-[12px] text-on-surface-variant">افتح الاتجاهات للوصول إلى المبنى</span>
-</div>
+<div class="relative h-56 w-full overflow-hidden rounded-xl border border-line bg-surface-container-low sm:h-60">
+<iframe class="h-full w-full border-0" id="dp-map" data-location="المستشفى، الخرطوم، السودان" title="خريطة موقع العيادة" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=%D8%A7%D9%84%D8%AE%D8%B1%D8%B7%D9%88%D9%85&amp;z=13&amp;output=embed"></iframe>
+<div class="pointer-events-none absolute right-3 top-3 max-w-[70%]">
+<span class="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-line bg-surface-container-lowest px-2.5 py-1.5 text-[12px] font-medium text-on-surface">
+<span class="material-symbols-outlined text-[15px] text-primary" aria-hidden="true">near_me</span>
+<span class="truncate" id="dp-gate">موقع العيادة</span>
+</span>
 </div>
 </div>
 <!-- Clinic directions -->
-<div class="flex w-full flex-col gap-4 md:w-1/2">
+<div class="grid gap-4 sm:grid-cols-2">
 <div class="flex items-start gap-3">
 <span class="material-symbols-outlined mt-0.5 text-[19px] text-primary" aria-hidden="true">apartment</span>
 <div class="min-w-0">
@@ -208,11 +208,11 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <p class="mt-0.5 text-[13px] text-on-surface-variant" id="dp-clinic-line">المصاعد الرئيسية C • أمام صالة انتظار المرضى</p>
 </div>
 </div>
+</div>
 <a class="inline-flex h-9 w-fit items-center gap-1.5 rounded-lg border border-line bg-surface-container-lowest px-3 text-[12px] font-medium text-on-surface transition-colors hover:bg-surface-container" href="#" id="dp-map-link" target="_blank" rel="noreferrer">
 <span>فتح الموقع في خرائط Google</span>
 <span class="material-symbols-outlined text-[15px]" aria-hidden="true">open_in_new</span>
 </a>
-</div>
 </div>
 </article>
 <!-- 4. Patient Reviews & Verified Ratings -->
@@ -463,7 +463,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 <button class="w-full py-3.5 px-space-md bg-primary hover:bg-primary-container active:scale-[0.99] text-on-primary rounded-full font-label-lg text-label-lg font-bold transition-colors flex items-center justify-center gap-2 group" id="dp-cta" type="button">
 <span class="material-symbols-outlined text-[20px] text-on-primary">lock</span>
-<span id="cta-button-text">تأكيد الحجز | Confirm Booking</span>
+<span id="cta-button-text">تأكيد الحجز</span>
 </button>
 <!-- Security Assurance Footnote -->
 <div class="flex items-center justify-center gap-space-sm text-secondary font-label-sm text-label-sm mt-1">

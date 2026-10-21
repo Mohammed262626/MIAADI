@@ -200,7 +200,13 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
   const mapLink = el("dp-map-link") as HTMLAnchorElement | null;
   if (profile.hospital_name) {
     const mapEl = el("dp-map");
-    if (mapEl) mapEl.setAttribute("data-location", `${profile.hospital_name}, ${profile.hospital_city || ""}`);
+    if (mapEl) {
+      const location = [profile.hospital_name, profile.hospital_address, profile.hospital_city]
+        .filter(Boolean)
+        .join(", ");
+      mapEl.setAttribute("data-location", location);
+      mapEl.setAttribute("src", `https://maps.google.com/maps?q=${encodeURIComponent(location)}&z=15&output=embed`);
+    }
     setText("dp-building-name", profile.hospital_name);
     setText("dp-building-line", `${profile.hospital_address || ""}${profile.hospital_address ? "، " : ""}${profile.hospital_city || ""}`);
     if (mapLink) {
@@ -392,7 +398,7 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
     if (!cta) return;
     cta.disabled = loading;
     cta.classList.toggle("opacity-60", loading);
-    if (ctaText) ctaText.textContent = loading ? "جارٍ تأكيد الحجز…" : rescheduling ? "تأكيد الموعد الجديد" : "تأكيد الحجز | Confirm Booking";
+    if (ctaText) ctaText.textContent = loading ? "جارٍ تأكيد الحجز…" : rescheduling ? "تأكيد الموعد الجديد" : "تأكيد الحجز";
   }
 
   function showSuccess(ref: string, message = "تم تأكيد الحجز") {

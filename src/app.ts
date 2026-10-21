@@ -7,7 +7,7 @@ import { confirmSheet } from "./components/ConfirmDialog";
 import { emptyState } from "./components/ui";
 import type { Doctor, Slot } from "./components/DoctorCard";
 import { renderConfirmView } from "./views/confirm";
-import { renderProfileView } from "./views/profile";
+import { fixtureAccounts, fixtureAvailability, fixtureBlocked, fixtureDoctors, fixtureSchedules, mgFixture, mgOpenDoctor } from "./views/adminFixture";
 import { renderAdminView } from "./views/admin";
 import { renderSiteHeader, renderSiteFooter } from "./components/SiteHeader";
 import { HOME_MAIN } from "./views/stitch/home";
@@ -202,7 +202,6 @@ function render() {
   const main = document.getElementById("main-root") as HTMLElement | null;
   switch (route.name) {
     case "confirm": if (main) renderConfirmTab(main, route.param!); break;
-    case "profile": if (main) renderProfileTab(main); break;
     case "admin": if (main) void renderAdminTab(main); break;
   }
 }
@@ -340,35 +339,15 @@ function renderConfirmTab(main: HTMLElement, scheduleId: string) {
   });
 }
 
-function renderProfileTab(main: HTMLElement) {
-  const role = state.currentUser?.profile?.role as string | undefined;
-  renderProfileView(main, {
-    user: state.currentUser as unknown as Parameters<typeof renderProfileView>[1]["user"],
-    canAdmin: role === "admin" || role === "doctor",
-    onOpenAuth: () => authModal?.open(),
-    onAdmin: () => go("#admin"),
-    onLogout: async () => {
-      try {
-        await logoutUser();
-        state.currentUser = null;
-        state.patientAppointments = [];
-        showToast("تم تسجيل الخروج", "success");
-        go("#home");
-      } catch (e) { showToast(translateAuthError(e), "error"); }
-    },
-    onSave: async ({ fullName, phone }) => {
-      try {
-        await updatePatientProfile({ fullName, phone });
-        state.currentUser = await getCurrentUser();
-        render();
-      } catch (e) { showToast(translateAuthError(e), "error"); throw e; }
-    },
-  });
-}
-
 /* ----------------------------------- admin ---------------------------------- */
 
 async function renderAdminTab(main: HTMLElement) {
+  const fxTab = mgFixture();
+  if (fxTab) {
+    state.adminSubTab = state.adminSubTab === "appointments" ? fxTab : state.adminSubTab;
+    await renderAdminManagement(main, state.adminSubTab);
+    return;
+  }
   const role = state.currentUser?.profile?.role as string;
   const isDoctor = role === "doctor";
   if (state.adminSubTab !== "appointments") { await renderAdminManagement(main, state.adminSubTab); return; }
@@ -482,7 +461,7 @@ async function openApptEditDialog(row: AdminRow, main: HTMLElement) {
 
 async function renderAdminManagement(main: HTMLElement, tab: "management" | "accounts") {
   if (tab === "accounts") {
-    try { state.adminAccounts = await adminListProfiles(); } catch (e) { showToast(translateAuthError(e), "error"); }
+    try { state.adminAccounts = mgFixture() ? (fixtureAccounts as unknown as typeof state.adminAccounts) : await adminListProfiles(); } catch (e) { showToast(translateAuthError(e), "error"); }
     const rows = state.adminAccounts as { user_id: string; full_name: string; email: string; phone: string; role: string }[];
     const rolePill = (role: string) => role === "admin"
       ? `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-lg font-label-sm text-label-sm font-bold bg-inverse-surface text-inverse-on-surface"><span class="material-symbols-outlined text-[14px]">shield_person</span>مشرف</span>`
@@ -553,8 +532,12 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
     return;
   }
 
-  const docs = state.adminDoctorsCache.length ? state.adminDoctorsCache : await listDoctors();
-  state.adminDoctorsCache = docs;
+  const fixture = mgFixture();
+  const docs = fixture
+    ? (fixtureDoctors as unknown as typeof state.adminDoctors)
+    : state.adminDoctorsCache.length ? state.adminDoctorsCache : await listDoctors();
+  if (!fixture) state.adminDoctorsCache = docs;
+  if (fixture && mgOpenDoctor()) state.adminManagementDoctor = fixtureDoctors[0].id;
   main.innerHTML = `
     <div class="w-full px-margin-desktop py-space-xl">
       <div class="flex flex-wrap items-center justify-between gap-space-md mb-space-lg">
@@ -591,7 +574,7 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
               <span class="material-symbols-outlined text-[16px]">calendar_month</span>المواعيد
             </button>
             <button data-edit="${escapeHtml(d.id)}" class="px-space-md py-2 rounded-lg border border-line font-label-sm text-label-sm text-on-surface hover:bg-surface-container transition-colors">تعديل</button>
-            <button data-del="${escapeHtml(d.id)}" class="px-space-md py-2 rounded-lg bg-error-container/60 text-on-error-container font-label-sm text-label-sm font-bold hover:bg-error-container transition-colors">حذف</button>
+            <button data-del="${escapeHtml(d.id)}" class="px-space-md py-2 rounded-lg text-error font-label-sm text-label-sm font-bold hover:bg-error-container/40 transition-colors">حذف</button>
           </div>
         </div>`).join("")}</div>
       <div id="schedules-root" class="${state.adminManagementDoctor ? "" : "hidden"} mt-space-xl"></div>
@@ -669,12 +652,22 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
   root.innerHTML = `<p class="font-body-md text-body-md text-secondary py-space-lg text-center">جاري تحميل المواعيد…</p>`;
   type AvRule = { day_of_week: number; start_time: string; end_time: string; is_enabled: boolean; slot_minutes: number | null; break_start_1: string | null; break_end_1: string | null; break_start_2: string | null; break_end_2: string | null };
   type Blocked = { id: string; start_date: string; end_date: string; reason: string | null };
+  const fixture = mgFixture();
   try {
-    const [schedules, availability, blocked] = await Promise.all([
-      listDoctorSchedules(doctorId),
-      getDoctorAvailability(doctorId).catch(() => []) as Promise<AvRule[]>,
-      listBlockedDates(doctorId).catch(() => []) as Promise<Blocked[]>,
-    ]);
+    let schedules: Awaited<ReturnType<typeof listDoctorSchedules>>;
+    let availability: AvRule[];
+    let blocked: Blocked[];
+    if (fixture) {
+      schedules = fixtureSchedules() as unknown as typeof schedules;
+      availability = fixtureAvailability as unknown as AvRule[];
+      blocked = fixtureBlocked as unknown as Blocked[];
+    } else {
+      [schedules, availability, blocked] = await Promise.all([
+        listDoctorSchedules(doctorId),
+        getDoctorAvailability(doctorId).catch(() => []) as Promise<AvRule[]>,
+        listBlockedDates(doctorId).catch(() => []) as Promise<Blocked[]>,
+      ]);
+    }
     const doc = state.adminDoctorsCache.find((d) => d.id === doctorId);
     const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
     const enabled = availability.filter((r) => r.is_enabled);
@@ -725,7 +718,7 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
           <p class="mt-space-xs font-label-sm text-label-sm text-outline">اترك حقول أي استراحة فارغة لإلغائها.</p>
           <div class="mt-space-md flex flex-wrap items-center gap-space-sm">
             <button id="save-availability" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors"><span class="material-symbols-outlined text-[18px]">save</span>حفظ الأوقات</button>
-            <button id="generate-schedule" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-bold hover:brightness-110 transition-colors"><span class="material-symbols-outlined text-[18px]">auto_awesome</span>توليد المواعيد (90 يوماً)</button>
+            <button id="generate-schedule" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg border border-line bg-surface-container-lowest text-on-surface font-label-md text-label-md font-bold hover:bg-surface-container transition-colors"><span class="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>توليد المواعيد (90 يوماً)</button>
           </div>
           <label class="mt-space-xs flex items-center gap-space-xs font-label-sm text-label-sm text-secondary"><input id="gen-replace" type="checkbox" /> استبدال المواعيد الفارغة القادمة</label>
           <details class="mt-space-md rounded-lg bg-surface-container-low p-space-md">
@@ -778,7 +771,7 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-space-sm">${schedules.length ? schedules.map((s: { id: string; available_date: string; start_time: string; end_time: string; is_booked: boolean }) => `
         <div class="flex items-center justify-between gap-space-sm rounded-lg p-space-md font-body-sm text-body-sm ${s.is_booked ? "bg-warning-soft/60 text-on-surface" : "bg-surface-container-lowest text-on-surface"}">
           <span>${escapeHtml(formatArabicDate(s.available_date))} · <span class="tabular-nums">${escapeHtml(formatTime(s.start_time))}–${escapeHtml(formatTime(s.end_time))}</span> ${s.is_booked ? `<span class="ms-space-xs px-space-sm py-0.5 rounded-lg bg-warning-soft text-warning font-label-sm text-label-sm font-bold">محجوز</span>` : ""}</span>
-          ${s.is_booked ? "" : `<button data-del-sch="${escapeHtml(s.id)}" class="px-space-md py-1.5 rounded-lg bg-error-container/60 text-on-error-container font-label-sm text-label-sm font-bold hover:bg-error-container transition-colors">حذف</button>`}
+          ${s.is_booked ? "" : `<button data-del-sch="${escapeHtml(s.id)}" class="px-space-md py-1.5 rounded-lg text-error font-label-sm text-label-sm font-bold hover:bg-error-container/40 transition-colors">حذف</button>`}
         </div>`).join("") : `<p class="font-body-md text-body-md text-outline">لا مواعيد</p>`}</div>`;
 
     const startOf = (i: number) => (root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement).value;
