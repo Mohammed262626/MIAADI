@@ -69,9 +69,25 @@ export async function getDoctorsWithSchedules(daysWindow = 14) {
     return { ...d, available_schedules: schedules };
   });
 }
-export async function listDoctors() {
-  const { data, error } = await getClient().from("doctors").select("id,name,specialization,consultation_fee,user_id").order("name");
-  if (error) throw error; return data || [];
+export type DoctorAdminRow = {
+  id: string; name: string; name_en: string | null; title: string | null;
+  specialization: string; consultation_fee: number; city: string | null;
+  gender: string | null; languages: string[]; experience_years: number | null;
+  telehealth: boolean; about: string | null; photo_url: string | null;
+  user_id: string | null; hospital_id: string | null;
+};
+export async function listDoctors(): Promise<DoctorAdminRow[]> {
+  const { data, error } = await getClient().from("doctors")
+    .select("id,name,name_en,title,specialization,consultation_fee,city,gender,languages,experience_years,telehealth,about,photo_url,user_id,hospital_id")
+    .order("name");
+  if (error) throw error; return (data as DoctorAdminRow[]) || [];
+}
+
+/** Hospital options for the admin doctor editor (hospitals are admin-managed). */
+export async function listHospitals() {
+  const { data, error } = await getClient().from("hospitals").select("id,name,city").order("name");
+  if (error) throw error;
+  return (data as { id: string; name: string; city: string | null }[]) || [];
 }
 
 // --- public directory (rich rows for the home page & catalog)
@@ -166,9 +182,22 @@ export async function findDoctorByUser(userId: string) {
   const { data, error } = await getClient().from("doctors").select("id,name,specialization,consultation_fee,user_id").eq("user_id", userId).maybeSingle();
   if (error) throw error; return data || null;
 }
-export async function saveDoctor(p: { id?: string; name: string; specialization: string; consultationFee: number; userId?: string | null }) {
+export async function saveDoctor(p: {
+  id?: string; name: string; nameEn?: string | null; title?: string | null;
+  specialization: string; consultationFee: number; userId?: string | null;
+  city?: string | null; gender?: string | null; experienceYears?: number | null;
+  telehealth?: boolean; about?: string | null; languages?: string[];
+  photoUrl?: string | null; hospitalId?: string | null;
+}) {
   const c = getClient();
-  const payload = { name: p.name, specialization: p.specialization, consultation_fee: p.consultationFee, user_id: p.userId || null };
+  const payload = {
+    name: p.name, name_en: p.nameEn || null, title: p.title || null,
+    specialization: p.specialization, consultation_fee: p.consultationFee,
+    user_id: p.userId || null, city: p.city || null, gender: p.gender || null,
+    experience_years: p.experienceYears ?? null, telehealth: !!p.telehealth,
+    about: p.about || null, languages: p.languages ?? [], photo_url: p.photoUrl || null,
+    hospital_id: p.hospitalId || null,
+  };
   const q = p.id ? c.from("doctors").update(payload).eq("id", p.id).select().single() : c.from("doctors").insert(payload).select().single();
   const { data, error } = await q; if (error) throw error; return data;
 }

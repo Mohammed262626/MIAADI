@@ -1,6 +1,7 @@
 import "./styles/tailwind.css";
-import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, findDoctorByUser, listDoctorSchedules, createDoctorSchedules, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile } from "./lib/supabase";
+import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, listHospitals, findDoctorByUser, listDoctorSchedules, createDoctorSchedules, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile } from "./lib/supabase";
 import { localDateISO, escapeHtml, translateAuthError, formatTime, formatArabicDate } from "./lib/format";
+import { SPECIALTIES } from "./lib/specialties";
 import { detectNearestCity, locationLabel, rememberCity } from "./lib/geodata";
 import { showToast } from "./components/Toast";
 import { mountAuthModal } from "./components/AuthModal";
@@ -668,6 +669,9 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
     ? (fixtureDoctors as unknown as typeof state.adminDoctors)
     : state.adminDoctorsCache.length ? state.adminDoctorsCache : await listDoctors();
   if (!fixture) state.adminDoctorsCache = docs;
+  let hospitalOptions: { id: string; name: string; city: string | null }[] = [];
+  if (!fixture) { try { hospitalOptions = await listHospitals(); } catch { /* the editor still works without the list */ } }
+  const specOptions = SPECIALTIES.map((s) => `<option value="${escapeHtml(s.label)}">${escapeHtml(s.label)}</option>`).join("");
   if (fixture && mgOpenDoctor()) state.adminManagementDoctor = fixtureDoctors[0].id;
   main.innerHTML = `
     <div class="w-full px-margin-desktop py-space-xl">
@@ -711,27 +715,67 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
       <div id="schedules-root" class="${state.adminManagementDoctor ? "" : "hidden"} mt-space-xl"></div>
     </div>
     <dialog id="doctor-dialog" class="p-0 bg-transparent backdrop:bg-inverse-surface/50 backdrop:backdrop-blur-sm open:grid place-items-center min-h-dvh w-full max-w-none">
-      <div class="bg-surface-container-lowest rounded-xl shadow-[0_24px_60px_-20px_rgba(16,24,40,.4)] w-full max-w-[480px] p-space-xl mx-4">
+      <div class="bg-surface-container-lowest rounded-xl shadow-[0_24px_60px_-20px_rgba(16,24,40,.4)] w-full max-w-[560px] p-space-xl mx-4 max-h-[88vh] overflow-y-auto">
         <div class="flex items-center gap-space-sm mb-space-lg">
           <span class="w-11 h-11 rounded-lg grid place-items-center bg-primary/10 text-primary"><span class="material-symbols-outlined text-[22px]">stethoscope</span></span>
-          <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface" id="doctor-dialog-title">طبيب</h3>
+          <div class="min-w-0">
+            <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface" id="doctor-dialog-title">طبيب</h3>
+            <p class="mt-0.5 text-[12px] text-on-surface-variant">البيانات المهنية يُعدّلها مشرف المنصة فقط.</p>
+          </div>
         </div>
-        <form id="doctor-form" class="space-y-3">
-          <label class="block font-label-sm text-label-sm text-secondary">الاسم
-            <input id="doc-name" required placeholder="د. الاسم الكامل" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-line bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
+        <form id="doctor-form" class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <label class="block text-[12px] text-on-surface-variant">الاسم (عربي)
+            <input id="doc-name" required placeholder="د. الاسم الكامل" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2.5 text-[13px] text-on-surface outline-none focus:border-primary" />
           </label>
-          <label class="block font-label-sm text-label-sm text-secondary">التخصص
-            <input id="doc-spec" required placeholder="التخصص" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-line bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
+          <label class="block text-[12px] text-on-surface-variant">الاسم بالإنجليزية
+            <input id="doc-name-en" dir="ltr" placeholder="Dr. Full Name" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2.5 text-start text-[13px] text-on-surface outline-none focus:border-primary" />
           </label>
-          <label class="block font-label-sm text-label-sm text-secondary">رسوم الكشف (ج.س)
-            <input id="doc-fee" required type="number" min="0" placeholder="3000" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-line bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
+          <label class="block text-[12px] text-on-surface-variant">المسمى الوظيفي
+            <input id="doc-title" placeholder="استشاري" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2.5 text-[13px] text-on-surface outline-none focus:border-primary" />
           </label>
-          <label class="block font-label-sm text-label-sm text-secondary">حساب المستخدم
-            <select id="doc-user" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-line bg-surface text-body-md text-on-surface"><option value="">بدون حساب</option>${(state.adminAccounts as { user_id: string; full_name: string; email: string }[]).map((p) => `<option value="${escapeHtml(p.user_id)}">${escapeHtml(p.full_name)} — ${escapeHtml(p.email)}</option>`).join("")}</select>
+          <label class="block text-[12px] text-on-surface-variant">التخصص
+            <select id="doc-spec" required class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface"><option value="" selected disabled>اختر التخصص</option>${specOptions}</select>
           </label>
-          <div class="flex gap-2 pt-1">
-            <button type="button" data-close-doc class="flex-1 py-3 rounded-lg border border-line font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">إلغاء</button>
-            <button type="submit" class="flex-1 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors">حفظ</button>
+          <label class="block text-[12px] text-on-surface-variant">المدينة
+            <input id="doc-city" placeholder="الخرطوم" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2.5 text-[13px] text-on-surface outline-none focus:border-primary" />
+          </label>
+          <label class="block text-[12px] text-on-surface-variant">الجنس
+            <select id="doc-gender" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface">
+              <option value="">غير محدد</option>
+              <option value="male">ذكر</option>
+              <option value="female">أنثى</option>
+            </select>
+          </label>
+          <label class="block text-[12px] text-on-surface-variant">سنوات الخبرة
+            <input id="doc-exp" type="number" min="0" inputmode="numeric" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2.5 text-[13px] tabular-nums text-on-surface outline-none focus:border-primary" />
+          </label>
+          <label class="block text-[12px] text-on-surface-variant">رسوم الكشف (ج.س)
+            <input id="doc-fee" required type="number" min="0" inputmode="numeric" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2.5 text-[13px] tabular-nums text-on-surface outline-none focus:border-primary" />
+          </label>
+          <label class="block text-[12px] text-on-surface-variant sm:col-span-2">اللغات
+            <input id="doc-langs" placeholder="العربية، الإنجليزية" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2.5 text-[13px] text-on-surface outline-none focus:border-primary" />
+          </label>
+          <label class="block text-[12px] text-on-surface-variant sm:col-span-2">المستشفى
+            <select id="doc-hospital" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface">
+              <option value="">بدون مستشفى</option>
+              ${hospitalOptions.map((h) => `<option value="${escapeHtml(h.id)}">${escapeHtml(h.name)}${h.city ? ` — ${escapeHtml(h.city)}` : ""}</option>`).join("")}
+            </select>
+          </label>
+          <label class="block text-[12px] text-on-surface-variant sm:col-span-2">نبذة عن الطبيب
+            <textarea id="doc-about" rows="2" class="mt-1 w-full rounded-lg border border-line bg-surface-container-lowest px-2.5 py-2 text-[13px] leading-6 text-on-surface outline-none focus:border-primary"></textarea>
+          </label>
+          <label class="block text-[12px] text-on-surface-variant sm:col-span-2">رابط الصورة
+            <input id="doc-photo" dir="ltr" placeholder="https://…" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2.5 text-start text-[13px] text-on-surface outline-none focus:border-primary" />
+          </label>
+          <label class="flex items-center gap-2 text-[12px] font-medium text-on-surface sm:col-span-2">
+            <input id="doc-tele" type="checkbox" class="h-4 w-4 accent-primary" />الاستشارة عن بُعد متاحة
+          </label>
+          <label class="block text-[12px] text-on-surface-variant sm:col-span-2">حساب المستخدم
+            <select id="doc-user" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface"><option value="">بدون حساب</option>${(state.adminAccounts as { user_id: string; full_name: string; email: string }[]).map((p) => `<option value="${escapeHtml(p.user_id)}">${escapeHtml(p.full_name)} — ${escapeHtml(p.email)}</option>`).join("")}</select>
+          </label>
+          <div class="col-span-full flex gap-2 pt-1">
+            <button type="button" data-close-doc class="flex-1 py-2.5 rounded-lg border border-line font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">إلغاء</button>
+            <button type="submit" class="flex-1 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors">حفظ</button>
           </div>
         </form>
       </div>
@@ -740,19 +784,49 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
   main.querySelector("[data-back]")?.addEventListener("click", () => { state.adminSubTab = "appointments"; render(); });
   const docDlg = main.querySelector("#doctor-dialog") as HTMLDialogElement;
   let editing: string | null = null;
+  const field = (sel: string) => main.querySelector(sel) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+  const setField = (sel: string, value: string) => { const el = field(sel); if (el) el.value = value; };
+  const ensureSpec = (value: string) => {
+    const sel = field("#doc-spec") as HTMLSelectElement | null;
+    if (!sel || !value || [...sel.options].some((o) => o.value === value)) return;
+    sel.append(new Option(value, value));
+  };
+  const ensureHospital = (id: string, label: string) => {
+    const sel = field("#doc-hospital") as HTMLSelectElement | null;
+    if (!sel || !id || [...sel.options].some((o) => o.value === id)) return;
+    sel.append(new Option(label, id));
+  };
   const openDoc = async (id?: string) => {
     editing = id || null;
     (main.querySelector("#doctor-dialog-title") as HTMLElement).textContent = id ? "تعديل طبيب" : "إضافة طبيب";
+    (main.querySelector("#doctor-form") as HTMLFormElement).reset();
+    try { if (!state.adminAccounts.length) state.adminAccounts = await adminListProfiles(); } catch { /* ignore */ }
+    const userSel = field("#doc-user") as HTMLSelectElement | null;
+    if (userSel && state.adminAccounts.length) {
+      userSel.innerHTML = `<option value="">بدون حساب</option>` + (state.adminAccounts as { user_id: string; full_name: string; email: string }[])
+        .map((p) => `<option value="${escapeHtml(p.user_id)}">${escapeHtml(p.full_name)} — ${escapeHtml(p.email)}</option>`).join("");
+    }
     if (id) {
       const d = docs.find((x) => x.id === id)!;
-      (main.querySelector("#doc-name") as HTMLInputElement).value = d.name;
-      (main.querySelector("#doc-spec") as HTMLInputElement).value = d.specialization;
-      (main.querySelector("#doc-fee") as HTMLInputElement).value = String(d.consultation_fee);
-      (main.querySelector("#doc-user") as HTMLSelectElement).value = (d as { user_id?: string }).user_id || "";
-    } else {
-      (main.querySelector("#doctor-form") as HTMLFormElement).reset();
+      setField("#doc-name", d.name);
+      setField("#doc-name-en", d.name_en || "");
+      setField("#doc-title", d.title || "");
+      ensureSpec(d.specialization);
+      setField("#doc-spec", d.specialization);
+      setField("#doc-city", d.city || "");
+      setField("#doc-gender", d.gender || "");
+      setField("#doc-exp", d.experience_years == null ? "" : String(d.experience_years));
+      setField("#doc-fee", String(d.consultation_fee));
+      setField("#doc-langs", (d.languages || []).join("، "));
+      const hospital = hospitalOptions.find((h) => h.id === d.hospital_id);
+      ensureHospital(d.hospital_id || "", hospital ? `${hospital.name}${hospital.city ? ` — ${hospital.city}` : ""}` : "المستشفى الحالي");
+      setField("#doc-hospital", d.hospital_id || "");
+      setField("#doc-about", d.about || "");
+      setField("#doc-photo", d.photo_url || "");
+      const tele = field("#doc-tele") as HTMLInputElement | null;
+      if (tele) tele.checked = !!d.telehealth;
+      setField("#doc-user", d.user_id || "");
     }
-    try { if (!state.adminAccounts.length) state.adminAccounts = await adminListProfiles(); } catch { /* ignore */ }
     docDlg.showModal();
   };
   main.querySelector("#add-doctor")?.addEventListener("click", () => void openDoc());
@@ -769,11 +843,29 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
   docDlg.addEventListener("click", (e) => { if (e.target === docDlg) docDlg.close(); });
   (main.querySelector("#doctor-form") as HTMLFormElement).addEventListener("submit", async (e) => {
     e.preventDefault();
-    const name = (main.querySelector("#doc-name") as HTMLInputElement).value.trim();
-    const specialization = (main.querySelector("#doc-spec") as HTMLInputElement).value.trim();
-    const consultationFee = Number((main.querySelector("#doc-fee") as HTMLInputElement).value);
-    const userId = (main.querySelector("#doc-user") as HTMLSelectElement).value || null;
-    try { await saveDoctor({ id: editing || undefined, name, specialization, consultationFee, userId }); showToast("تم الحفظ", "success"); docDlg.close(); state.adminDoctorsCache = await listDoctors(); state.adminDoctors = state.adminDoctorsCache; void renderAdminManagement(main, "management"); } catch (err) { showToast(translateAuthError(err), "error"); }
+    const name = (field("#doc-name") as HTMLInputElement).value.trim();
+    const nameEn = (field("#doc-name-en") as HTMLInputElement).value.trim();
+    const title = (field("#doc-title") as HTMLInputElement).value.trim();
+    const specialization = (field("#doc-spec") as HTMLSelectElement).value;
+    const city = (field("#doc-city") as HTMLInputElement).value.trim();
+    const gender = (field("#doc-gender") as HTMLSelectElement).value;
+    const expRaw = (field("#doc-exp") as HTMLInputElement).value.trim();
+    const consultationFee = Number((field("#doc-fee") as HTMLInputElement).value);
+    const languages = (field("#doc-langs") as HTMLInputElement).value.split(/[,،]/).map((s) => s.trim()).filter(Boolean);
+    const hospitalId = (field("#doc-hospital") as HTMLSelectElement).value || null;
+    const about = (field("#doc-about") as HTMLTextAreaElement).value.trim();
+    const photoUrl = (field("#doc-photo") as HTMLInputElement).value.trim();
+    const telehealth = (field("#doc-tele") as HTMLInputElement).checked;
+    const userId = (field("#doc-user") as HTMLSelectElement).value || null;
+    if (!name || !specialization) { showToast("اكتب الاسم والتخصص", "error"); return; }
+    try {
+      await saveDoctor({ id: editing || undefined, name, nameEn, title, specialization, consultationFee, userId, city, gender, experienceYears: expRaw === "" ? null : Number(expRaw), telehealth, about, languages, photoUrl, hospitalId });
+      showToast("تم الحفظ", "success");
+      docDlg.close();
+      state.adminDoctorsCache = await listDoctors();
+      state.adminDoctors = state.adminDoctorsCache;
+      void renderAdminManagement(main, "management");
+    } catch (err) { showToast(translateAuthError(err), "error"); }
   });
   if (state.adminManagementDoctor) await renderSchedules(main.querySelector("#schedules-root") as HTMLElement, state.adminManagementDoctor);
 }
