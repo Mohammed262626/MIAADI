@@ -13,7 +13,7 @@ export const BOOKINGS_MAIN = `<div class="mx-auto flex w-full max-w-[1200px] fle
 </div>
 
 <!-- Tabs -->
-<div class="mt-6 flex gap-2 overflow-x-auto border-b border-line" role="tablist" aria-label="تصفية المواعيد">
+<div class="no-scrollbar mt-6 flex gap-2 overflow-x-auto border-b border-line" role="tablist" aria-label="تصفية المواعيد">
   <button class="booking-tab -mb-px inline-flex h-11 items-center gap-2 border-b-2 border-primary px-3 text-[14px] font-semibold text-on-surface transition-colors" id="tab-upcoming" type="button" role="tab" aria-selected="true" data-bk-tab="upcoming">
     <span>القادمة</span><span class="text-[12px] tabular-nums text-on-surface-variant" id="bk-count-upcoming">—</span>
   </button>

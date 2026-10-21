@@ -63,7 +63,7 @@ export function renderAdminView(
       </div>
     </div>
 
-    <div class="mt-6 flex gap-2 overflow-x-auto border-b border-line">
+    <div class="no-scrollbar mt-6 flex gap-2 overflow-x-auto border-b border-line">
       ${SUB_TABS.map((t) => `<button data-sub="${t.key}" class="-mb-px inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 text-[14px] transition-colors ${
         opts.activeSubTab === t.key ? "border-primary font-semibold text-on-surface" : "border-transparent text-on-surface-variant hover:text-on-surface"
       }">

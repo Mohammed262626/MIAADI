@@ -47,7 +47,7 @@ export const PROFILE_MAIN = `
     </div>
 
     <!-- tabs -->
-    <div class="mt-6 flex gap-2 overflow-x-auto border-b border-line">
+    <div class="no-scrollbar mt-6 flex gap-2 overflow-x-auto border-b border-line">
       <button data-pf-tab="info" class="-mb-px inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 border-primary px-3 text-[14px] font-semibold text-on-surface transition-colors" type="button">
         <span class="material-symbols-outlined text-[18px]" aria-hidden="true">person</span>
         <span>البيانات الشخصية</span>
