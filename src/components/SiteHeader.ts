@@ -1,4 +1,6 @@
 import { SITE_HEADER, SITE_FOOTER } from "../views/stitch/shell";
+import { escapeHtml } from "../lib/format";
+import { locationLabel } from "../lib/geodata";
 
 const AVATAR_LOGGED_OUT = `<button data-action="open-auth" type="button" aria-label="دخول" class="press flex items-center gap-space-xs px-space-md py-space-xs min-h-11 rounded-xl bg-surface-container-low text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors"><span aria-hidden="true" class="material-symbols-outlined text-[18px]">login</span><span>دخول</span></button>`;
 
@@ -60,7 +62,8 @@ export function renderSiteHeader(user: unknown, route?: { name: string } | null)
   const items = navItemsFor(user);
   let inner = SITE_HEADER
     .replace("__DESKTOP_NAV__", items.map((i) => desktopLink(i, i.key === key)).join(""))
-    .replace("__DRAWER_NAV__", items.map((i) => drawerLink(i, i.key === key)).join(""));
+    .replace("__DRAWER_NAV__", items.map((i) => drawerLink(i, i.key === key)).join(""))
+    .replaceAll("__LOCATION_LABEL__", escapeHtml(locationLabel()));
   inner = inner.replace(AVATAR_RE, user ? AVATAR_LOGGED_IN : AVATAR_LOGGED_OUT);
   return `<header class="fixed top-0 w-full z-50 pt-[env(safe-area-inset-top)] bg-surface-container-lowest">${inner}</header>`;
 }

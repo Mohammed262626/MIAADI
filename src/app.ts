@@ -1,6 +1,7 @@
 import "./styles/tailwind.css";
 import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, findDoctorByUser, listDoctorSchedules, createDoctorSchedule, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile } from "./lib/supabase";
 import { localDateISO, escapeHtml, translateAuthError, formatTime, formatArabicDate } from "./lib/format";
+import { detectNearestCity, locationLabel, rememberCity } from "./lib/geodata";
 import { showToast } from "./components/Toast";
 import { mountAuthModal } from "./components/AuthModal";
 import { confirmSheet } from "./components/ConfirmDialog";
@@ -218,7 +219,7 @@ function wireShell() {
 
   appEl.querySelectorAll<HTMLElement>('[data-action="open-auth"]').forEach((b) => b.addEventListener("click", () => authModal?.open()));
 
-  const headRow = appEl.querySelector<HTMLElement>("#db-actions") || appEl.querySelector<HTMLElement>("header > div");
+  const headRow = appEl.querySelector<HTMLElement>("#db-actions") || appEl.querySelector<HTMLElement>("#header-actions") || appEl.querySelector<HTMLElement>("header > div");
   if (headRow && !document.getElementById("theme-toggle")) {
     const btn = document.createElement("button");
     btn.id = "theme-toggle";
@@ -227,7 +228,8 @@ function wireShell() {
     btn.className = "press grid h-10 w-10 shrink-0 place-items-center rounded-lg text-on-surface transition-colors hover:bg-surface-container";
     btn.innerHTML = '<span aria-hidden="true" class="material-symbols-outlined text-[18px]">dark_mode</span>';
     btn.setAttribute("aria-label", "تبديل المظهر الداكن أو الفاتح");
-    headRow.appendChild(btn);
+    // Keep the burger as the outermost action (left edge in RTL).
+    headRow.insertBefore(btn, headRow.querySelector("#mobile-menu-btn"));
     const paintToggle = (mode: string) => {
       btn.setAttribute("aria-pressed", String(mode === "dark"));
       btn.title = mode === "dark" ? "المظهر الفاتح" : "المظهر الداكن";
@@ -297,6 +299,37 @@ function wireShell() {
     if (!(e.target as HTMLElement).closest("[data-path]")) return;
     closeMenu();
   });
+
+  /* Location chip: explicit opt-in, real browser coordinates, nearest known
+     city. No city is ever invented when permission is denied. */
+  const locateBtns = appEl.querySelectorAll<HTMLButtonElement>("[data-locate-btn]");
+  if (locateBtns.length) {
+    const status = appEl.querySelector<HTMLElement>("#locate-status");
+    const paintLocations = (label: string, announce = false) => {
+      appEl.querySelectorAll<HTMLElement>("[data-locate-label]").forEach((el) => { el.textContent = label; });
+      if (announce && status) status.textContent = label;
+    };
+    locateBtns.forEach((btn) => btn.addEventListener("click", async () => {
+      if (btn.dataset.busy === "true") return;
+      locateBtns.forEach((b) => { b.dataset.busy = "true"; b.setAttribute("aria-busy", "true"); });
+      paintLocations("جارٍ تحديد موقعك…", true);
+      try {
+        const { city } = await detectNearestCity();
+        rememberCity(city);
+        paintLocations(locationLabel(city), true);
+        showToast(`أقرب مدينة لموقعك: ${city}`, "success");
+        window.dispatchEvent(new CustomEvent<string>("miaadi:city-detected", { detail: city }));
+        // The home search deck follows the detected city without a full re-render.
+        const heroCity = document.querySelector<HTMLSelectElement>("#hero-city");
+        if (heroCity && [...heroCity.options].some((o) => o.value === city)) heroCity.value = city;
+      } catch {
+        paintLocations(locationLabel(), true);
+        showToast("تعذّر تحديد موقعك. اسمح بالوصول إلى الموقع من إعدادات المتصفح.", "error");
+      } finally {
+        locateBtns.forEach((b) => { delete b.dataset.busy; b.removeAttribute("aria-busy"); });
+      }
+    }));
+  }
 }
 
 function handleClick(e: MouseEvent) {

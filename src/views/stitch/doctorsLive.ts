@@ -1,4 +1,5 @@
 import { escapeHtml, formatRelativeDay, formatTime, localDateISO } from "../../lib/format";
+import { storedCity } from "../../lib/geodata";
 import { getDoctorsDirectory, getPatientAppointments, type DoctorDirectoryRow, type DirectorySlot } from "../../lib/supabase";
 import { SPECIALTIES, countSpecialties, specialtyKeyOf, type SpecialtyKey } from "../../lib/specialties";
 import { initials, money } from "../../components/ui";
@@ -64,6 +65,8 @@ function slotConflict(doc: DoctorDirectoryRow, slot: DirectorySlot): "same" | "o
 const CONFLICT_NOTE = { same: "لديك موعد آخر مع نفس الطبيب في هذا اليوم", overlap: "يتعارض مع موعد آخر لديك في نفس التوقيت" } as const;
 let DEFAULTS: Filters = emptyFilters();
 let visibleCount = 30;
+/* Updated when the navbar detects the visitor's city while this page is mounted. */
+let cityListener: ((e: Event) => void) | null = null;
 
 /* Filters handed over from another view (e.g. the home search deck). Consumed once. */
 export type DoctorsSeed = {
@@ -363,6 +366,13 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
     }
   }
 
+  const cities = [...new Set(ROWS.map((d) => d.hospital_city || d.city).filter((c): c is string => Boolean(c)))].sort();
+
+  // A city detected from the navbar scopes the directory to the nearest doctors,
+  // unless the home deck handed over an explicit city.
+  const savedCity = storedCity();
+  if (!seed?.city && savedCity && cities.includes(savedCity)) f.city = savedCity;
+
   const specsBox = appEl.querySelector<HTMLElement>("#doc-specs");
   if (specsBox) {
     specsBox.innerHTML = SPECIALTIES.map((sp) => `
@@ -377,7 +387,6 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
 
   const citySelect = appEl.querySelector<HTMLSelectElement>("#doc-city");
   if (citySelect) {
-    const cities = [...new Set(ROWS.map((d) => d.hospital_city || d.city).filter((c): c is string => Boolean(c)))].sort();
     citySelect.innerHTML = `<option value="">كافة المدن</option>${cities.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("")}`;
   }
 
@@ -388,6 +397,17 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
   }
 
   const rerender = () => { visibleCount = 30; render(appEl, f); };
+
+  // Live update when the navbar detects the visitor's city while this page is open.
+  if (cityListener) window.removeEventListener("miaadi:city-detected", cityListener);
+  cityListener = (e) => {
+    const city = (e as CustomEvent<string>).detail;
+    if (!city || !appEl.querySelector("#doc-list")) return;
+    f.city = city;
+    paintControls(appEl, f);
+    rerender();
+  };
+  window.addEventListener("miaadi:city-detected", cityListener);
 
   appEl.querySelector("#doc-pagination")?.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLElement>("#doc-more");

@@ -5,6 +5,7 @@ import { initials, money, shortRef } from "../../components/ui";
 import { qrSvg } from "../../components/qr";
 import { NEXT_APPOINTMENT_SKELETON } from "./home";
 import { seedDoctorsFilters } from "./doctorsLive";
+import { storedCity } from "../../lib/geodata";
 
 type HomeUser = { id?: string; profile?: { full_name?: string | null; role?: string | null } | null } | null;
 
@@ -147,6 +148,10 @@ function populateHeroFilters(root: HTMLElement, docs: DoctorDirectoryRow[]) {
   const insurers = [...new Set(docs.flatMap((d) => d.insurances))].sort();
   fillHeroSelect(root.querySelector<HTMLSelectElement>("#hero-city"), cities, "كافة المدن");
   fillHeroSelect(root.querySelector<HTMLSelectElement>("#hero-insurance"), insurers, "كافة شركات التأمين");
+  // Follow the city detected from the navbar when it is one of the listed options.
+  const citySelect = root.querySelector<HTMLSelectElement>("#hero-city");
+  const saved = storedCity();
+  if (citySelect && saved && [...citySelect.options].some((o) => o.value === saved)) citySelect.value = saved;
 }
 
 function wireHeroControls(root: HTMLElement) {
