@@ -65,8 +65,8 @@ const HOSPITAL_SKELETONS = [0, 1, 2]
   .join("");
 
 const STAT_SKELETON = `
-<div class="mx-auto h-9 w-24 rounded bg-on-primary/15" aria-hidden="true"></div>
-<div class="mx-auto mt-2 h-3.5 w-24 rounded bg-on-primary/10" aria-hidden="true"></div>`;
+<div class="mx-auto h-9 w-24 rounded bg-white/15" aria-hidden="true"></div>
+<div class="mx-auto mt-2 h-3.5 w-24 rounded bg-white/10" aria-hidden="true"></div>`;
 
 // Shared with the retry path in homeLive.ts.
 export const NEXT_APPOINTMENT_SKELETON = `
@@ -92,27 +92,27 @@ export const HOME_MAIN = `<div class="w-full">
   <div class="relative z-10 mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
     <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-12">
       <!-- Editorial column -->
-      <div class="flex flex-col items-start gap-6 text-start text-on-primary lg:col-span-7">
-        <div class="inline-flex items-center gap-2 rounded-full border border-on-primary/25 bg-on-primary/10 px-3.5 py-1.5 text-[12px] font-medium">
-          <span class="h-2 w-2 rounded-full bg-on-primary animate-pulse" aria-hidden="true"></span>
+      <div class="flex flex-col items-start gap-6 text-start text-white lg:col-span-7">
+        <div class="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-[12px] font-medium">
+          <span class="h-2 w-2 rounded-full bg-white animate-pulse" aria-hidden="true"></span>
           <span>حجز مباشر من جدول العيادة — بلا تعارض في المواعيد</span>
         </div>
         <h1 class="text-[clamp(2.25rem,5vw,3.5rem)] font-extrabold leading-[1.2] tracking-tight">
           احجز موعد طبيبك<br />أونلاين وبجدول العيادة نفسه.
         </h1>
-        <p class="max-w-xl text-[15px] leading-relaxed text-on-primary/85 sm:text-base">
+        <p class="max-w-xl text-[15px] leading-relaxed text-white/85 sm:text-base">
           المواعيد المعروضة متاحة فعلاً في جدول العيادة: تختار، تؤكد، وتدير موعدك بنفسك — دون انتظار في صالة الاستقبال.
         </p>
         <div class="flex flex-wrap items-center gap-4 pt-2">
           <a href="#home-search" class="press inline-flex items-center justify-center rounded-xl bg-surface-container-lowest px-7 py-3.5 text-[15px] font-bold text-on-surface shadow-lg transition-colors hover:bg-surface-container-high">
             احجز موعداً
           </a>
-          <a href="#hospitals" class="press inline-flex items-center justify-center gap-2.5 rounded-xl border-2 border-on-primary/50 px-6 py-3.5 text-[15px] font-semibold transition-colors hover:border-on-primary hover:bg-on-primary/10">
+          <a href="#hospitals" class="press inline-flex items-center justify-center gap-2.5 rounded-xl border-2 border-white/50 px-6 py-3.5 text-[15px] font-semibold transition-colors hover:border-white hover:bg-white/10">
             <span aria-hidden="true" class="material-symbols-outlined text-[18px]">apartment</span>
             <span>تصفّح المستشفيات والمراكز</span>
           </a>
         </div>
-        <div class="flex flex-wrap items-center gap-6 border-t border-on-primary/15 pt-5 text-[12px] text-on-primary/80">
+        <div class="flex flex-wrap items-center gap-6 border-t border-white/15 pt-5 text-[12px] text-white/80">
           <span class="flex items-center gap-2">
             <span aria-hidden="true" class="material-symbols-outlined text-[18px]">event_available</span>
             مواعيد من جدول العيادة الفعلي

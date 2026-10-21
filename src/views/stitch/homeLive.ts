@@ -161,8 +161,8 @@ function renderHomeStats(root: HTMLElement, docs: DoctorDirectoryRow[]) {
   ];
   el.innerHTML = items.map((item) => `
 <div>
-  <div class="text-[clamp(1.75rem,3vw,2.4rem)] font-extrabold tabular-nums text-on-primary">${item.value}</div>
-  <div class="mt-1 text-[13px] text-on-primary/80">${escapeHtml(item.label)}</div>
+  <div class="text-[clamp(1.75rem,3vw,2.4rem)] font-extrabold tabular-nums text-white">${item.value}</div>
+  <div class="mt-1 text-[13px] text-white/80">${escapeHtml(item.label)}</div>
 </div>`).join("");
 }
 
