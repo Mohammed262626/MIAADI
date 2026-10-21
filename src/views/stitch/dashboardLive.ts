@@ -1,5 +1,5 @@
 import { escapeHtml, formatTime, formatArabicDate, localDateISO, translateAuthError } from "../../lib/format";
-import { getAdminAppointments, getDoctorProfile, findDoctorByUser, getDoctorAvailability, updateAppointmentState, cancelAppointmentClinic, updatePatientProfile, updatePassword } from "../../lib/supabase";
+import { getAdminAppointments, getDoctorProfile, getDoctorReviews, findDoctorByUser, getDoctorAvailability, updateAppointmentState, cancelAppointmentClinic, updatePatientProfile, updatePassword, type DoctorReview } from "../../lib/supabase";
 import { confirmSheet } from "../../components/ConfirmDialog";
 import { showToast } from "../../components/Toast";
 import { initials, money, actionButton } from "../../components/ui";
@@ -16,7 +16,7 @@ type Filter = "all" | "waiting" | "completed" | "cancelled" | "no_show";
 
 /* The dashboard is a single page: the sidebar swaps these panels in place and
    never navigates away from #admin. */
-export type DashView = "overview" | "appointments" | "schedule" | "account";
+export type DashView = "overview" | "appointments" | "schedule" | "reviews" | "account";
 export type DashboardHooks = {
   renderAppointments?: (host: HTMLElement) => Promise<void> | void;
   renderSchedule?: (host: HTMLElement, doctorId: string | null) => Promise<void> | void;
@@ -110,6 +110,7 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
     overview: "#db-content",
     appointments: "#db-view-appointments",
     schedule: "#db-view-schedule",
+    reviews: "#db-view-reviews",
     account: "#db-view-account",
   };
   const NAV_ON = ["bg-surface-container-highest", "text-on-surface", "font-semibold"];
@@ -156,7 +157,6 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
               <h2 class="truncate text-[18px] font-bold text-on-surface">${escapeHtml(name || "مستخدم ميعادي")}</h2>
               <div class="mt-1 flex flex-wrap items-center gap-2">
                 <span class="inline-flex items-center gap-1 rounded-md bg-surface-container px-2 py-0.5 text-[11px] text-on-surface-variant"><span class="material-symbols-outlined text-[13px]" aria-hidden="true">shield_person</span>${escapeHtml(roleLabel)}</span>
-                ${docProfile && doctorId ? `<a href="#doctor/${escapeHtml(doctorId)}" class="inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/10" title="كما يراها المرضى">صفحتي العامة<span class="material-symbols-outlined text-[13px]" aria-hidden="true">open_in_new</span></a>` : ""}
               </div>
             </div>
           </div>
@@ -238,7 +238,70 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
     });
   };
 
+  /* Reviews panel: real rows from doctor_reviews — the public dossier used to
+     be the only place a doctor could read them. */
+  const paintReviewsPanel = async (target: HTMLElement) => {
+    if (!doctorId) { target.innerHTML = failureHtml("لا يوجد ملف طبيب مرتبط بهذا الحساب"); return; }
+    let rows: DoctorReview[] = [];
+    try { rows = await getDoctorReviews(doctorId); } catch (e) { target.innerHTML = failureHtml(e); return; }
+
+    const rated = rows.filter((r) => Number(r.rating) > 0);
+    const avg = rated.length ? rated.reduce((sum, r) => sum + Number(r.rating), 0) / rated.length : 0;
+    const last = rows[0]?.created_at?.slice(0, 10) || "";
+    const maskName = (value: string) => {
+      const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return "مريض";
+      return parts.length === 1 ? parts[0] : `${parts[0]} ${parts[1].charAt(0)}.`;
+    };
+    const starsHtml = (value: number) => {
+      const filled = Math.max(0, Math.min(5, Math.round(value)));
+      return `<span class="inline-flex items-center gap-0.5" role="img" aria-label="${filled} من 5 نجوم">${Array.from({ length: 5 }, (_, i) => `<span class="material-symbols-outlined text-[14px] ${i < filled ? "text-warning" : "text-line"}" style="font-variation-settings:'FILL' ${i < filled ? 1 : 0};" aria-hidden="true">star</span>`).join("")}</span>`;
+    };
+    const stat = (label: string, value: string, note: string) => `<div class="bg-surface-container-lowest px-4 py-3">
+      <p class="text-[12px] text-on-surface-variant">${escapeHtml(label)}</p>
+      <p class="mt-1 text-[19px] font-semibold leading-none tabular-nums text-on-surface">${escapeHtml(value)}</p>
+      <p class="mt-1 text-[11px] text-on-surface-variant">${escapeHtml(note)}</p>
+    </div>`;
+
+    target.innerHTML = `
+      <div class="flex flex-col gap-4">
+        <div class="min-w-0">
+          <p class="text-[12px] font-medium text-on-surface-variant">آراء المرضى بعد الزيارة</p>
+          <h2 class="mt-0.5 text-[20px] font-bold text-on-surface">تقييماتي</h2>
+        </div>
+
+        <div class="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">
+          ${stat("متوسط التقييم", rated.length ? avg.toFixed(1) : "—", rated.length ? `من ${rated.length} تقييم` : "لا تقييمات بعد")}
+          ${stat("عدد التقييمات", String(rows.length), rows.length ? "متاحة فقط بعد زيارة مكتملة" : "لم يُقيَّم أي موعد بعد")}
+          ${stat("آخر تقييم", last ? formatArabicDate(last) : "—", last ? "" : "لا يوجد بعد")}
+        </div>
+
+        ${rows.length
+          ? `<div class="flex flex-col gap-2">${rows.map((r) => `<article class="rounded-xl border border-line bg-surface-container-lowest p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex min-w-0 items-center gap-2.5">
+                  <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-[12px] font-bold text-primary">${escapeHtml(initials(maskName(r.patient_name)))}</span>
+                  <div class="min-w-0">
+                    <p class="truncate text-[13px] font-semibold text-on-surface">${escapeHtml(maskName(r.patient_name))}</p>
+                    <p class="mt-0.5 text-[11px] text-on-surface-variant">زيارة موثّقة · <span class="tabular-nums">${escapeHtml(formatArabicDate(r.created_at.slice(0, 10)))}</span></p>
+                  </div>
+                </div>
+                ${starsHtml(r.rating)}
+              </div>
+              ${r.comment
+                ? `<p class="mt-2 text-[13px] leading-6 text-on-surface-variant">"${escapeHtml(r.comment)}"</p>`
+                : `<p class="mt-2 text-[12px] text-on-surface-variant">بدون تعليق.</p>`}
+            </article>`).join("")}</div>`
+          : `<div class="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line bg-surface-container-low/50 px-4 py-10 text-center">
+              <span class="material-symbols-outlined text-[28px] text-on-surface-variant/70" aria-hidden="true">reviews</span>
+              <p class="text-[14px] font-semibold text-on-surface">لا توجد تقييمات بعد</p>
+              <p class="max-w-[44ch] text-[12px] text-on-surface-variant">يستطيع المريض تقييم الزيارة بعد اكتمالها، ويظهر التقييم هنا مباشرة.</p>
+            </div>`}
+      </div>`;
+  };
+
   const showView = async (view: DashView) => {
+    if (view === "reviews" && !(role === "doctor" && doctorId)) view = "overview";
     currentView = view;
     try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* private mode */ }
     paintNav();
@@ -246,15 +309,24 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
     appEl.querySelector<HTMLElement>("#db-search-wrap")?.classList.toggle("hidden", view !== "overview");
     const target = appEl.querySelector<HTMLElement>(VIEW_HOSTS[view]);
     if (!target) return;
+    const pendingLabel: Record<DashView, string> = {
+      overview: "جاري تحميل اللوحة…",
+      appointments: "جاري تحميل المواعيد…",
+      schedule: "جاري تحميل جدول العمل…",
+      reviews: "جاري تحميل التقييمات…",
+      account: "جاري تحميل حسابك…",
+    };
     try {
       if (view === "overview") { await reload(); return; }
-      target.innerHTML = pendingHtml(view === "appointments" ? "جاري تحميل المواعيد…" : view === "schedule" ? "جاري تحميل جدول العمل…" : "جاري تحميل حسابك…");
+      target.innerHTML = pendingHtml(pendingLabel[view]);
       if (view === "appointments") {
         if (hooks.renderAppointments) await hooks.renderAppointments(target);
         else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
       } else if (view === "schedule") {
         if (hooks.renderSchedule) await hooks.renderSchedule(target, doctorId);
         else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
+      } else if (view === "reviews") {
+        await paintReviewsPanel(target);
       } else {
         paintAccountPanel(target);
       }
@@ -289,6 +361,8 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
   };
 
   const paintShell = (profile: Awaited<ReturnType<typeof getDoctorProfile>>) => {
+    // Reviews belong to a doctor's own dossier; admins have no reviews of their own.
+    if (!(role === "doctor" && doctorId)) appEl.querySelector("#db-nav-reviews")?.remove();
     const displayName = profile?.name || me.profile?.full_name || "مستخدم";
     setText("#db-user-name", displayName);
     setText("#db-side-name", displayName);

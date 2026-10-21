@@ -136,10 +136,13 @@ function render() {
   const canAdmin = role === "admin" || role === "doctor";
   const demoMode = !state.currentUser;
   if (route.name === "admin" && !canAdmin && !demoMode) { location.hash = "#home"; return; }
+  // Staff stay inside the dashboard: the patient catalog, the public doctor
+  // dossier, the booking flow and the patient account pages are not for them.
   // The doctor's index is the dashboard, not the consumer landing page.
-  if (route.name === "home" && canAdmin) { location.replace("#admin"); return; }
-  // Staff never need the patient profile page — their account lives in the dashboard.
-  if (route.name === "profile" && canAdmin) { location.replace("#admin"); return; }
+  if (canAdmin && ["home", "doctors", "doctor", "hospitals", "appointments", "confirm", "profile"].includes(route.name)) {
+    location.replace("#admin");
+    return;
+  }
 
   if (route.name === "admin") {
     appEl.innerHTML = `<main class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"><div id="admin-boot" class="p-space-xl text-center text-secondary font-body-md text-body-md flex items-center justify-center gap-space-sm"><span class="material-symbols-outlined animate-spin">progress_activity</span> جاري تحميل لوحة العيادة…</div></main><div id="auth-mount"></div>`;
