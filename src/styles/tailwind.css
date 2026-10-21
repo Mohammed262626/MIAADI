@@ -219,6 +219,27 @@ html { scroll-behavior: smooth; }
 }
 .press:active { transform: scale(0.97); }
 
+/* Landing hero: abstract teal blobs and the elevated surfaces around them.
+   Shapes are pure decoration and never intercept clicks. */
+.hero-shape { position: absolute; pointer-events: none; z-index: 0; }
+.hero-shape-1 {
+  width: 42rem; height: 42rem; max-width: 90vw; max-height: 90vw;
+  border-radius: 46% 54% 68% 32% / 38% 46% 54% 62%;
+  background: radial-gradient(circle at 40% 40%, rgb(255 255 255 / 0.14) 0%, rgb(255 255 255 / 0.04) 62%, transparent 74%);
+}
+.hero-shape-2 {
+  width: 30rem; height: 30rem; max-width: 80vw; max-height: 80vw;
+  border-radius: 58% 42% 40% 60% / 51% 57% 43% 49%;
+  background: linear-gradient(135deg, rgb(0 131 120 / 0.55), rgb(255 255 255 / 0.06));
+}
+html[data-theme="dark"] .hero-shape-2 { background: linear-gradient(135deg, rgb(0 80 73 / 0.7), rgb(255 255 255 / 0.05)); }
+
+.shadow-glow-card { box-shadow: 0 24px 50px -14px rgb(6 51 46 / 0.28), 0 6px 16px -8px rgb(0 0 0 / 0.12); }
+.shadow-soft-card { box-shadow: 0 10px 30px -8px rgb(0 104 95 / 0.10); }
+.clinical-shadow-glow { box-shadow: 0 20px 45px -12px rgb(6 51 46 / 0.22), 0 8px 16px -8px rgb(0 0 0 / 0.08); }
+html[data-theme="dark"] .shadow-glow-card,
+html[data-theme="dark"] .clinical-shadow-glow { box-shadow: 0 24px 50px -14px rgb(0 0 0 / 0.55), 0 6px 16px -8px rgb(0 0 0 / 0.4); }
+
 @keyframes rise-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }

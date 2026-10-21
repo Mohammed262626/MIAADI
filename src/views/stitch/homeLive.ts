@@ -1,6 +1,6 @@
 import { escapeHtml, formatArabicDate, formatRelativeDay, formatTime, localDateISO } from "../../lib/format";
 import { getDoctorSpecializations, getDoctorsDirectory, getPatientAppointments, type DoctorDirectoryRow } from "../../lib/supabase";
-import { countSpecialties } from "../../lib/specialties";
+import { countSpecialties, specialtyKeyOf } from "../../lib/specialties";
 import { initials, money, shortRef } from "../../components/ui";
 import { qrSvg } from "../../components/qr";
 import { NEXT_APPOINTMENT_SKELETON } from "./home";
@@ -19,9 +19,9 @@ function shortSpecialty(spec: string): string {
 
 function doctorPhoto(doc: DoctorDirectoryRow): string {
   if (doc.photo_url) {
-    return `<img class="h-20 w-20 shrink-0 rounded-xl object-cover" src="${escapeHtml(doc.photo_url)}" alt="${escapeHtml(doc.name)}" loading="lazy"/>`;
+    return `<img class="h-16 w-16 shrink-0 rounded-full border border-line/60 object-cover" src="${escapeHtml(doc.photo_url)}" alt="${escapeHtml(doc.name)}" loading="lazy"/>`;
   }
-  return `<span class="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-primary text-[22px] font-extrabold text-on-primary">${escapeHtml(initials(doc.name))}</span>`;
+  return `<span class="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-line/60 bg-primary text-[19px] font-extrabold text-on-primary">${escapeHtml(initials(doc.name))}</span>`;
 }
 
 function nextSlotLabel(doc: DoctorDirectoryRow): string | null {
@@ -41,66 +41,71 @@ function featuredCardHtml(doc: DoctorDirectoryRow, _index: number): string {
   const hasReviews = (doc.reviews_count ?? 0) > 0;
   const rating = hasReviews ? (doc.rating ?? 0).toFixed(1) : "";
   const next = nextSlotLabel(doc);
-  const coverage = doc.insurances.length
-    ? doc.insurances.slice(0, 3).join("، ")
-    : "دفع مباشر";
+  const coverage = doc.insurances.length ? doc.insurances.slice(0, 3).join("، ") : "دفع مباشر";
   const ratingHtml = hasReviews
-    ? `<span class="flex shrink-0 items-center gap-1 text-[14px] text-on-surface-variant">
-          <span class="text-primary material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
+    ? `<span class="flex shrink-0 items-center gap-1 text-[12px] text-on-surface-variant">
+          <span class="text-primary material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
           <span class="font-semibold tabular-nums text-on-surface">${escapeHtml(rating)}</span>
           <span class="tabular-nums">(${escapeHtml(doc.reviews_count ?? 0)})</span>
         </span>`
-    : `<span class="flex shrink-0 items-center gap-1 text-[12px] text-on-surface-variant">
-          <span class="material-symbols-outlined text-[15px]" aria-hidden="true">rate_review</span>
+    : `<span class="flex shrink-0 items-center gap-1 text-[11px] text-on-surface-variant">
+          <span class="material-symbols-outlined text-[14px]" aria-hidden="true">rate_review</span>
           <span>لا تقييمات بعد</span>
         </span>`;
   return `
-<article class="press relative rounded-xl bg-surface-container-lowest p-4 sm:p-5">
-  <div class="flex items-start gap-4">
-    ${doctorPhoto(doc)}
-    <div class="min-w-0 flex-1">
-      <div class="flex items-start justify-between gap-2">
-        <h3 class="truncate text-[19px] font-bold leading-tight text-on-surface"><a href="#doctor/${escapeHtml(doc.id)}" class="after:absolute after:inset-0 after:content-['']">${escapeHtml(doc.name)}</a></h3>
-        ${ratingHtml}
+<article class="press relative flex h-full flex-col justify-between rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors hover:border-primary/40">
+  <div>
+    <div class="flex items-start gap-4">
+      ${doctorPhoto(doc)}
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center justify-between gap-1.5">
+          <span class="max-w-full truncate rounded bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">${escapeHtml(shortSpecialty(doc.specialization))}</span>
+          ${ratingHtml}
+        </div>
+        <h3 class="mt-1.5 truncate text-[17px] font-bold leading-tight text-on-surface"><a class="after:absolute after:inset-0 after:content-['']" href="#doctor/${escapeHtml(doc.id)}">${escapeHtml(doc.name)}</a></h3>
+        <p class="mt-0.5 truncate text-[13px] text-on-surface-variant">${escapeHtml(doc.hospital_city || doc.city || "—")}</p>
       </div>
-      <p class="mt-1 truncate text-[15px] text-on-surface-variant" title="${escapeHtml(doc.specialization)}">${escapeHtml(shortSpecialty(doc.specialization))}</p>
-      <p class="mt-1 truncate text-[14px] text-on-surface-variant">${escapeHtml(doc.hospital_name || "العيادة الخاصة")} · ${escapeHtml(doc.hospital_city || doc.city || "—")}</p>
+    </div>
+    <div class="mt-4 space-y-2 border-y border-line/60 py-3 text-[13px] text-on-surface-variant">
+      <p class="flex items-center gap-2">
+        <span aria-hidden="true" class="material-symbols-outlined text-[16px] text-outline">apartment</span>
+        <span class="truncate">${escapeHtml(doc.hospital_name || "العيادة الخاصة")}</span>
+      </p>
+      <p class="flex items-center gap-2 text-on-surface">
+        <span aria-hidden="true" class="material-symbols-outlined text-[16px] text-primary">schedule</span>
+        <span>أقرب موعد: <strong class="font-bold ${next ? "text-primary" : "text-on-surface-variant"}">${next ? escapeHtml(next) : "لا يوجد حالياً"}</strong></span>
+      </p>
+      <p class="flex items-center gap-2">
+        <span aria-hidden="true" class="material-symbols-outlined text-[16px] text-outline">verified_user</span>
+        <span class="truncate">تغطية: ${escapeHtml(coverage)}</span>
+      </p>
     </div>
   </div>
-  <div class="mt-4 flex flex-wrap items-end justify-between gap-3">
+  <div class="mt-4 flex items-end justify-between gap-3">
     <div class="min-w-0">
-      <p class="text-[13px] text-on-surface-variant">أقرب موعد متاح</p>
-      <p class="mt-0.5 text-[15px] font-semibold ${next ? "text-primary" : "text-on-surface-variant"}">${next ? escapeHtml(next) : "لا يوجد حالياً"}</p>
-      <p class="mt-1 truncate text-[13px] text-on-surface-variant">تغطية: ${escapeHtml(coverage)}</p>
+      <p class="text-[12px] text-on-surface-variant">رسوم الكشف</p>
+      <p class="text-[16px] font-bold tabular-nums text-on-surface">${escapeHtml(money(doc.consultation_fee))}</p>
     </div>
-    <div class="flex shrink-0 items-center gap-3">
-      <div class="text-end">
-        <p class="text-[13px] text-on-surface-variant">رسوم الكشف</p>
-        <p class="text-[17px] font-bold tabular-nums text-on-surface">${escapeHtml(money(doc.consultation_fee))}</p>
-      </div>
-      <button class="press relative z-10 h-11 rounded-xl bg-primary px-4 text-[15px] font-semibold text-on-primary transition-colors hover:bg-primary-container" type="button" data-book-doctor="${escapeHtml(doc.id)}">
-        احجز
-      </button>
-    </div>
+    <button class="press relative z-10 h-10 shrink-0 rounded-lg bg-primary px-5 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container" type="button" data-book-doctor="${escapeHtml(doc.id)}">
+      احجز موعداً
+    </button>
   </div>
 </article>`;
 }
 
 function featuredLoadingHtml(): string {
   return [0, 1, 2].map(() => `
-<div class="rounded-xl bg-surface-container-lowest p-4 sm:p-5">
-  <div class="flex items-start gap-4">
-    <div class="h-20 w-20 shrink-0 rounded-xl bg-surface-container-high"></div>
-    <div class="flex-1 pt-1">
+<div class="rounded-xl border border-line/80 bg-surface-container-lowest p-5">
+  <div class="flex items-center gap-4">
+    <div class="h-16 w-16 shrink-0 rounded-full bg-surface-container-high"></div>
+    <div class="flex-1">
       <div class="h-4 w-2/3 rounded bg-surface-container-high"></div>
       <div class="mt-2 h-3 w-1/2 rounded bg-surface-container"></div>
       <div class="mt-2 h-3 w-3/4 rounded bg-surface-container"></div>
     </div>
   </div>
-  <div class="mt-4 flex items-end justify-between gap-4">
-    <div class="h-3 w-32 rounded bg-surface-container"></div>
-    <div class="h-11 w-24 rounded-xl bg-surface-container-high"></div>
-  </div>
+  <div class="mt-4 h-3 w-3/4 rounded bg-surface-container"></div>
+  <div class="mt-5 h-10 rounded-lg bg-surface-container-high"></div>
 </div>`).join("");
 }
 
@@ -116,9 +121,97 @@ function renderFeaturedDoctors(root: HTMLElement, docs: DoctorDirectoryRow[]) {
     </div>`;
     return;
   }
-  grid.innerHTML = docs.slice(0, 5)
-    .map((doc, i) => `<div class="rise-in" style="animation-delay:${i * 50}ms">${featuredCardHtml(doc, i)}</div>`)
+  grid.innerHTML = docs.slice(0, 6)
+    .map((doc, i) => `<div class="rise-in h-full" style="animation-delay:${i * 50}ms">${featuredCardHtml(doc, i)}</div>`)
     .join("");
+}
+
+/* ------------------------------ real stats + hospitals ------------------------------ */
+
+type HospitalGroup = { name: string; city: string; doctors: number; earliest: string | null };
+
+function collectHospitals(docs: DoctorDirectoryRow[]): HospitalGroup[] {
+  const groups = new Map<string, HospitalGroup>();
+  docs.forEach((d) => {
+    const name = d.hospital_name;
+    if (!name) return;
+    const g = groups.get(name) || { name, city: d.hospital_city || d.city || "", doctors: 0, earliest: null };
+    g.doctors += 1;
+    d.available_schedules.forEach((s) => {
+      if (!s.available_date) return;
+      const key = `${s.available_date} ${s.start_time}`;
+      if (!g.earliest || key < g.earliest) g.earliest = key;
+    });
+    groups.set(name, g);
+  });
+  return [...groups.values()].sort((a, b) => b.doctors - a.doctors || a.name.localeCompare(b.name, "ar"));
+}
+
+function renderHomeStats(root: HTMLElement, docs: DoctorDirectoryRow[]) {
+  const el = root.querySelector<HTMLElement>("#home-stats");
+  if (!el) return;
+  const hospitals = new Set(docs.map((d) => d.hospital_name).filter(Boolean));
+  const cities = new Set(docs.map((d) => d.hospital_city || d.city).filter((c): c is string => Boolean(c)));
+  const specs = new Set(docs.map((d) => specialtyKeyOf(d.specialization)).filter(Boolean));
+  const items = [
+    { value: docs.length, label: "طبيب متاح هذا الأسبوع" },
+    { value: hospitals.size, label: "مستشفى ومركز" },
+    { value: specs.size, label: "تخصصاً طبياً" },
+    { value: cities.size, label: "مدينة في السودان" },
+  ];
+  el.innerHTML = items.map((item) => `
+<div>
+  <div class="text-[clamp(1.75rem,3vw,2.4rem)] font-extrabold tabular-nums text-on-primary">${item.value}</div>
+  <div class="mt-1 text-[13px] text-on-primary/80">${escapeHtml(item.label)}</div>
+</div>`).join("");
+}
+
+const HOSPITAL_ICONS = ["local_hospital", "domain", "health_and_safety"];
+
+function hospitalCardHtml(h: HospitalGroup, index: number): string {
+  const icon = HOSPITAL_ICONS[index % HOSPITAL_ICONS.length];
+  let slot = "لا مواعيد خلال أسبوع";
+  if (h.earliest) {
+    const date = h.earliest.slice(0, 10);
+    const time = h.earliest.slice(11);
+    slot = `${formatRelativeDay(date)} · ${formatTime(time)}`;
+  }
+  return `<article class="press relative flex h-full flex-col justify-between rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors hover:border-primary/40">
+  <div>
+    <div class="mb-4 flex items-center justify-between gap-2">
+      <span class="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary"><span aria-hidden="true" class="material-symbols-outlined text-[20px]">${icon}</span></span>
+      <span class="rounded-full bg-surface-container-low px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-on-surface">${h.doctors} طبيب</span>
+    </div>
+    <h3 class="text-[17px] font-bold text-on-surface">${escapeHtml(h.name)}</h3>
+    <p class="mt-1 flex items-center gap-1 text-[13px] text-outline">
+      <span aria-hidden="true" class="material-symbols-outlined text-[15px]">location_on</span>
+      <span class="truncate">${escapeHtml(h.city || "—")}</span>
+    </p>
+    <div class="mt-3 flex items-center justify-between gap-2 rounded-lg border border-line/60 bg-surface-container-low/50 px-3 py-2">
+      <span class="text-[12px] text-on-surface-variant">أقرب موعد شاغر</span>
+      <span class="text-[12px] font-bold tabular-nums ${h.earliest ? "text-primary" : "text-on-surface-variant"}">${escapeHtml(slot)}</span>
+    </div>
+  </div>
+  <button type="button" class="press relative z-10 mt-5 inline-flex h-10 w-full items-center justify-center rounded-lg border border-primary text-[13px] font-semibold text-primary transition-colors hover:bg-primary/5" data-hosp-explore data-hospital="${escapeHtml(h.name)}" data-city="${escapeHtml(h.city)}">استعرض الأطباء</button>
+</article>`;
+}
+
+function renderHomeHospitals(root: HTMLElement, docs: DoctorDirectoryRow[]) {
+  const el = root.querySelector<HTMLElement>("#home-hospitals");
+  if (!el) return;
+  el.setAttribute("aria-busy", "false");
+  const groups = collectHospitals(docs).slice(0, 3);
+  if (!groups.length) {
+    el.closest("section")?.classList.add("hidden");
+    return;
+  }
+  el.innerHTML = groups.map((h, i) => hospitalCardHtml(h, i)).join("");
+  el.querySelectorAll<HTMLElement>("[data-hosp-explore]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      seedDoctorsFilters({ hospital: btn.dataset.hospital || "", city: btn.dataset.city || "" });
+      location.hash = "#doctors";
+    });
+  });
 }
 
 /* ------------------------------ specialty counts ------------------------------ */
@@ -349,6 +442,13 @@ export async function wireHome(appEl: HTMLElement, user: HomeUser) {
 
   await renderNextAppointment(appEl, user, await appointmentsPromise);
 
+  // Stats and the hospitals grid are derived from the same directory rows.
+  // Without them there is nothing honest to show, so the sections collapse.
+  const hideDerivedSections = () => {
+    appEl.querySelector("#home-stats")?.closest("section")?.classList.add("hidden");
+    appEl.querySelector("#home-hospitals")?.closest("section")?.classList.add("hidden");
+  };
+
   const renderFeaturedFailure = () => {
     const grid = appEl.querySelector<HTMLElement>("#featured-doctors");
     if (!grid) return;
@@ -365,6 +465,8 @@ export async function wireHome(appEl: HTMLElement, user: HomeUser) {
         const rows = await getDoctorsDirectory(7);
         populateHeroFilters(appEl, rows);
         renderFeaturedDoctors(appEl, rows);
+        renderHomeStats(appEl, rows);
+        renderHomeHospitals(appEl, rows);
       } catch {
         renderFeaturedFailure();
       }
@@ -374,7 +476,10 @@ export async function wireHome(appEl: HTMLElement, user: HomeUser) {
   if (directory) {
     populateHeroFilters(appEl, directory);
     renderFeaturedDoctors(appEl, directory);
+    renderHomeStats(appEl, directory);
+    renderHomeHospitals(appEl, directory);
   } else {
+    hideDerivedSections();
     renderFeaturedFailure();
   }
 }
