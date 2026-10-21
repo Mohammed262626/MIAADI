@@ -1,8 +1,8 @@
 // Live wiring for the doctor dossier screen (#doctor/:id).
 //
-// Facts come from the database (doctors + hospitals + doctor_insurances +
-// doctor_schedules); the editorial sections (credentials, highlights, treated
-// conditions, patient quotes, wayfinding line) come from specialtyContent.ts.
+// Every visible fact comes from the database (doctors + hospitals +
+// doctor_insurances + doctor_schedules + doctor_reviews). There is no editorial
+// filler: if the doctors row leaves a field empty, its block stays hidden.
 // Booking is real: it writes through the book_appointment RPC.
 import { escapeHtml, formatArabicDate, formatDayNum, formatMonthShort, formatRelativeDay, formatTime, formatWeekdayShort, localDateISO, translateAuthError } from "../../lib/format";
 import { bookAppointmentRPC, getDoctorProfile, getDoctorProfileSlots, getDoctorReviews, getReviewableAppointmentId, rescheduleAppointmentRPC, submitDoctorReview, type DoctorProfileRow, type DoctorReview, type ProfileSlot } from "../../lib/supabase";
@@ -10,7 +10,7 @@ import { clearRescheduleIntent, getRescheduleIntent } from "../../lib/reschedule
 import { initials, shortRef } from "../../components/ui";
 import { confirmSheet } from "../../components/ConfirmDialog";
 import { showToast } from "../../components/Toast";
-import { contentOf, specialtyLabel, titleEn } from "./specialtyContent";
+import { specialtyLabel } from "./specialtyContent";
 
 type ProfileUser = {
   id?: string;
@@ -34,13 +34,6 @@ function minutesOf(time: string): number {
 function monthLabel(date: string): string {
   const d = dayOf(date);
   return `${formatMonthShort(date)} ${d.getFullYear()}`;
-}
-
-// "+3.1k" style headcount derived from the review volume (decorative, matches
-// the reference screen's recovered-cases chip).
-function compactCount(n: number): string {
-  if (n >= 1000) return `+${(n / 1000).toFixed(1)}k`;
-  return `+${n}`;
 }
 
 function mapsUrl(q: string): string {
@@ -78,7 +71,6 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
     return;
   }
 
-  const content = contentOf(profile.specialization);
   const fee = Number(profile.consultation_fee) || 0;
 
   /* --------------------------- reschedule intent ---------------------------- */
@@ -119,7 +111,7 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
   if (crumb) { crumb.textContent = specialtyLabel(profile.specialization); crumb.setAttribute("href", "#doctors"); }
   crumb?.closest("nav")?.querySelector("a")?.setAttribute("href", "#home");
   setText("dp-crumb-name", profile.name);
-  setText("dp-title-pill", profile.title || "استشاري");
+  setText("dp-title-pill", profile.title || specialtyLabel(profile.specialization));
 
   const avatar = el("dp-avatar");
   if (avatar) {
@@ -145,13 +137,6 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
   const hospIcon = el("dp-hospital")?.parentElement?.querySelector<HTMLElement>(".material-symbols-outlined");
   if (hospIcon && !profile.hospital_name) hospIcon.textContent = "local_hospital";
 
-  const creds = el("dp-credentials");
-  if (creds) {
-    creds.innerHTML = content.credentials
-      .map((c) => `<span class="rounded-md bg-surface-container-low px-2 py-1 text-[12px] text-on-surface-variant">${escapeHtml(c)}</span>`)
-      .join("");
-  }
-
   // metric chips
   const expCell = el("dp-exp-cell");
   if (profile.experience_years) setText("dp-exp", `+${profile.experience_years}`);
@@ -176,33 +161,21 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
     }
   }
 
-  // about
-  setText("dp-bio-1", profile.about || content.bio);
-  const bio2 = el("dp-bio-2");
-  if (bio2) {
-    if (profile.about) bio2.textContent = content.bio;
-    else bio2.remove();
-  }
+  // about — the doctors row is the only source; no editorial fallback
+  const about = (profile.about || "").trim();
+  setText("dp-bio-1", about);
+  el("dp-about-card")?.classList.toggle("hidden", !about);
 
-  const highlights = el("dp-highlights");
-  if (highlights) {
-    highlights.innerHTML = content.highlights
-      .map((h) => `<div class="flex items-center gap-space-xs text-on-surface"><span class="material-symbols-outlined text-primary text-[20px]">check_circle</span><span class="font-label-md text-label-md">${escapeHtml(h)}</span></div>`)
-      .join("");
-  }
-
-  setText("dp-services-icon", content.sectionIcon);
-  const services = el("dp-services");
-  if (services) {
-    services.innerHTML = content.services
-      .map((s) => `<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
-        <div class="p-2 bg-surface-container-lowest rounded-lg text-primary"><span class="material-symbols-outlined text-[22px]">${escapeHtml(s.icon)}</span></div>
-        <div>
-          <h4 class="font-headline-sm text-headline-sm text-on-surface font-semibold">${escapeHtml(s.title)}</h4>
-          <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">${escapeHtml(s.desc)}</p>
-        </div>
-      </div>`)
-      .join("");
+  // facts — only what the row actually contains
+  const facts = el("dp-facts");
+  if (facts) {
+    const langs = (profile.languages || []).map((l) => String(l).trim()).filter(Boolean);
+    const chips = [
+      langs.length ? `<span class="inline-flex items-center gap-1 rounded-md bg-surface-container-low px-2 py-1 text-[12px] text-on-surface-variant"><span class="material-symbols-outlined text-[15px]" aria-hidden="true">translate</span>${escapeHtml(langs.join(" · "))}</span>` : "",
+      profile.telehealth ? `<span class="inline-flex items-center gap-1 rounded-md bg-surface-container-low px-2 py-1 text-[12px] text-on-surface-variant"><span class="material-symbols-outlined text-[15px]" aria-hidden="true">videocam</span>الاستشارة عن بُعد متاحة</span>` : "",
+    ].filter(Boolean);
+    facts.innerHTML = chips.join("");
+    facts.classList.toggle("hidden", !chips.length);
   }
 
   // location & wayfinding
@@ -232,8 +205,6 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
     setText("dp-building-line", "يُرسل رابط الجلسة قبل الموعد على جوالك");
     mapLink?.parentElement?.remove();
   }
-  setText("dp-clinic-name", content.clinic.name);
-  setText("dp-clinic-line", content.clinic.line);
 
   // reviews — real rows, each tied to a completed visit
   const doctor = profile;

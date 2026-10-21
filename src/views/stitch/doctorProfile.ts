@@ -46,12 +46,6 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <span aria-hidden="true" id="dp-city-sep">·</span>
 <span id="dp-hospital-city"><span class="block h-4 w-20 rounded bg-surface-container-high" aria-hidden="true"></span></span>
 </div>
-<!-- Credentials Badges -->
-<div class="mt-3 flex flex-wrap items-center gap-1.5" id="dp-credentials">
-<span class="block h-6 w-44 rounded-md bg-surface-container-high" aria-hidden="true"></span>
-<span class="block h-6 w-36 rounded-md bg-surface-container-high" aria-hidden="true"></span>
-<span class="block h-6 w-40 rounded-md bg-surface-container-high" aria-hidden="true"></span>
-</div>
 </div>
 </div>
 <!-- Metric Summary -->
@@ -74,7 +68,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <!-- Right Column: Doctor Dossier & Clinical Information (7 Cols on LG) -->
 <div class="order-2 flex flex-col gap-space-xl lg:order-none lg:col-span-7">
 <!-- 1. About Section -->
-<article class="bg-surface-container-lowest rounded-xl p-space-xl">
+<article class="bg-surface-container-lowest rounded-xl p-space-xl" id="dp-about-card">
 <div class="flex items-center justify-between mb-space-md">
 <div class="flex items-center gap-space-sm">
 <div class="w-8 h-8 rounded-lg bg-primary-fixed-dim/40 flex items-center justify-center text-primary">
@@ -83,51 +77,13 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <h2 class="text-[18px] font-bold leading-snug text-on-surface sm:text-[24px]">نبذة عن الطبيب والتخصص</h2>
 </div>
 </div>
-<p class="font-body-lg text-body-lg text-on-surface leading-relaxed mb-space-md" id="dp-bio-1">
+<p class="font-body-lg text-body-lg text-on-surface leading-relaxed" id="dp-bio-1">
 <span class="mb-2 block h-4 w-full rounded bg-surface-container-high" aria-hidden="true"></span>
 <span class="mb-2 block h-4 w-11/12 rounded bg-surface-container-high" aria-hidden="true"></span>
 <span class="block h-4 w-4/5 rounded bg-surface-container-high" aria-hidden="true"></span>
 </p>
-<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed" id="dp-bio-2">
-<span class="mb-2 block h-3.5 w-full rounded bg-surface-container" aria-hidden="true"></span>
-<span class="block h-3.5 w-3/4 rounded bg-surface-container" aria-hidden="true"></span>
-</p>
-<!-- Highlights Pill Grid -->
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm mt-space-lg pt-space-md bg-surface-container-low/50 rounded-xl p-space-md" id="dp-highlights">
-<div class="flex items-center gap-space-xs" aria-hidden="true"><span class="h-4 w-4 shrink-0 rounded-full bg-surface-container-high"></span><span class="h-3 w-40 max-w-full rounded bg-surface-container-high"></span></div>
-<div class="flex items-center gap-space-xs" aria-hidden="true"><span class="h-4 w-4 shrink-0 rounded-full bg-surface-container-high"></span><span class="h-3 w-44 max-w-full rounded bg-surface-container-high"></span></div>
-<div class="flex items-center gap-space-xs" aria-hidden="true"><span class="h-4 w-4 shrink-0 rounded-full bg-surface-container-high"></span><span class="h-3 w-36 max-w-full rounded bg-surface-container-high"></span></div>
-<div class="flex items-center gap-space-xs" aria-hidden="true"><span class="h-4 w-4 shrink-0 rounded-full bg-surface-container-high"></span><span class="h-3 w-48 max-w-full rounded bg-surface-container-high"></span></div>
-</div>
-</article>
-<!-- 2. Sub-specialties & Conditions Treated -->
-<article class="bg-surface-container-lowest rounded-xl p-space-xl">
-<div class="flex items-center justify-between mb-space-md">
-<div class="flex items-center gap-space-sm">
-<div class="w-8 h-8 rounded-lg bg-tertiary-fixed-dim/40 flex items-center justify-center text-tertiary">
-<span class="material-symbols-outlined text-[20px]" id="dp-services-icon" aria-hidden="true">medical_services</span>
-</div>
-<h2 class="text-[18px] font-bold leading-snug text-on-surface sm:text-[24px]">الخدمات التخصصية</h2>
-</div>
-</div>
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md" id="dp-services">
-<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low" aria-hidden="true">
-<div class="h-10 w-10 shrink-0 rounded-lg bg-surface-container-high"></div>
-<div class="min-w-0 flex-1 space-y-2"><div class="h-4 w-3/5 rounded bg-surface-container-high"></div><div class="h-3 w-4/5 rounded bg-surface-container"></div></div>
-</div>
-<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low" aria-hidden="true">
-<div class="h-10 w-10 shrink-0 rounded-lg bg-surface-container-high"></div>
-<div class="min-w-0 flex-1 space-y-2"><div class="h-4 w-2/5 rounded bg-surface-container-high"></div><div class="h-3 w-3/4 rounded bg-surface-container"></div></div>
-</div>
-<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low" aria-hidden="true">
-<div class="h-10 w-10 shrink-0 rounded-lg bg-surface-container-high"></div>
-<div class="min-w-0 flex-1 space-y-2"><div class="h-4 w-1/2 rounded bg-surface-container-high"></div><div class="h-3 w-4/5 rounded bg-surface-container"></div></div>
-</div>
-<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low" aria-hidden="true">
-<div class="h-10 w-10 shrink-0 rounded-lg bg-surface-container-high"></div>
-<div class="min-w-0 flex-1 space-y-2"><div class="h-4 w-2/5 rounded bg-surface-container-high"></div><div class="h-3 w-3/5 rounded bg-surface-container"></div></div>
-</div>
-</div>
+<!-- Facts drawn from the doctors row only -->
+<div class="mt-space-md flex flex-wrap items-center gap-1.5 hidden" id="dp-facts"></div>
 </article>
 <!-- 3. Hospital Location & Clinic Wayfinding -->
 <article class="bg-surface-container-lowest rounded-xl p-space-xl">
@@ -157,20 +113,13 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </span>
 </div>
 </div>
-<!-- Clinic directions -->
+<!-- Location details from the hospital record -->
 <div class="grid gap-4 sm:grid-cols-2">
 <div class="flex items-start gap-3">
 <span class="material-symbols-outlined mt-0.5 text-[19px] text-primary" aria-hidden="true">apartment</span>
 <div class="min-w-0">
 <h4 class="text-[14px] font-semibold text-on-surface" id="dp-building-name"><span class="block h-4 w-40 max-w-full rounded bg-surface-container-high" aria-hidden="true"></span></h4>
 <p class="mt-0.5 text-[13px] text-on-surface-variant" id="dp-building-line"><span class="block h-3 w-56 max-w-full rounded bg-surface-container" aria-hidden="true"></span></p>
-</div>
-</div>
-<div class="flex items-start gap-3">
-<span class="material-symbols-outlined mt-0.5 text-[19px] text-primary" aria-hidden="true">meeting_room</span>
-<div class="min-w-0">
-<h4 class="text-[14px] font-semibold text-on-surface" id="dp-clinic-name"><span class="block h-4 w-36 max-w-full rounded bg-surface-container-high" aria-hidden="true"></span></h4>
-<p class="mt-0.5 text-[13px] text-on-surface-variant" id="dp-clinic-line"><span class="block h-3 w-52 max-w-full rounded bg-surface-container" aria-hidden="true"></span></p>
 </div>
 </div>
 </div>

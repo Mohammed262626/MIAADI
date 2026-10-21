@@ -12,7 +12,7 @@ import { qrSvg } from "../../components/qr";
 import { setRescheduleIntent } from "../../lib/reschedule";
 import { confirmSheet } from "../../components/ConfirmDialog";
 import { showToast } from "../../components/Toast";
-import { contentOf, specialtyLabel } from "./specialtyContent";
+import { specialtyLabel } from "./specialtyContent";
 
 type BookingsUser = { id?: string; profile?: { full_name?: string | null; role?: string | null } | null } | null;
 
@@ -311,8 +311,8 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
     setText("bk-pass-time", formatTime(primary.time));
     setText("bk-pass-window", "(الحضور قبل الموعد بـ 15 دقيقة)");
     setText("bk-pass-building", primary.hospital || "الاستشارة الافتراضية (فيديو)");
-    const clinic = contentOf(primary.specialization).clinic;
-    setText("bk-pass-room", primary.hospital ? clinic.name : "يُرسل رابط الجلسة على جوالك قبل الموعد");
+    setText("bk-pass-room", primary.hospital ? "" : "يُرسل رابط الجلسة على جوالك قبل الموعد");
+    el("bk-pass-room")?.parentElement?.classList.toggle("hidden", !!primary.hospital);
 
     const hex = primary.id.replace(/-/g, "").toUpperCase();
     setText("bk-pass-token", `TOKEN: ${hex.slice(0, 4)}-${hex.slice(4, 8)}-MIAADI`);
