@@ -56,12 +56,105 @@ function visitDateLine(v: Visit): string {
   return `${rel === "اليوم" || rel === "غداً" ? rel + "، " : ""}${formatArabicDate(v.date)}`;
 }
 
+// Skeletons mirror the real layout (ticket + QR stub + "other upcoming" rows)
+// so the page builds up in place instead of showing two empty slabs.
 function loadingSkeletonHtml(): string {
-  return `<div class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_288px]" aria-hidden="true">
-    <div class="h-80 rounded-xl border border-line bg-surface-container-low"></div>
-    <div class="h-80 rounded-xl border border-line bg-surface-container-low"></div>
-  </div>
-  <span class="sr-only">جارٍ تحميل مواعيدك…</span>`;
+  const line = "rounded bg-surface-container-high";
+  const soft = "rounded bg-surface-container";
+
+  const ticket = `<div class="rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6" aria-hidden="true">
+      <div class="flex items-start gap-4">
+        <div class="h-14 w-14 shrink-0 rounded-xl bg-surface-container-high"></div>
+        <div class="min-w-0 flex-1">
+          <div class="h-5 w-2/5 ${line}"></div>
+          <div class="mt-2 h-3.5 w-1/4 ${soft}"></div>
+          <div class="mt-2.5 h-3.5 w-1/3 ${soft}"></div>
+        </div>
+      </div>
+      <div class="mt-5 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-2">
+        <div class="bg-surface-container-lowest p-4">
+          <div class="h-3 w-24 ${soft}"></div>
+          <div class="mt-2 h-4 w-32 ${line}"></div>
+          <div class="mt-2 h-3 w-40 ${soft}"></div>
+        </div>
+        <div class="bg-surface-container-lowest p-4">
+          <div class="h-3 w-28 ${soft}"></div>
+          <div class="mt-2 h-4 w-36 ${line}"></div>
+          <div class="mt-2 h-3 w-24 ${soft}"></div>
+        </div>
+      </div>
+      <div class="mt-3 flex flex-col gap-3 rounded-lg bg-surface-container-low p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex min-w-0 flex-1 items-center gap-3">
+          <div class="h-9 w-9 shrink-0 rounded-lg bg-surface-container-high"></div>
+          <div class="min-w-0 flex-1">
+            <div class="h-3 w-20 ${soft}"></div>
+            <div class="mt-2 h-3.5 w-40 ${line}"></div>
+          </div>
+        </div>
+        <div class="h-8 w-20 shrink-0 rounded-lg bg-surface-container-high"></div>
+      </div>
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="h-8 w-28 rounded-lg bg-surface-container-high"></div>
+          <div class="h-8 w-28 rounded-lg bg-surface-container-high"></div>
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="h-8 w-20 ${soft}"></div>
+          <div class="h-8 w-20 ${soft}"></div>
+        </div>
+      </div>
+    </div>`;
+
+  const qrStub = `<div class="rounded-xl border border-line bg-surface-container-lowest p-5" aria-hidden="true">
+      <div class="flex items-baseline justify-between gap-2">
+        <div class="h-3 w-20 ${soft}"></div>
+        <div class="h-3 w-24 ${soft}"></div>
+      </div>
+      <div class="mt-3 flex flex-col items-center">
+        <div class="grid place-items-center rounded-lg border border-line p-2">
+          <div class="h-40 w-40 rounded bg-surface-container-high"></div>
+        </div>
+        <div class="mt-2 h-3 w-32 ${soft}"></div>
+        <div class="mt-3 h-3 w-full ${soft}"></div>
+        <div class="mt-1.5 h-3 w-3/5 ${soft}"></div>
+        <div class="mt-3 h-8 w-full rounded-lg bg-surface-container-low"></div>
+        <div class="mt-3 flex w-full items-center justify-between gap-2 border-t border-line pt-3">
+          <div class="h-3 w-24 ${soft}"></div>
+          <div class="h-8 w-8 rounded-lg bg-surface-container"></div>
+        </div>
+      </div>
+    </div>`;
+
+  const rows = [0, 1]
+    .map(
+      () => `<div class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between" aria-hidden="true">
+        <div class="flex min-w-0 flex-1 items-start gap-3">
+          <div class="h-10 w-10 shrink-0 rounded-lg bg-surface-container-high"></div>
+          <div class="min-w-0 flex-1">
+            <div class="h-4 w-1/3 ${line}"></div>
+            <div class="mt-2 h-3 w-1/2 ${soft}"></div>
+            <div class="mt-2 h-3 w-2/5 ${soft}"></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <div class="h-8 w-24 rounded-lg bg-surface-container-high"></div>
+          <div class="h-8 w-8 rounded-lg bg-surface-container"></div>
+        </div>
+      </div>`
+    )
+    .join("");
+
+  return `<div class="flex animate-pulse flex-col gap-6">
+    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_288px]">${ticket}${qrStub}</div>
+    <div aria-hidden="true">
+      <div class="flex items-baseline justify-between gap-3">
+        <div class="h-4 w-32 ${line}"></div>
+        <div class="h-3 w-20 ${soft}"></div>
+      </div>
+      <div class="mt-2 flex flex-col divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface-container-lowest">${rows}</div>
+    </div>
+    <span class="sr-only">جارٍ تحميل مواعيدك…</span>
+  </div>`;
 }
 
 
