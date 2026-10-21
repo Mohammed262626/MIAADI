@@ -286,57 +286,57 @@ export const HOME_MAIN = `<div class="w-full">
 
 <!-- ============ FAQ ============ -->
 <section class="py-16 lg:py-24" aria-labelledby="faq-title">
-  <div class="mx-auto w-full max-w-[840px] px-4 sm:px-6">
+  <div class="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
     <div class="mb-10 text-center" data-reveal>
       <span class="text-[11px] font-bold uppercase tracking-wider text-primary">إجابات واضحة</span>
       <h2 id="faq-title" class="mt-1 text-[clamp(1.5rem,2.6vw,2rem)] font-extrabold tracking-tight text-on-surface">الأسئلة الشائعة</h2>
       <p class="mt-2 text-[14px] text-on-surface-variant">عن الحجز، الرسوم، وإدارة موعدك.</p>
     </div>
-    <div class="flex flex-col gap-4" data-reveal>
-      <details class="group rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors open:border-primary [&_summary::-webkit-details-marker]:hidden">
-        <summary class="flex cursor-pointer items-center justify-between gap-4 focus-visible:outline-none">
-          <span class="text-[16px] font-bold text-on-surface transition-colors group-hover:text-primary">كيف أحجز موعداً؟</span>
-          <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-container text-primary transition-transform group-open:rotate-180">
-            <span aria-hidden="true" class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5" data-reveal>
+      <details class="group flex h-full flex-col rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors open:border-primary [&_summary::-webkit-details-marker]:hidden">
+        <summary class="flex flex-1 cursor-pointer flex-col items-start justify-between gap-3 focus-visible:outline-none">
+          <span class="text-[15px] font-bold leading-snug text-on-surface transition-colors group-hover:text-primary">كيف أحجز موعداً؟</span>
+          <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface-container text-primary transition-transform group-open:rotate-180">
+            <span aria-hidden="true" class="material-symbols-outlined text-[16px]">keyboard_arrow_down</span>
           </span>
         </summary>
-        <p class="mt-4 border-t border-line/60 pt-4 text-[14px] leading-relaxed text-on-surface-variant">اختر التخصص أو ابحث باسم الطبيب، ثم اختر من المواعيد المتاحة وأكّد الحجز. لا تحتاج إلى مكالمة.</p>
+        <p class="mt-4 border-t border-line/60 pt-4 text-[13px] leading-relaxed text-on-surface-variant">اختر التخصص أو ابحث باسم الطبيب، ثم اختر من المواعيد المتاحة وأكّد الحجز. لا تحتاج إلى مكالمة.</p>
       </details>
-      <details class="group rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors open:border-primary [&_summary::-webkit-details-marker]:hidden">
-        <summary class="flex cursor-pointer items-center justify-between gap-4 focus-visible:outline-none">
-          <span class="text-[16px] font-bold text-on-surface transition-colors group-hover:text-primary">كيف أعرف رسوم الكشف؟</span>
-          <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-container text-primary transition-transform group-open:rotate-180">
-            <span aria-hidden="true" class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+      <details class="group flex h-full flex-col rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors open:border-primary [&_summary::-webkit-details-marker]:hidden">
+        <summary class="flex flex-1 cursor-pointer flex-col items-start justify-between gap-3 focus-visible:outline-none">
+          <span class="text-[15px] font-bold leading-snug text-on-surface transition-colors group-hover:text-primary">كيف أعرف رسوم الكشف؟</span>
+          <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface-container text-primary transition-transform group-open:rotate-180">
+            <span aria-hidden="true" class="material-symbols-outlined text-[16px]">keyboard_arrow_down</span>
           </span>
         </summary>
-        <p class="mt-4 border-t border-line/60 pt-4 text-[14px] leading-relaxed text-on-surface-variant">تظهر رسوم الكشف لكل طبيب في بطاقته، وقبل تأكيد الحجز مباشرة. الدفع يتم في العيادة، ولا يوجد دفع إلكتروني مسبق.</p>
+        <p class="mt-4 border-t border-line/60 pt-4 text-[13px] leading-relaxed text-on-surface-variant">تظهر رسوم الكشف لكل طبيب في بطاقته، وقبل تأكيد الحجز مباشرة. الدفع يتم في العيادة، ولا يوجد دفع إلكتروني مسبق.</p>
       </details>
-      <details class="group rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors open:border-primary [&_summary::-webkit-details-marker]:hidden">
-        <summary class="flex cursor-pointer items-center justify-between gap-4 focus-visible:outline-none">
-          <span class="text-[16px] font-bold text-on-surface transition-colors group-hover:text-primary">كيف أتأكد أن الحجز مؤكد؟</span>
-          <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-container text-primary transition-transform group-open:rotate-180">
-            <span aria-hidden="true" class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+      <details class="group flex h-full flex-col rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors open:border-primary [&_summary::-webkit-details-marker]:hidden">
+        <summary class="flex flex-1 cursor-pointer flex-col items-start justify-between gap-3 focus-visible:outline-none">
+          <span class="text-[15px] font-bold leading-snug text-on-surface transition-colors group-hover:text-primary">كيف أتأكد أن الحجز مؤكد؟</span>
+          <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface-container text-primary transition-transform group-open:rotate-180">
+            <span aria-hidden="true" class="material-symbols-outlined text-[16px]">keyboard_arrow_down</span>
           </span>
         </summary>
-        <p class="mt-4 border-t border-line/60 pt-4 text-[14px] leading-relaxed text-on-surface-variant">المواعيد تأتي من جدول العيادة نفسه في ميعادي، وتصلك تفاصيل الحجز مع رقم مرجع؛ ظهّر بطاقة الدخول من صفحة مواعيدي فيظهر رمز التحقق.</p>
+        <p class="mt-4 border-t border-line/60 pt-4 text-[13px] leading-relaxed text-on-surface-variant">المواعيد تأتي من جدول العيادة نفسه في ميعادي، وتصلك تفاصيل الحجز مع رقم مرجع؛ ظهّر بطاقة الدخول من صفحة مواعيدي فيظهر رمز التحقق.</p>
       </details>
-      <details class="group rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors open:border-primary [&_summary::-webkit-details-marker]:hidden">
-        <summary class="flex cursor-pointer items-center justify-between gap-4 focus-visible:outline-none">
-          <span class="text-[16px] font-bold text-on-surface transition-colors group-hover:text-primary">هل يمكنني إعادة الجدولة أو الإلغاء؟</span>
-          <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-container text-primary transition-transform group-open:rotate-180">
-            <span aria-hidden="true" class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+      <details class="group flex h-full flex-col rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors open:border-primary [&_summary::-webkit-details-marker]:hidden">
+        <summary class="flex flex-1 cursor-pointer flex-col items-start justify-between gap-3 focus-visible:outline-none">
+          <span class="text-[15px] font-bold leading-snug text-on-surface transition-colors group-hover:text-primary">هل يمكنني إعادة الجدولة أو الإلغاء؟</span>
+          <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface-container text-primary transition-transform group-open:rotate-180">
+            <span aria-hidden="true" class="material-symbols-outlined text-[16px]">keyboard_arrow_down</span>
           </span>
         </summary>
-        <p class="mt-4 border-t border-line/60 pt-4 text-[14px] leading-relaxed text-on-surface-variant">نعم، من صفحة حجوزاتك: افتح الموعد القادم واختر إعادة الجدولة أو الإلغاء، فيتاح المقعد لمريض آخر.</p>
+        <p class="mt-4 border-t border-line/60 pt-4 text-[13px] leading-relaxed text-on-surface-variant">نعم، من صفحة حجوزاتك: افتح الموعد القادم واختر إعادة الجدولة أو الإلغاء، فيتاح المقعد لمريض آخر.</p>
       </details>
-      <details class="group rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors open:border-primary [&_summary::-webkit-details-marker]:hidden">
-        <summary class="flex cursor-pointer items-center justify-between gap-4 focus-visible:outline-none">
-          <span class="text-[16px] font-bold text-on-surface transition-colors group-hover:text-primary">في أي مدن تعمل المنصة؟</span>
-          <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-container text-primary transition-transform group-open:rotate-180">
-            <span aria-hidden="true" class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+      <details class="group flex h-full flex-col rounded-xl border border-line/80 bg-surface-container-lowest p-5 transition-colors open:border-primary [&_summary::-webkit-details-marker]:hidden">
+        <summary class="flex flex-1 cursor-pointer flex-col items-start justify-between gap-3 focus-visible:outline-none">
+          <span class="text-[15px] font-bold leading-snug text-on-surface transition-colors group-hover:text-primary">في أي مدن تعمل المنصة؟</span>
+          <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-surface-container text-primary transition-transform group-open:rotate-180">
+            <span aria-hidden="true" class="material-symbols-outlined text-[16px]">keyboard_arrow_down</span>
           </span>
         </summary>
-        <p class="mt-4 border-t border-line/60 pt-4 text-[14px] leading-relaxed text-on-surface-variant">الخرطوم وأم درمان وبورتسودان وتُضاف مدن جديدة مع انضمام عيادات إليها.</p>
+        <p class="mt-4 border-t border-line/60 pt-4 text-[13px] leading-relaxed text-on-surface-variant">الخرطوم وأم درمان وبورتسودان وتُضاف مدن جديدة مع انضمام عيادات إليها.</p>
       </details>
     </div>
   </div>
