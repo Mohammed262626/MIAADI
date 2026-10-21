@@ -11,6 +11,7 @@ type SortKey = "rating" | "earliest" | "price" | "experience";
 type Filters = {
   q: string;
   city: string;
+  hospital: string;
   avail: Avail;
   specs: Set<SpecialtyKey>;
   gender: Gender;
@@ -83,7 +84,7 @@ export function seedDoctorsFilters(seed: DoctorsSeed) {
 }
 
 function emptyFilters(): Filters {
-  return { q: "", city: "", avail: "any", specs: new Set<SpecialtyKey>(), gender: "all", insurance: "", maxPrice: 8000, minRating: 4.5, sort: "rating" };
+  return { q: "", city: "", hospital: "", avail: "any", specs: new Set<SpecialtyKey>(), gender: "all", insurance: "", maxPrice: 8000, minRating: 4.5, sort: "rating" };
 }
 
 function daysFromToday(date: string): number {
@@ -102,6 +103,7 @@ function apply(rows: DoctorDirectoryRow[], f: Filters): DoctorDirectoryRow[] {
   const q = f.q.trim().toLowerCase();
   let out = rows.filter((d) => {
     if (f.city && (d.hospital_city || d.city) !== f.city) return false;
+    if (f.hospital && d.hospital_name !== f.hospital) return false;
     // clinic-only product: hide doctors that exist solely for (removed) video consultations
     if (d.telehealth && !d.hospital_name) return false;
     if (f.gender !== "all" && d.gender !== f.gender) return false;
@@ -136,6 +138,16 @@ function apply(rows: DoctorDirectoryRow[], f: Filters): DoctorDirectoryRow[] {
 
 /* ---------------------------------- markup ---------------------------------- */
 
+/* Hospitals available under the current city filter, from real directory data. */
+function hospitalOptions(rows: DoctorDirectoryRow[], city: string): string[] {
+  return [...new Set(
+    rows
+      .filter((d) => !city || (d.hospital_city || d.city) === city)
+      .map((d) => d.hospital_name)
+      .filter((n): n is string => Boolean(n)),
+  )].sort();
+}
+
 function doctorAvatar(doc: DoctorDirectoryRow): string {
   if (doc.photo_url) {
     return `<img class="h-16 w-16 rounded-lg object-cover sm:h-20 sm:w-20" src="${escapeHtml(doc.photo_url)}" alt="${escapeHtml(doc.name)}" loading="lazy"/>`;
@@ -158,9 +170,9 @@ function doctorRowHtml(doc: DoctorDirectoryRow): string {
 <article class="flex flex-col gap-4 rounded-xl border border-line bg-surface-container-lowest p-4 sm:p-5 xl:flex-row xl:items-center" data-doctor-row="${escapeHtml(doc.id)}">
   <div class="flex min-w-0 flex-1 items-start gap-3">
     <div class="shrink-0">${doctorAvatar(doc)}</div>
-    <div class="min-w-0 flex-1">
+    <div class="relative min-w-0 flex-1">
       <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <h3 class="text-[17px] font-bold leading-tight text-on-surface">${escapeHtml(doc.name)}</h3>
+        <h3 class="text-[17px] font-bold leading-tight text-on-surface"><a href="#doctor/${escapeHtml(doc.id)}" class="after:absolute after:inset-0 after:content-['']">${escapeHtml(doc.name)}</a></h3>
         <span class="text-[12px] text-on-surface-variant">${escapeHtml(doc.title || "طبيب")}</span>
       </div>
       <p class="mt-0.5 text-[13px] font-medium text-primary">${escapeHtml(doc.specialization)}</p>
@@ -201,7 +213,7 @@ function doctorRowHtml(doc: DoctorDirectoryRow): string {
       ${chips.map((s) => {
         const conflict = slotConflict(doc, s);
         return `
-      <button class="relative h-9 rounded-md text-[12px] tabular-nums transition-colors ${conflict ? "border border-error bg-error-container text-on-error-container" : "border border-line bg-surface-container-lowest text-on-surface hover:bg-surface-container"}" data-book-doctor="${escapeHtml(doc.id)}" type="button"${conflict ? ` title="${CONFLICT_NOTE[conflict]}"` : ""}>
+      <button class="press relative h-9 rounded-md text-[12px] tabular-nums transition-colors ${conflict ? "border border-error bg-error-container text-on-error-container" : "border border-line bg-surface-container-lowest text-on-surface hover:bg-surface-container"}" data-book-doctor="${escapeHtml(doc.id)}" type="button"${conflict ? ` title="${CONFLICT_NOTE[conflict]}"` : ""}>
         ${escapeHtml(slotChipLabel(s, first!.available_date))}${conflict ? `<span class="absolute -end-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-error text-on-error" title="${CONFLICT_NOTE[conflict]}"><span class="material-symbols-outlined text-[11px]" aria-hidden="true">error</span></span>` : ""}
       </button>`;
       }).join("")}
@@ -211,7 +223,7 @@ function doctorRowHtml(doc: DoctorDirectoryRow): string {
         <span class="text-[16px] font-semibold tabular-nums text-on-surface">${escapeHtml(doc.consultation_fee)}</span>
         <span class="text-[12px] text-on-surface-variant">ج.س</span>
       </div>
-      <button class="inline-flex h-9 items-center gap-1 rounded-lg bg-primary px-3 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container" data-book-doctor="${escapeHtml(doc.id)}" type="button">
+      <button class="press inline-flex h-9 items-center gap-1 rounded-lg bg-primary px-3 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container" data-book-doctor="${escapeHtml(doc.id)}" type="button">
         <span>احجز موعداً</span>
         <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_back</span>
       </button>
@@ -253,6 +265,8 @@ function paintControls(root: ParentNode, f: Filters) {
   if (ins) ins.value = f.insurance;
   const city = root.querySelector<HTMLSelectElement>("#doc-city");
   if (city) city.value = f.city;
+  const hospital = root.querySelector<HTMLSelectElement>("#doc-hospital");
+  if (hospital) hospital.value = f.hospital;
   const sort = root.querySelector<HTMLSelectElement>("#doc-sort");
   if (sort) sort.value = f.sort;
   const price = root.querySelector<HTMLInputElement>("#doc-price");
@@ -268,6 +282,7 @@ function activePills(root: ParentNode, f: Filters) {
   const pills: { field: string; label: string }[] = [];
   if (f.q) pills.push({ field: "q", label: `بحث: ${f.q}` });
   if (f.city) pills.push({ field: "city", label: f.city });
+  if (f.hospital) pills.push({ field: "hospital", label: f.hospital });
   if (f.avail !== "any") pills.push({ field: "avail", label: `متاح ${root.querySelector(`#doc-avail [data-avail="${f.avail}"]`)?.textContent?.trim() || f.avail}` });
   const defaultSpecs = DEFAULTS.specs.size;
   if (f.specs.size !== defaultSpecs) pills.push({ field: "specs", label: `${f.specs.size} تخصص` });
@@ -307,16 +322,19 @@ function render(root: HTMLElement, f: Filters) {
 <span class="material-symbols-outlined text-[28px] text-on-surface-variant" aria-hidden="true">search_off</span>
 <p class="text-[15px] font-semibold text-on-surface">لا يوجد أطباء مطابقون</p>
 <p class="max-w-[40ch] text-[13px] text-on-surface-variant">جرّب توسيع نطاق البحث أو إعادة تعيين الفلاتر.</p>
+<button class="press mt-1 inline-flex h-10 items-center rounded-lg bg-primary px-4 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container" data-reset-empty type="button">إعادة تعيين الفلاتر</button>
 </div>`;
   const count = root.querySelector<HTMLElement>("#doc-count");
   if (count) count.textContent = `${rows.length} طبيب`;
+  const title = root.querySelector<HTMLElement>("#doc-title");
+  if (title) title.textContent = f.city ? `أطباء واستشاريو ${f.city}` : "أطباء واستشاريو السودان";
   const sub = root.querySelector<HTMLElement>("#doc-count-sub");
-  if (sub) sub.textContent = `متاح للحجز الآن • جميعهم موثّقون ومعتمدون`;
+  if (sub) sub.textContent = "المواعيد المعروضة متاحة خلال الأيام السبعة القادمة";
   const pag = root.querySelector<HTMLElement>("#doc-pagination");
   if (pag) {
     pag.className = rows.length > 10 ? "flex items-center justify-between rounded-xl border border-line bg-surface-container-lowest px-4 py-3" : "hidden";
     pag.innerHTML = rows.length > visibleCount
-      ? `<span class="text-[13px] tabular-nums text-on-surface-variant">${rows.length - visibleCount} طبيب آخر</span><button id="doc-more" class="inline-flex h-9 items-center rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container" type="button">عرض المزيد</button>`
+      ? `<span class="text-[13px] tabular-nums text-on-surface-variant">${rows.length - visibleCount} طبيب آخر</span><button id="doc-more" class="press inline-flex h-9 items-center rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container" type="button">عرض المزيد</button>`
       : "";
   }
   activePills(root, f);
@@ -328,10 +346,20 @@ function wireFilterToggle(appEl: HTMLElement) {
   const aside = appEl.querySelector<HTMLElement>("#filters-aside");
   const toggle = appEl.querySelector<HTMLButtonElement>("#filters-toggle");
   const label = appEl.querySelector<HTMLElement>("#filters-toggle-label");
+  const chevron = appEl.querySelector<HTMLElement>("#filters-chevron");
   toggle?.addEventListener("click", () => {
     if (!aside) return;
     const nowHidden = aside.classList.toggle("hidden");
+    if (nowHidden) {
+      aside.classList.remove("drawer-in");
+    } else {
+      // Restart the entrance when re-opened quickly (same curve as the nav drawer).
+      aside.classList.remove("drawer-in");
+      void aside.offsetWidth;
+      aside.classList.add("drawer-in");
+    }
     if (label) label.textContent = nowHidden ? "فلترة النتائج" : "إخفاء الفلاتر";
+    chevron?.classList.toggle("rotate-180", !nowHidden);
     if (!nowHidden) aside.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
@@ -390,6 +418,16 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
     citySelect.innerHTML = `<option value="">كافة المدن</option>${cities.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("")}`;
   }
 
+  const hospitalSelect = appEl.querySelector<HTMLSelectElement>("#doc-hospital");
+  const paintHospitals = () => {
+    if (!hospitalSelect) return;
+    const names = hospitalOptions(ROWS, f.city);
+    if (f.hospital && !names.includes(f.hospital)) f.hospital = "";
+    hospitalSelect.innerHTML = `<option value="">كافة المستشفيات</option>${names.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("")}`;
+    hospitalSelect.value = f.hospital;
+  };
+  paintHospitals();
+
   const insSelect = appEl.querySelector<HTMLSelectElement>("#doc-insurance");
   if (insSelect) {
     const insurers = [...new Set(ROWS.flatMap((d) => d.insurances))].sort();
@@ -397,6 +435,13 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
   }
 
   const rerender = () => { visibleCount = 30; render(appEl, f); };
+
+  const resetAll = () => {
+    Object.assign(f, { ...DEFAULTS, specs: new Set(DEFAULTS.specs) });
+    paintHospitals();
+    paintControls(appEl, f);
+    rerender();
+  };
 
   // Live update when the navbar detects the visitor's city while this page is open.
   if (cityListener) window.removeEventListener("miaadi:city-detected", cityListener);
@@ -418,7 +463,8 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
 
   const search = appEl.querySelector<HTMLInputElement>("#doc-search");
   search?.addEventListener("input", () => { f.q = search.value; rerender(); });
-  citySelect?.addEventListener("change", () => { f.city = citySelect.value; rerender(); });
+  citySelect?.addEventListener("change", () => { f.city = citySelect.value; paintHospitals(); rerender(); });
+  hospitalSelect?.addEventListener("change", () => { f.hospital = hospitalSelect.value; rerender(); });
   insSelect?.addEventListener("change", () => { f.insurance = insSelect.value; rerender(); });
   const sortSelect = appEl.querySelector<HTMLSelectElement>("#doc-sort");
   sortSelect?.addEventListener("change", () => { f.sort = sortSelect.value as SortKey; rerender(); });
@@ -441,10 +487,12 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
   appEl.querySelectorAll<HTMLElement>("#doc-rating [data-rating]").forEach((b) =>
     b.addEventListener("click", () => { f.minRating = Number(b.dataset.rating); paintControls(appEl, f); rerender(); }));
 
-  appEl.querySelector("#reset-filters")?.addEventListener("click", () => {
-    Object.assign(f, { ...DEFAULTS, specs: new Set(DEFAULTS.specs) });
-    paintControls(appEl, f);
-    rerender();
+  appEl.querySelector("#reset-filters")?.addEventListener("click", resetAll);
+
+  // The empty state offers the same reset, where the sidebar may be collapsed.
+  appEl.querySelector("#doc-list")?.addEventListener("click", (e) => {
+    if (!(e.target as HTMLElement).closest("[data-reset-empty]")) return;
+    resetAll();
   });
 
   appEl.querySelector<HTMLElement>("#doc-active")?.addEventListener("click", (e) => {
@@ -452,7 +500,8 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
     if (!btn) return;
     switch (btn.dataset.clear) {
       case "q": f.q = ""; if (search) search.value = ""; break;
-      case "city": f.city = ""; break;
+      case "city": f.city = ""; paintHospitals(); break;
+      case "hospital": f.hospital = ""; break;
       case "avail": f.avail = "any"; break;
       case "specs": f.specs = new Set(DEFAULTS.specs); break;
       case "gender": f.gender = "all"; break;
@@ -461,6 +510,7 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
       case "price": f.maxPrice = 8000; break;
     }
     paintControls(appEl, f);
+    paintHospitals();
     rerender();
   });
 

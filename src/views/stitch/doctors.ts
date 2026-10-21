@@ -8,7 +8,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <!-- Filter Header -->
 <div class="flex items-center justify-between pb-space-xs">
 <div class="flex items-center gap-space-xs">
-<span class="material-symbols-outlined text-primary text-[22px]">tune</span>
+<span aria-hidden="true" class="material-symbols-outlined text-primary text-[22px]">tune</span>
 <h2 class="font-headline-sm text-headline-sm text-on-surface">فلترة النتائج</h2>
 </div>
 <button class="inline-flex items-center min-h-11 lg:min-h-7 px-2 -mx-2 rounded-lg text-primary hover:text-primary-container font-label-sm text-label-sm transition-colors" id="reset-filters" type="button">
@@ -29,7 +29,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <div class="relative w-full">
 <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" aria-hidden="true">location_on</span>
 <select class="h-10 w-full cursor-pointer appearance-none rounded-lg border border-line bg-surface-container-lowest pl-3 pr-10 text-start text-[13px] text-on-surface outline-none" id="doc-city">
-<option selected="">الخرطوم (كافة الأحياء والمراكز)</option>
+<option value="" selected="">كافة المدن</option>
 <option>أم درمان</option>
 <option>الخرطوم بحري</option>
 <option>بورتسودان</option>
@@ -42,7 +42,18 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <option>سنار</option>
 <option>دنقلا</option>
 </select>
-<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">expand_more</span>
+<span aria-hidden="true" class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Hospital / Center (narrowed by the selected city) -->
+<div class="flex flex-col gap-space-xs">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="doc-hospital">المستشفى أو المركز</label>
+<div class="relative w-full">
+<span aria-hidden="true" class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">local_hospital</span>
+<select class="h-10 w-full cursor-pointer appearance-none rounded-lg border border-line bg-surface-container-lowest pl-3 pr-10 text-start text-[13px] text-on-surface outline-none" id="doc-hospital">
+<option value="" selected="">كافة المستشفيات</option>
+</select>
+<span aria-hidden="true" class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">expand_more</span>
 </div>
 </div>
 <!-- Availability Quick Chips -->
@@ -50,21 +61,25 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <label class="font-label-md text-label-md text-on-surface font-semibold">المواعيد المتاحة</label>
 <div class="flex flex-wrap gap-1.5" id="doc-avail">
 <button class="inline-flex h-8 items-center gap-1 rounded-md bg-surface-container-highest px-2.5 text-[12px] font-semibold text-on-surface" data-avail="any" type="button">
-<span class="material-symbols-outlined text-[14px]">check</span>
+<span aria-hidden="true" class="material-symbols-outlined text-[14px]">check</span>
 <span>الكل (أي موعد)</span>
 </button>
-<button class="inline-flex h-8 items-center rounded-md px-2.5 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-avail="today" type="button">
-                اليوم
-              </button>
-<button class="inline-flex h-8 items-center rounded-md px-2.5 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-avail="tomorrow" type="button">
-                غداً
-              </button>
-<button class="inline-flex h-8 items-center rounded-md px-2.5 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-avail="3days" type="button">
-                خلال 3 أيام
-              </button>
-<button class="inline-flex h-8 items-center rounded-md px-2.5 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-avail="7days" type="button">
-                خلال 7 أيام
-              </button>
+<button class="inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-avail="today" type="button">
+<span aria-hidden="true" class="material-symbols-outlined text-[14px]">check</span>
+<span>اليوم</span>
+</button>
+<button class="inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-avail="tomorrow" type="button">
+<span aria-hidden="true" class="material-symbols-outlined text-[14px]">check</span>
+<span>غداً</span>
+</button>
+<button class="inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-avail="3days" type="button">
+<span aria-hidden="true" class="material-symbols-outlined text-[14px]">check</span>
+<span>خلال 3 أيام</span>
+</button>
+<button class="inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-avail="7days" type="button">
+<span aria-hidden="true" class="material-symbols-outlined text-[14px]">check</span>
+<span>خلال 7 أيام</span>
+</button>
 </div>
 </div>
 <!-- Specialty Category -->
@@ -106,7 +121,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <option>أعمال للتأمين</option>
 <option>الوحدة للتأمين</option>
 </select>
-<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">expand_more</span>
+<span aria-hidden="true" class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">expand_more</span>
 </div>
 </div>
 <!-- Price Range Slider Indicator -->
@@ -126,15 +141,15 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <label class="font-label-md text-label-md text-on-surface font-semibold">تقييم المرضى</label>
 <div class="flex items-center gap-2" id="doc-rating">
 <button class="flex h-8 flex-1 items-center justify-center gap-1 rounded-md border border-line bg-surface-container-lowest text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-rating="0" type="button">
-<span class="material-symbols-outlined text-warning text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-warning text-[16px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
 <span>الكل</span>
 </button>
 <button class="flex h-8 flex-1 items-center justify-center gap-1 rounded-md border border-line bg-surface-container-lowest text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-rating="4.8" type="button">
-<span class="material-symbols-outlined text-warning text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-warning text-[16px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
 <span>4.8+</span>
 </button>
 <button class="flex h-8 flex-1 items-center justify-center gap-1 rounded-md bg-surface-container-highest text-[12px] font-semibold text-on-surface" data-rating="4.5" type="button">
-<span class="material-symbols-outlined text-amber-300 text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-warning text-[16px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
 <span>4.5+</span>
 </button>
 </div>
@@ -143,11 +158,11 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <!-- Trust Mini-Card -->
 <div class="flex items-center gap-3 rounded-lg bg-surface-container-low p-3 text-on-surface">
 <div class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-on-primary">
-<span class="material-symbols-outlined text-[20px]">shield_with_heart</span>
+<span aria-hidden="true" class="material-symbols-outlined text-[20px]">shield_with_heart</span>
 </div>
 <div class="flex flex-col">
-<span class="font-label-md text-label-md font-bold text-primary">ضمان حجز ميعادي</span>
-<span class="font-body-sm text-body-sm text-secondary">تأكيد فوري دون انتظار في الاستقبال وإلغاء مجاني قبل 3 ساعات</span>
+<span class="font-label-md text-label-md font-bold text-primary">حجز مؤكد بلا تعارض</span>
+<span class="font-body-sm text-body-sm text-secondary">الكشفية تُدفع في العيادة عند الحضور — لا رسوم على الحجز</span>
 </div>
 </div>
 </aside>
@@ -156,18 +171,18 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <!-- Mobile Filter Toggle Bar -->
 <div class="flex items-center justify-between rounded-lg border border-line bg-surface-container-lowest px-3 py-1.5 lg:hidden" id="filters-bar">
 <button class="inline-flex h-10 items-center gap-2 rounded-lg bg-surface-container-low px-3 text-[13px] font-semibold text-on-surface" id="filters-toggle" type="button">
-<span class="material-symbols-outlined text-[18px]">tune</span>
+<span aria-hidden="true" class="material-symbols-outlined text-[18px]">tune</span>
 <span id="filters-toggle-label">فلترة النتائج</span>
 <span id="filters-badge" class="hidden min-w-5 h-5 px-1 grid place-items-center rounded-full bg-primary text-on-primary text-[11px] font-bold tabular-nums">0</span>
 </button>
-<span class="material-symbols-outlined text-outline text-[18px] pointer-events-none">expand_more</span>
+<span aria-hidden="true" class="material-symbols-outlined text-outline text-[18px] pointer-events-none transition-transform" id="filters-chevron">expand_more</span>
 </div>
 <!-- Results Header Strip -->
 <div class="flex flex-col gap-3 pt-1 md:flex-row md:items-end md:justify-between">
 <div class="flex flex-col">
 <div class="flex items-center gap-2">
-<h1 class="text-[24px] font-bold leading-tight text-on-surface">أطباء واستشاريو الخرطوم</h1>
-<span class="text-[14px] font-medium tabular-nums text-on-surface-variant" id="doc-count">—</span>
+<h1 class="text-[24px] font-bold leading-tight text-on-surface" id="doc-title">أطباء واستشاريو السودان</h1>
+<span class="text-[14px] font-medium tabular-nums text-on-surface-variant" id="doc-count">…</span>
 </div>
 <p class="mt-1 text-[14px] text-on-surface-variant" id="doc-count-sub">جارٍ تحميل الأطباء…</p>
 </div>
@@ -181,7 +196,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <option value="price">الأقل سعراً (Lowest Price)</option>
 <option value="experience">الأكثر خبرة (Years of Experience)</option>
 </select>
-<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">expand_more</span>
+<span aria-hidden="true" class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none">expand_more</span>
 </div>
 </div>
 </div>
@@ -189,7 +204,54 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <div id="doc-active" class="hidden items-center gap-space-xs flex-wrap"></div>
 <!-- Doctor Cards Stack -->
 <div class="flex flex-col gap-space-md" id="doc-list">
-<div class="rounded-xl border border-line bg-surface-container-lowest px-6 py-10 text-center text-[13px] text-on-surface-variant">جارٍ تحميل الأطباء…</div>
+<div class="flex flex-col gap-4 rounded-xl border border-line bg-surface-container-lowest p-4 sm:p-5 xl:flex-row xl:items-center" aria-hidden="true">
+<div class="flex min-w-0 flex-1 items-start gap-3">
+<div class="h-16 w-16 shrink-0 rounded-lg bg-surface-container-high sm:h-20 sm:w-20"></div>
+<div class="flex-1 pt-1">
+<div class="h-4 w-2/5 rounded bg-surface-container-high"></div>
+<div class="mt-2 h-3 w-1/4 rounded bg-surface-container"></div>
+<div class="mt-3 h-3 w-3/5 rounded bg-surface-container"></div>
+<div class="mt-3 h-3 w-2/5 rounded bg-surface-container"></div>
+</div>
+</div>
+<div class="flex shrink-0 flex-col gap-2 border-t border-line pt-3 xl:w-[292px] xl:border-s xl:border-t-0 xl:ps-4 xl:pt-0">
+<div class="h-3 w-24 rounded bg-surface-container"></div>
+<div class="grid grid-cols-3 gap-1.5"><div class="h-9 rounded-md bg-surface-container-high"></div><div class="h-9 rounded-md bg-surface-container-high"></div><div class="h-9 rounded-md bg-surface-container-high"></div></div>
+<div class="flex items-center justify-between gap-2"><div class="h-4 w-16 rounded bg-surface-container-high"></div><div class="h-9 w-24 rounded-lg bg-surface-container-high"></div></div>
+</div>
+</div>
+<div class="flex flex-col gap-4 rounded-xl border border-line bg-surface-container-lowest p-4 sm:p-5 xl:flex-row xl:items-center" aria-hidden="true">
+<div class="flex min-w-0 flex-1 items-start gap-3">
+<div class="h-16 w-16 shrink-0 rounded-lg bg-surface-container-high sm:h-20 sm:w-20"></div>
+<div class="flex-1 pt-1">
+<div class="h-4 w-1/3 rounded bg-surface-container-high"></div>
+<div class="mt-2 h-3 w-1/4 rounded bg-surface-container"></div>
+<div class="mt-3 h-3 w-3/5 rounded bg-surface-container"></div>
+<div class="mt-3 h-3 w-2/5 rounded bg-surface-container"></div>
+</div>
+</div>
+<div class="flex shrink-0 flex-col gap-2 border-t border-line pt-3 xl:w-[292px] xl:border-s xl:border-t-0 xl:ps-4 xl:pt-0">
+<div class="h-3 w-24 rounded bg-surface-container"></div>
+<div class="grid grid-cols-3 gap-1.5"><div class="h-9 rounded-md bg-surface-container-high"></div><div class="h-9 rounded-md bg-surface-container-high"></div><div class="h-9 rounded-md bg-surface-container-high"></div></div>
+<div class="flex items-center justify-between gap-2"><div class="h-4 w-16 rounded bg-surface-container-high"></div><div class="h-9 w-24 rounded-lg bg-surface-container-high"></div></div>
+</div>
+</div>
+<div class="flex flex-col gap-4 rounded-xl border border-line bg-surface-container-lowest p-4 sm:p-5 xl:flex-row xl:items-center" aria-hidden="true">
+<div class="flex min-w-0 flex-1 items-start gap-3">
+<div class="h-16 w-16 shrink-0 rounded-lg bg-surface-container-high sm:h-20 sm:w-20"></div>
+<div class="flex-1 pt-1">
+<div class="h-4 w-2/5 rounded bg-surface-container-high"></div>
+<div class="mt-2 h-3 w-1/4 rounded bg-surface-container"></div>
+<div class="mt-3 h-3 w-2/4 rounded bg-surface-container"></div>
+<div class="mt-3 h-3 w-1/3 rounded bg-surface-container"></div>
+</div>
+</div>
+<div class="flex shrink-0 flex-col gap-2 border-t border-line pt-3 xl:w-[292px] xl:border-s xl:border-t-0 xl:ps-4 xl:pt-0">
+<div class="h-3 w-24 rounded bg-surface-container"></div>
+<div class="grid grid-cols-3 gap-1.5"><div class="h-9 rounded-md bg-surface-container-high"></div><div class="h-9 rounded-md bg-surface-container-high"></div><div class="h-9 rounded-md bg-surface-container-high"></div></div>
+<div class="flex items-center justify-between gap-2"><div class="h-4 w-16 rounded bg-surface-container-high"></div><div class="h-9 w-24 rounded-lg bg-surface-container-high"></div></div>
+</div>
+</div>
 </div>
 <div class="hidden items-center justify-between rounded-xl border border-line bg-surface-container-lowest px-4 py-3" id="doc-pagination"></div>
 </main>
