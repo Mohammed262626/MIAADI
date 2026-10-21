@@ -70,7 +70,8 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
   if (!profile) {
     const box = el("morning-slots");
     if (box) box.innerHTML = errorPanel("لم يتم العثور على الطبيب المطلوب");
-    setText("dp-name-ar", "طبيب غير معروف");
+    setText("dp-name", "طبيب غير معروف");
+    setText("dp-crumb-name", "طبيب غير معروف");
     return;
   }
 
@@ -123,6 +124,7 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
       avatar.className = "w-full h-full";
       avatar.innerHTML = `<img class="w-full h-full object-cover" src="${escapeHtml(profile.photo_url)}" alt="${escapeHtml(profile.name)}"/>`;
     } else {
+      avatar.className = "grid h-full w-full place-items-center whitespace-nowrap rounded-xl bg-primary text-[28px] font-bold leading-none text-on-primary";
       avatar.textContent = initials(profile.name);
     }
   }
@@ -196,6 +198,7 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
   }
 
   // location & wayfinding
+  el("dp-map-skeleton")?.remove();
   const mapWrap = el("dp-map")?.parentElement;
   const mapLink = el("dp-map-link") as HTMLAnchorElement | null;
   if (profile.hospital_name) {
@@ -237,7 +240,6 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
             <div class="flex flex-col">
               <div class="flex items-center gap-1.5">
                 <span class="font-label-md text-label-md font-semibold text-on-surface">${escapeHtml(r.name)}</span>
-                <span class="inline-flex items-center gap-0.5 bg-tertiary/10 text-tertiary text-[11px] font-bold px-1.5 py-0.5 rounded-full"><span class="material-symbols-outlined text-[12px]">verified_user</span>حجز مؤكد عبر نفاذ</span>
               </div>
               <span class="font-body-sm text-body-sm text-secondary">${escapeHtml(r.meta)}</span>
             </div>
@@ -470,8 +472,9 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
   renderSlots();
   renderSummary();
 
-  if (!firstFree) {
-    if (ctaText) ctaText.textContent = "لا تتوفر مواعيد";
-    if (cta) cta.disabled = true;
+  if (cta) {
+    cta.disabled = !firstFree;
+    cta.classList.toggle("opacity-60", !firstFree);
   }
+  if (!firstFree && ctaText) ctaText.textContent = "لا تتوفر مواعيد";
 }
