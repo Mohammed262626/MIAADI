@@ -51,6 +51,29 @@ export function shortRef(id: string): string {
   return String(id || "").replace(/-/g, "").slice(0, 8).toUpperCase();
 }
 
+const ACTION_TONES = {
+  primary: "bg-primary/10 text-primary hover:bg-primary/20",
+  warning: "bg-warning-soft text-warning hover:bg-warning-soft/70",
+  danger: "bg-error-container/60 text-on-error-container hover:bg-error-container",
+  neutral: "border border-line text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface",
+} as const;
+
+/**
+ * Tinted, icon-led action button. Single source of truth for row/card actions
+ * so the appointments table and the overview stream can never drift apart.
+ */
+export function actionButton(o: {
+  attrs: string;
+  label: string;
+  icon: string;
+  tone: keyof typeof ACTION_TONES;
+  solid?: boolean;
+  title?: string;
+}): string {
+  const toneCls = o.tone === "primary" && o.solid ? "bg-primary text-on-primary hover:bg-primary-container" : ACTION_TONES[o.tone];
+  return `<button ${o.attrs} class="inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 text-[12px] font-semibold transition-colors ${toneCls}" type="button"${o.title ? ` title="${escapeHtml(o.title)}"` : ""}>${icon(o.icon, { size: 16 })}${escapeHtml(o.label)}</button>`;
+}
+
 export function sectionTitle(title: string, actionHref?: string, actionLabel?: string): string {
   return `<div class="flex items-center justify-between px-1">
     <h2 class="font-extrabold text-[17px] tracking-tight">${escapeHtml(title)}</h2>

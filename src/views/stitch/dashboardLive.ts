@@ -2,7 +2,7 @@ import { escapeHtml, formatTime, formatArabicDate, localDateISO, translateAuthEr
 import { getAdminAppointments, getDoctorProfile, findDoctorByUser, getDoctorAvailability, updateAppointmentState, cancelAppointmentClinic, updatePatientProfile, updatePassword } from "../../lib/supabase";
 import { confirmSheet } from "../../components/ConfirmDialog";
 import { showToast } from "../../components/Toast";
-import { initials, money } from "../../components/ui";
+import { initials, money, actionButton } from "../../components/ui";
 import { specialtyLabel } from "./specialtyContent";
 
 type Row = {
@@ -78,7 +78,16 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
   let live = false;
   let doctorId: string | null = null;
   let docProfile: Awaited<ReturnType<typeof getDoctorProfile>> | null = null;
-  let currentView: DashView = hooks.initialView || "overview";
+  /* The panel you left stays open across a reload in this tab; a fresh tab
+     starts at the overview. */
+  const VIEW_KEY = "myappo.db.view";
+  const savedView = (): DashView | null => {
+    try {
+      const v = sessionStorage.getItem(VIEW_KEY);
+      return v === "overview" || v === "appointments" || v === "schedule" || v === "account" ? v : null;
+    } catch { return null; }
+  };
+  let currentView: DashView = hooks.initialView || savedView() || "overview";
 
   setText("#db-sync", "جاري التحديث…");
   host.innerHTML = `<div class="flex h-64 items-center justify-center gap-2 rounded-xl border border-line bg-surface-container-lowest text-[14px] text-on-surface-variant">
@@ -220,6 +229,7 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
 
   const showView = async (view: DashView) => {
     currentView = view;
+    try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* private mode */ }
     paintNav();
     (Object.keys(VIEW_HOSTS) as DashView[]).forEach((k) => appEl.querySelector<HTMLElement>(VIEW_HOSTS[k])?.classList.toggle("hidden", k !== view));
     appEl.querySelector<HTMLElement>("#db-search-wrap")?.classList.toggle("hidden", view !== "overview");
@@ -442,10 +452,10 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
   const cardActions = (r: Row, primary = false) => {
     if (r.status !== "booked") return "";
     const slotPassed = toMin(r.start_time) + 30 <= nowMin();
-    return `<div class="flex items-center gap-1.5">
-      <button data-done="${escapeHtml(r.appointment_id)}" class="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-[12px] font-semibold transition-colors ${primary ? "bg-primary text-on-primary hover:bg-primary-container" : "border border-line bg-surface-container-lowest text-on-surface hover:bg-surface-container-low"}" type="button"><span class="material-symbols-outlined text-[16px]" aria-hidden="true">check</span>تم</button>
-      ${slotPassed ? `<button data-noshow="${escapeHtml(r.appointment_id)}" class="inline-flex h-8 items-center rounded-lg px-2 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-error" type="button" title="المريض لم يحضر">غياب</button>` : ""}
-      <button data-cancel="${escapeHtml(r.appointment_id)}" class="inline-flex h-8 items-center rounded-lg px-2 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-error" type="button">إلغاء</button>
+    return `<div class="flex flex-wrap items-center justify-end gap-1">
+      ${actionButton({ attrs: `data-done="${escapeHtml(r.appointment_id)}"`, label: "تم", icon: "check_circle", tone: "primary", solid: primary })}
+      ${slotPassed ? actionButton({ attrs: `data-noshow="${escapeHtml(r.appointment_id)}"`, label: "غياب", icon: "person_off", tone: "warning", title: "المريض لم يحضر" }) : ""}
+      ${actionButton({ attrs: `data-cancel="${escapeHtml(r.appointment_id)}"`, label: "إلغاء", icon: "event_busy", tone: "danger" })}
       <a href="tel:${escapeHtml(r.patient_phone)}" class="grid h-8 w-8 place-items-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container-low" title="اتصال بالمريض"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">call</span></a>
     </div>`;
   };

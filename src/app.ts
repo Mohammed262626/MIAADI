@@ -185,7 +185,7 @@ function render() {
         renderAppointments: (host) => renderAdminTab(host),
         renderSchedule: (host, doctorId) => renderSchedulePanel(host, doctorId),
         onLogout: () => logoutToSite(),
-        initialView: state.route.param === "manage" ? "appointments" : "overview",
+        initialView: state.route.param === "manage" ? "appointments" : undefined,
       });
     })();
   }

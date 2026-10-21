@@ -1,5 +1,5 @@
 import { escapeHtml, formatTime, formatArabicDate, localDateISO } from "../lib/format";
-import { statusMeta } from "../components/ui";
+import { statusMeta, actionButton } from "../components/ui";
 import { confirmSheet } from "../components/ConfirmDialog";
 
 type Row = { appointment_id: string; schedule_id: string; patient_name: string; patient_phone: string; doctor_name: string; available_date: string; start_time: string; status: string; doctor_id: string };
@@ -155,16 +155,15 @@ export function renderAdminView(
     return `<span class="inline-flex items-center gap-1.5 text-[12px] text-on-surface-variant"><span class="h-1.5 w-1.5 rounded-full ${m.dot}" aria-hidden="true"></span>${escapeHtml(m.label)}</span>`;
   };
 
-  const quietBtn = "inline-flex h-7 items-center rounded-md px-2 text-[12px] font-medium transition-colors";
   const actionsHtml = (r: Row) => r.status === "booked"
-    ? `<div class="flex flex-wrap items-center justify-end gap-0.5">
-        <button data-edit="${escapeHtml(r.appointment_id)}" class="${quietBtn} text-on-surface-variant hover:bg-surface-container hover:text-on-surface">تعديل</button>
-        <button data-complete="${escapeHtml(r.appointment_id)}" class="${quietBtn} text-primary hover:bg-primary/10">اكتمل</button>
-        <button data-noshow="${escapeHtml(r.appointment_id)}" class="${quietBtn} text-on-surface-variant hover:bg-surface-container">لم يحضر</button>
-        <button data-cancel="${escapeHtml(r.appointment_id)}" class="${quietBtn} text-error hover:bg-error-container/40">إلغاء</button>
+    ? `<div class="flex flex-wrap items-center justify-end gap-1">
+        ${actionButton({ attrs: `data-edit="${escapeHtml(r.appointment_id)}"`, label: "تعديل", icon: "edit_calendar", tone: "neutral" })}
+        ${actionButton({ attrs: `data-complete="${escapeHtml(r.appointment_id)}"`, label: "اكتمل", icon: "check_circle", tone: "primary" })}
+        ${actionButton({ attrs: `data-noshow="${escapeHtml(r.appointment_id)}"`, label: "لم يحضر", icon: "person_off", tone: "warning" })}
+        ${actionButton({ attrs: `data-cancel="${escapeHtml(r.appointment_id)}"`, label: "إلغاء", icon: "event_busy", tone: "danger" })}
       </div>`
-    : `<div class="flex items-center justify-end gap-0.5">
-        <button data-delete="${escapeHtml(r.appointment_id)}" class="${quietBtn} text-error hover:bg-error-container/40">حذف</button>
+    : `<div class="flex items-center justify-end gap-1">
+        ${actionButton({ attrs: `data-delete="${escapeHtml(r.appointment_id)}"`, label: "حذف", icon: "delete_forever", tone: "danger" })}
       </div>`;
 
 
