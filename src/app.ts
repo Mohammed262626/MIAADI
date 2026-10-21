@@ -105,10 +105,6 @@ const PATH_ROUTES: Record<string, string> = {
   profile: "#profile",
   "dashboard-overview": "#admin",
   "appointments-schedule": "#admin/manage",
-  "patients-emr": "#admin/manage",
-  "prescriptions-reports": "#admin/manage",
-  "billing-cchi-claims": "#admin/manage",
-  "clinic-settings-availability": "#admin/manage",
 };
 
 let revealObserver: IntersectionObserver | null = null;
@@ -139,8 +135,12 @@ function render() {
   const canAdmin = role === "admin" || role === "doctor";
   const demoMode = !state.currentUser;
   if (route.name === "admin" && !canAdmin && !demoMode) { location.hash = "#home"; return; }
+  // The doctor's index is the dashboard, not the consumer landing page.
+  if (route.name === "home" && canAdmin) { location.replace("#admin"); return; }
+  // Staff never need the patient profile page — their account lives in the dashboard.
+  if (route.name === "profile" && canAdmin) { location.replace("#admin"); return; }
 
-  if (route.name === "admin" && !route.param) {
+  if (route.name === "admin") {
     appEl.innerHTML = `<main class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"><div id="admin-boot" class="p-space-xl text-center text-secondary font-body-md text-body-md flex items-center justify-center gap-space-sm"><span class="material-symbols-outlined animate-spin">progress_activity</span> جاري تحميل لوحة العيادة…</div></main><div id="auth-mount"></div>`;
   } else {
     const staticHtml = STATIC_VIEWS[route.name];
@@ -159,23 +159,20 @@ function render() {
   if (route.name === "appointments") void wireBookings(appEl, state.currentUser);
   if (route.name === "profile") void wireProfile(appEl, state.currentUser, {
     onOpenAuth: () => authModal?.open(),
-    onLogout: async () => {
-      try { await logoutUser(); state.currentUser = null; state.patientAppointments = []; showToast("تم تسجيل الخروج", "success"); go("#home"); }
-      catch (e) { showToast(translateAuthError(e), "error"); }
-    },
+    onLogout: () => logoutToSite(),
     onSave: async ({ fullName, phone }) => {
       try { await updatePatientProfile({ fullName, phone }); state.currentUser = await getCurrentUser(); render(); }
       catch (e) { showToast(translateAuthError(e), "error"); throw e; }
     },
   });
-  if (route.name === "admin" && !route.param) {
+  if (route.name === "admin") {
     void (async () => {
       const [{ DASHBOARD_BODY: body }, { wireDoctorDashboard: wireDb }, { mountAuthModal: mountModal }] = await Promise.all([
         import("./views/stitch/dashboard"),
         import("./views/stitch/dashboardLive"),
         import("./components/AuthModal"),
       ]);
-      if (state.route.name !== "admin" || state.route.param) return;
+      if (state.route.name !== "admin") return;
       appEl.innerHTML = `${body}<div id="auth-mount"></div>`;
       wireShell();
       authModal = mountModal(appEl.querySelector<HTMLElement>("#auth-mount")!,
@@ -183,7 +180,13 @@ function render() {
         async ({ email, password, fullName, phone }) => { const r = await registerPatient({ email, password, fullName, phone }); state.currentUser = await getCurrentUser(); await refreshAll(); render(); return r as unknown as void; }
       );
       if (!state.currentUser && !new URLSearchParams(location.search).has("fixture")) authModal?.open();
-      void wireDb(appEl, state.currentUser);
+      // Everything the staff account needs happens inside this one page.
+      void wireDb(appEl, state.currentUser, {
+        renderAppointments: (host) => renderAdminTab(host),
+        renderSchedule: (host, doctorId) => renderSchedulePanel(host, doctorId),
+        onLogout: () => logoutToSite(),
+        initialView: state.route.param === "manage" ? "appointments" : "overview",
+      });
     })();
   }
 
@@ -208,7 +211,6 @@ function render() {
   const main = document.getElementById("main-root") as HTMLElement | null;
   switch (route.name) {
     case "confirm": if (main) renderConfirmTab(main, route.param!); break;
-    case "admin": if (main) void renderAdminTab(main); break;
   }
 }
 
@@ -424,6 +426,43 @@ function renderConfirmTab(main: HTMLElement, scheduleId: string) {
 
 /* ----------------------------------- admin ---------------------------------- */
 
+/* Staff account actions used by the dashboard panels — a doctor never has to
+   leave #admin to log out or to manage their own calendar. */
+async function logoutToSite() {
+  try {
+    await logoutUser();
+    state.currentUser = null;
+    state.patientAppointments = [];
+    showToast("تم تسجيل الخروج", "success");
+    go("#home");
+  } catch (e) { showToast(translateAuthError(e), "error"); }
+}
+
+/* «جدولي وساعات العمل» panel: a doctor edits their own calendar, a supervisor
+   picks the doctor first. Reuses the real schedules editor. */
+async function renderSchedulePanel(host: HTMLElement, doctorId: string | null) {
+  if (!state.adminDoctorsCache.length) {
+    try { state.adminDoctorsCache = await listDoctors(); } catch { /* ignore */ }
+  }
+  if (doctorId) { await renderSchedules(host, doctorId); return; }
+  const docs = state.adminDoctorsCache;
+  host.innerHTML = `
+    <div class="flex flex-col gap-space-md">
+      <div>
+        <h2 class="font-headline-sm text-headline-sm font-bold text-on-surface">جدولي وساعات العمل</h2>
+        <p class="mt-1 font-body-md text-body-md text-on-surface-variant">اختر الطبيب لعرض جدول عمله أو تعديله.</p>
+      </div>
+      ${docs.length
+        ? `<div class="grid grid-cols-1 gap-space-sm sm:grid-cols-2 xl:grid-cols-3">${docs.map((d) => `<button type="button" data-sched-doctor="${escapeHtml(d.id)}" class="flex items-center justify-between rounded-xl border border-line bg-surface-container-lowest px-space-md py-3 text-start transition-colors hover:bg-surface-container"><span class="font-label-md text-label-md font-semibold text-on-surface">${escapeHtml(d.name)}</span><span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">chevron_left</span></button>`).join("")}</div>`
+        : `<p class="rounded-xl border border-line bg-surface-container-lowest p-space-lg text-center font-body-md text-body-md text-on-surface-variant">لا يوجد أطباء مسجّلون بعد.</p>`}
+    </div>`;
+  host.querySelectorAll<HTMLElement>("[data-sched-doctor]").forEach((b) => b.addEventListener("click", () => {
+    const id = b.dataset.schedDoctor as string;
+    host.innerHTML = `<p class="font-body-md text-body-md text-secondary py-space-lg text-center">جاري تحميل الجدول…</p>`;
+    void renderSchedules(host, id);
+  }));
+}
+
 async function renderAdminTab(main: HTMLElement) {
   const fxTab = mgFixture();
   if (fxTab) {
@@ -433,6 +472,8 @@ async function renderAdminTab(main: HTMLElement) {
   }
   const role = state.currentUser?.profile?.role as string;
   const isDoctor = role === "doctor";
+  // Doctor accounts have no business in the admin screens: keep them on bookings.
+  if (isDoctor && state.adminSubTab !== "appointments") state.adminSubTab = "appointments";
   if (state.adminSubTab !== "appointments") { await renderAdminManagement(main, state.adminSubTab); return; }
   try {
     if (isDoctor) {
@@ -453,6 +494,8 @@ async function renderAdminTab(main: HTMLElement) {
     rows: state.adminRows, total: state.adminTotal, page: state.adminPage, pageSize: state.adminPageSize, stats,
     filters: state.adminFilters, doctors: state.adminDoctors.map((d) => ({ id: d.id, name: d.name })),
     roleLabel: isDoctor ? "حساب طبيب" : "حساب مشرف",
+    ...(isDoctor ? { title: "مواعيد عيادتي", subtitle: "متابعة حجوزاتك وأحوالها — كل ما يخص عيادتك في مكان واحد." } : {}),
+    showSubTabs: !isDoctor,
     onFilter: (patch) => { Object.assign(state.adminFilters, patch); state.adminPage = 0; void renderAdminTab(main); },
     onPage: (dir) => { state.adminPage = Math.max(0, state.adminPage + dir); void renderAdminTab(main); },
     onState: async (id, s) => { try { await updateAppointmentState(id, s); showToast("تم التحديث", "success"); await refreshAdminRows(); void renderAdminTab(main); } catch (e) { showToast(translateAuthError(e), "error"); } },
@@ -462,7 +505,7 @@ async function renderAdminTab(main: HTMLElement) {
       try { await adminDeleteAppointmentRPC(row.appointment_id); showToast("تم حذف الحجز بنجاح", "success"); await refreshAdminRows(); void renderAdminTab(main); }
       catch (e) { showToast(translateAuthError(e), "error"); }
     },
-    onManageTab: (tab) => { state.adminSubTab = tab; if (tab === "appointments") void renderAdminTab(main); else void renderAdminManagement(main, tab); },
+    onManageTab: (tab) => { if (isDoctor && tab !== "appointments") return; state.adminSubTab = tab; if (tab === "appointments") void renderAdminTab(main); else void renderAdminManagement(main, tab); },
     activeSubTab: state.adminSubTab,
   });
 }
@@ -543,6 +586,8 @@ async function openApptEditDialog(row: AdminRow, main: HTMLElement) {
 }
 
 async function renderAdminManagement(main: HTMLElement, tab: "management" | "accounts") {
+  // Doctors manage their own calendar from the schedule panel — this screen is admin-only.
+  if (state.currentUser?.profile?.role === "doctor") return;
   if (tab === "accounts") {
     try { state.adminAccounts = mgFixture() ? (fixtureAccounts as unknown as typeof state.adminAccounts) : await adminListProfiles(); } catch (e) { showToast(translateAuthError(e), "error"); }
     const rows = state.adminAccounts as { user_id: string; full_name: string; email: string; phone: string; role: string }[];

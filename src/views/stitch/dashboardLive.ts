@@ -1,9 +1,9 @@
 import { escapeHtml, formatTime, formatArabicDate, localDateISO, translateAuthError } from "../../lib/format";
-import { getAdminAppointments, getDoctorProfile, findDoctorByUser, getDoctorAvailability, updateAppointmentState, cancelAppointmentClinic } from "../../lib/supabase";
+import { getAdminAppointments, getDoctorProfile, findDoctorByUser, getDoctorAvailability, updateAppointmentState, cancelAppointmentClinic, updatePatientProfile, updatePassword } from "../../lib/supabase";
 import { confirmSheet } from "../../components/ConfirmDialog";
 import { showToast } from "../../components/Toast";
 import { initials, money } from "../../components/ui";
-import { contentOf, specialtyLabel } from "./specialtyContent";
+import { specialtyLabel } from "./specialtyContent";
 
 type Row = {
   appointment_id: string; patient_name: string; patient_phone: string; doctor_name: string;
@@ -11,13 +11,22 @@ type Row = {
   start_time: string; end_time: string; status: string; doctor_id: string;
 };
 type AvRule = { day_of_week: number; start_time: string; end_time: string; is_enabled: boolean };
-type User = { id: string; profile?: { full_name?: string; role?: string } | null } | null;
+type User = { id: string; email?: string; profile?: { full_name?: string; phone?: string; role?: string } | null } | null;
 type Filter = "all" | "waiting" | "completed" | "cancelled" | "no_show";
+
+/* The dashboard is a single page: the sidebar swaps these panels in place and
+   never navigates away from #admin. */
+export type DashView = "overview" | "appointments" | "schedule" | "account";
+export type DashboardHooks = {
+  renderAppointments?: (host: HTMLElement) => Promise<void> | void;
+  renderSchedule?: (host: HTMLElement, doctorId: string | null) => Promise<void> | void;
+  onLogout?: () => Promise<void> | void;
+  initialView?: DashView;
+};
 
 const toMin = (t: string) => { const [h, m] = String(t).split(":"); return Number(h) * 60 + Number(m || 0); };
 const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
 const plus30 = (t: string) => { const total = toMin(t) + 30; return String(Math.floor(total / 60)).padStart(2, "0") + ":" + String(total % 60).padStart(2, "0"); };
-const fileRef = (id: string) => "MIA-" + String(id || "").replace(/-/g, "").slice(0, 6).toUpperCase();
 const isCancelled = (s: string) => String(s).startsWith("cancelled");
 const waitText = (mins: number) => (mins <= 0 ? "الآن" : mins < 60 ? `${mins} دقيقة` : `${Math.floor(mins / 60)} س ${mins % 60} د`);
 
@@ -29,13 +38,6 @@ const FILTERS: { key: Filter; label: string; icon: string }[] = [
   { key: "no_show", label: "غياب", icon: "person_off" },
 ];
 
-function countOf(rows: Row[], f: Filter) {
-  if (f === "all") return rows.length;
-  if (f === "waiting") return rows.filter((r) => r.status === "booked").length;
-  if (f === "cancelled") return rows.filter((r) => isCancelled(r.status)).length;
-  return rows.filter((r) => r.status === f).length;
-}
-
 function matches(rows: Row[], f: Filter, q: string) {
   const needle = q.trim().toLowerCase();
   return rows.filter((r) => {
@@ -46,7 +48,7 @@ function matches(rows: Row[], f: Filter, q: string) {
   });
 }
 
-export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
+export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks: DashboardHooks = {}) {
   const dbAside = appEl.querySelector<HTMLElement>("aside.fixed");
   const dbBackdrop = appEl.querySelector<HTMLElement>("#db-backdrop");
   const closeDbDrawer = () => { dbAside?.classList.add("max-lg:hidden"); dbBackdrop?.classList.add("hidden"); };
@@ -65,6 +67,7 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
   if (!user && fixtureMode) user = { id: "fixture", profile: { full_name: "د. طارق المنصور", role: "doctor" } };
   const role = (user?.profile?.role || "") as string;
   if (!user || (role !== "admin" && role !== "doctor")) return;
+  const me = user;
 
   const panel = (sel: string) => appEl.querySelector<HTMLElement>(sel);
   const setText = (sel: string, value: string) => { const el = panel(sel); if (el) el.textContent = value; };
@@ -73,6 +76,9 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
   let query = "";
   let rows: Row[] = [];
   let live = false;
+  let doctorId: string | null = null;
+  let docProfile: Awaited<ReturnType<typeof getDoctorProfile>> | null = null;
+  let currentView: DashView = hooks.initialView || "overview";
 
   setText("#db-sync", "جاري التحديث…");
   host.innerHTML = `<div class="flex h-64 items-center justify-center gap-2 rounded-xl border border-line bg-surface-container-lowest text-[14px] text-on-surface-variant">
@@ -89,11 +95,162 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     }
   };
 
+  /* One page, four panels — the sidebar swaps content in place and the URL
+     never changes. Each panel keeps its own host so switching is instant. */
+  const VIEW_HOSTS: Record<DashView, string> = {
+    overview: "#db-content",
+    appointments: "#db-view-appointments",
+    schedule: "#db-view-schedule",
+    account: "#db-view-account",
+  };
+  const NAV_ON = ["bg-surface-container-highest", "text-on-surface", "font-semibold"];
+  const NAV_OFF = ["text-on-surface-variant", "hover:bg-surface-container-high", "hover:text-on-surface"];
+  const pendingHtml = (label: string) => `<div class="flex h-64 items-center justify-center gap-2 rounded-xl border border-line bg-surface-container-lowest text-[14px] text-on-surface-variant"><span class="material-symbols-outlined animate-spin text-[18px]" aria-hidden="true">progress_activity</span> ${escapeHtml(label)}</div>`;
+  const failureHtml = (e: unknown) => `<div class="flex flex-col items-center gap-2 rounded-xl border border-line bg-surface-container-lowest p-6 text-center text-[14px] text-on-surface-variant"><span class="material-symbols-outlined text-[36px]">cloud_off</span><span>تعذر تحميل هذا القسم — ${escapeHtml(translateAuthError(e))}</span></div>`;
+
+  const paintNav = () => {
+    appEl.querySelectorAll<HTMLElement>(".dash-nav").forEach((item) => {
+      const on = item.dataset.view === currentView;
+      NAV_ON.forEach((c) => item.classList.toggle(c, on));
+      NAV_OFF.forEach((c) => item.classList.toggle(c, !on));
+      if (on) item.setAttribute("aria-current", "page");
+      else item.removeAttribute("aria-current");
+    });
+  };
+
+  /* Account panel: the doctor's own profile — editable name/phone, password,
+     and a logout button, so nothing forces them into the patient pages. */
+  const paintAccountPanel = (target: HTMLElement) => {
+    const name = me.profile?.full_name || "";
+    const phone = me.profile?.phone || "";
+    const email = me.email || "";
+    const roleLabel = role === "admin" ? "مشرف النظام" : "طبيب";
+    const info: [string, string][] = docProfile
+      ? [
+        ["التخصص", specialtyLabel(docProfile.specialization)],
+        ["المدينة", docProfile.city || "—"],
+        ["سعر الكشفية", money(docProfile.consultation_fee)],
+        ["المستشفى", docProfile.hospital_name || "غير مسجّل"],
+      ]
+      : [];
+
+    target.innerHTML = `
+      <div class="flex flex-col gap-space-lg">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex min-w-0 items-center gap-3">
+            <div class="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-primary/10 text-[18px] font-bold text-primary">${escapeHtml(initials(name))}</div>
+            <div class="min-w-0">
+              <h2 class="font-headline-sm text-headline-sm font-bold text-on-surface">${escapeHtml(name || "مستخدم ميعادي")}</h2>
+              <span class="mt-1 inline-flex items-center gap-1 rounded-md bg-surface-container px-2 py-0.5 text-[12px] text-on-surface-variant"><span class="material-symbols-outlined text-[14px]" aria-hidden="true">shield_person</span>${escapeHtml(roleLabel)}</span>
+            </div>
+          </div>
+          <button id="ac-logout" type="button" class="flex items-center gap-space-xs rounded-lg px-4 py-2.5 font-label-md text-label-md font-bold text-error transition-colors hover:bg-error-container/40"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">logout</span>تسجيل الخروج</button>
+        </div>
+
+        <div class="grid grid-cols-1 gap-space-lg lg:grid-cols-2">
+          <section class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
+            <h3 class="font-label-lg text-label-lg font-bold text-on-surface">البيانات الأساسية</h3>
+            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">الاسم والجوال المرتبطان بحسابك.</p>
+            <div class="mt-space-md grid grid-cols-1 gap-space-md sm:grid-cols-2">
+              <label class="font-label-sm text-label-sm text-secondary">الاسم الكامل
+                <input id="ac-name" type="text" value="${escapeHtml(name)}" class="mt-1 h-10 w-full rounded-lg border border-line bg-surface-container-lowest px-3 text-[14px] text-on-surface outline-none transition-colors focus:border-primary" />
+              </label>
+              <label class="font-label-sm text-label-sm text-secondary">رقم الجوال
+                <input id="ac-phone" type="tel" dir="ltr" value="${escapeHtml(phone)}" class="mt-1 h-10 w-full rounded-lg border border-line bg-surface-container-lowest px-3 text-left text-[14px] tabular-nums text-on-surface outline-none transition-colors focus:border-primary" />
+              </label>
+            </div>
+            <button id="ac-save" type="button" class="mt-space-md flex items-center gap-space-xs rounded-lg bg-primary px-4 py-2.5 font-label-md text-label-md font-bold text-on-primary transition-colors hover:bg-primary-container"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">save</span>حفظ التغييرات</button>
+          </section>
+
+          <section class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
+            <h3 class="font-label-lg text-label-lg font-bold text-on-surface">البريد وكلمة المرور</h3>
+            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">البريد المرتبط بالحساب وكلمة مرور جديدة.</p>
+            <span class="mt-space-md block font-label-sm text-label-sm text-secondary">البريد الإلكتروني</span>
+            <span dir="ltr" class="mt-1 block truncate rounded-lg border border-line bg-surface-container-low px-3 py-2 text-[13px] text-on-surface-variant">${escapeHtml(email || "—")}</span>
+            <div class="mt-space-md grid grid-cols-1 gap-space-md sm:grid-cols-2">
+              <label class="font-label-sm text-label-sm text-secondary">كلمة مرور جديدة
+                <input id="ac-pass" type="password" dir="ltr" autocomplete="new-password" class="mt-1 h-10 w-full rounded-lg border border-line bg-surface-container-lowest px-3 text-left text-[14px] text-on-surface outline-none transition-colors focus:border-primary" />
+              </label>
+              <label class="font-label-sm text-label-sm text-secondary">تأكيد كلمة المرور
+                <input id="ac-pass2" type="password" dir="ltr" autocomplete="new-password" class="mt-1 h-10 w-full rounded-lg border border-line bg-surface-container-lowest px-3 text-left text-[14px] text-on-surface outline-none transition-colors focus:border-primary" />
+              </label>
+            </div>
+            <button id="ac-pass-save" type="button" class="mt-space-md flex items-center gap-space-xs rounded-lg border border-line bg-surface-container-lowest px-4 py-2.5 font-label-md text-label-md font-bold text-on-surface transition-colors hover:bg-surface-container"><span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">lock_reset</span>تغيير كلمة المرور</button>
+          </section>
+        </div>
+
+        ${info.length ? `<section class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
+          <h3 class="font-label-lg text-label-lg font-bold text-on-surface">البيانات المهنية</h3>
+          <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">مسجّلة في دليل ميعادي — تُحدَّث من إدارة المنصة.</p>
+          <div class="mt-space-md grid grid-cols-2 gap-space-md sm:grid-cols-4">${info.map(([k, v]) => `<div class="rounded-lg bg-surface-container-low p-3"><span class="block text-[12px] text-on-surface-variant">${escapeHtml(k)}</span><span class="mt-0.5 block font-label-md text-label-md font-semibold text-on-surface">${escapeHtml(v)}</span></div>`).join("")}</div>
+        </section>` : ""}
+      </div>`;
+
+    const val = (sel: string) => target.querySelector<HTMLInputElement>(sel)?.value || "";
+    target.querySelector<HTMLButtonElement>("#ac-logout")?.addEventListener("click", () => { if (hooks.onLogout) void hooks.onLogout(); });
+    target.querySelector<HTMLButtonElement>("#ac-save")?.addEventListener("click", async () => {
+      const fullName = val("#ac-name").trim();
+      const phone = val("#ac-phone").trim();
+      if (!fullName) { showToast("اكتب الاسم الكامل", "error"); return; }
+      try {
+        await updatePatientProfile({ fullName, phone });
+        if (me.profile) { me.profile.full_name = fullName; me.profile.phone = phone; }
+        setText("#db-user-name", fullName);
+        setText("#db-side-name", fullName);
+        showToast("تم حفظ البيانات", "success");
+      } catch (e) { showToast(translateAuthError(e), "error"); }
+    });
+    target.querySelector<HTMLButtonElement>("#ac-pass-save")?.addEventListener("click", async () => {
+      const pass = val("#ac-pass");
+      if (pass.length < 8) { showToast("كلمة المرور يجب أن تكون 8 أحرف على الأقل", "error"); return; }
+      if (pass !== val("#ac-pass2")) { showToast("كلمتا المرور غير متطابقتين", "error"); return; }
+      try {
+        await updatePassword(pass);
+        const i1 = target.querySelector<HTMLInputElement>("#ac-pass");
+        const i2 = target.querySelector<HTMLInputElement>("#ac-pass2");
+        if (i1) i1.value = "";
+        if (i2) i2.value = "";
+        showToast("تم تغيير كلمة المرور", "success");
+      } catch (e) { showToast(translateAuthError(e), "error"); }
+    });
+  };
+
+  const showView = async (view: DashView) => {
+    currentView = view;
+    paintNav();
+    (Object.keys(VIEW_HOSTS) as DashView[]).forEach((k) => appEl.querySelector<HTMLElement>(VIEW_HOSTS[k])?.classList.toggle("hidden", k !== view));
+    appEl.querySelector<HTMLElement>("#db-search-wrap")?.classList.toggle("hidden", view !== "overview");
+    const target = appEl.querySelector<HTMLElement>(VIEW_HOSTS[view]);
+    if (!target) return;
+    try {
+      if (view === "overview") { await reload(); return; }
+      target.innerHTML = pendingHtml(view === "appointments" ? "جاري تحميل المواعيد…" : "جاري تحميل جدول العمل…");
+      if (view === "appointments") {
+        if (hooks.renderAppointments) await hooks.renderAppointments(target);
+        else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
+      } else if (view === "schedule") {
+        if (hooks.renderSchedule) await hooks.renderSchedule(target, doctorId);
+        else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
+      } else {
+        paintAccountPanel(target);
+      }
+    } catch (e) {
+      target.innerHTML = failureHtml(e);
+    }
+  };
+
+  appEl.querySelectorAll<HTMLElement>("[data-view]").forEach((el) => el.addEventListener("click", (e) => {
+    e.preventDefault();
+    closeDbDrawer();
+    void showView((el.dataset.view || "overview") as DashView);
+  }));
+  appEl.querySelector<HTMLElement>("#db-logout")?.addEventListener("click", () => { if (hooks.onLogout) void hooks.onLogout(); });
+  paintNav();
+
   const load = async () => {
     const today = localDateISO();
-    let doctorId: string | null = null;
-    if (role === "doctor") {
-      try { const d = await findDoctorByUser(user.id); doctorId = d?.id || null; } catch { /* ignore */ }
+    if (role === "doctor" && !doctorId) {
+      try { const d = await findDoctorByUser(me.id); doctorId = d?.id || null; } catch { /* ignore */ }
     }
     const [profile, res, availability] = await Promise.all([
       doctorId ? getDoctorProfile(doctorId).catch(() => null) : Promise.resolve(null),
@@ -102,13 +259,18 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     ]);
     rows = ((res.rows || []) as Row[]).map((r) => ({ ...r, consultation_fee: Number(r.consultation_fee) || 0 }));
     live = true;
+    docProfile = profile;
     paintShell(profile);
     renderBody(profile, today, availability);
   };
 
   const paintShell = (profile: Awaited<ReturnType<typeof getDoctorProfile>>) => {
-    const displayName = profile?.name || user.profile?.full_name || "مستخدم";
+    const displayName = profile?.name || me.profile?.full_name || "مستخدم";
     setText("#db-user-name", displayName);
+    setText("#db-side-name", displayName);
+    setText("#db-side-role", role === "admin" ? "مشرف النظام" : "طبيب");
+    const sideAvatar = panel("#db-side-avatar");
+    if (sideAvatar) sideAvatar.textContent = initials(displayName);
     const specEl = panel("#db-user-spec");
     if (specEl) { specEl.textContent = profile ? specialtyLabel(profile.specialization) : "مشرف النظام"; specEl.classList.toggle("hidden", false); }
     setText("#db-facility-name", profile ? (profile.hospital_name || "بدون موقع مسجّل") : "جميع العيادات");
@@ -174,10 +336,6 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <span class="hidden text-[13px] text-on-surface-variant sm:inline">${escapeHtml(formatArabicDate(today))}</span>
-          <button id="db-refresh" class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface-container-lowest px-3 text-[13px] font-medium text-on-surface transition-colors hover:bg-surface-container-low" type="button">
-            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">refresh</span>تحديث
-          </button>
-          <button id="db-manage" class="inline-flex h-9 items-center rounded-lg border border-line bg-surface-container-lowest px-3.5 text-[13px] font-semibold text-on-surface transition-colors hover:bg-surface-container-low" type="button">إدارة المواعيد</button>
         </div>
       </div>
 
@@ -234,49 +392,11 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
         </section>
 
         <aside class="flex flex-col gap-6">
-          <section aria-labelledby="db-queue-title">
-            <div class="flex items-baseline justify-between gap-2">
-              <h2 id="db-queue-title" class="text-[14px] font-semibold text-on-surface">صالة الانتظار</h2>
-              <span class="text-[12px] tabular-nums text-on-surface-variant">${upcoming.length}</span>
-            </div>
-            <div id="db-queue" class="mt-1 flex flex-col divide-y divide-line"></div>
-            <button id="db-queue-all" class="mt-3 h-8 w-full rounded-lg border border-line text-[12px] font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low" type="button">عرض سجل الحجوزات</button>
-          </section>
-
           <section aria-labelledby="db-clinic-title">
             <h2 id="db-clinic-title" class="text-[14px] font-semibold text-on-surface">${profile ? "بيانات العيادة" : "ملخص العيادات"}</h2>
             <div id="db-clinic-panel" class="mt-1 flex flex-col"></div>
-            <button id="db-clinic-edit" class="mt-3 h-8 w-full rounded-lg border border-line text-[12px] font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low" type="button">${profile ? "إدارة بيانات العيادة" : "فتح سجل الحجوزات"}</button>
+            <button id="db-clinic-edit" class="mt-3 h-8 w-full rounded-lg border border-line text-[12px] font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low" type="button">${profile ? "إدارة ساعات العمل" : "السجل الكامل"}</button>
           </section>
-
-          ${profile && profile.insurances.length ? `
-          <section aria-labelledby="db-ins-title">
-            <div class="flex items-baseline justify-between gap-2">
-              <h2 id="db-ins-title" class="text-[14px] font-semibold text-on-surface">شركات التأمين</h2>
-              <span class="text-[12px] tabular-nums text-on-surface-variant">${profile.insurances.length}</span>
-            </div>
-            <ul class="mt-1 flex flex-col divide-y divide-line">
-              ${profile.insurances.map((n) => `<li class="flex items-center justify-between gap-2 py-2 text-[13px] text-on-surface"><span class="truncate">${escapeHtml(n)}</span><span class="material-symbols-outlined text-[16px] text-tertiary" aria-hidden="true">check</span></li>`).join("")}
-            </ul>
-            <div class="mt-2 flex items-baseline justify-between gap-2 text-[12px] text-on-surface-variant">
-              <span>الرسوم المعتمدة</span>
-              <span class="text-[14px] font-semibold tabular-nums text-on-surface">${escapeHtml(money(profile.consultation_fee))}</span>
-            </div>
-          </section>` : ""}
-
-          ${next ? `
-          <section class="rounded-xl border border-line px-4 py-3" aria-labelledby="db-pass-title">
-            <div class="flex items-baseline justify-between gap-2">
-              <h2 id="db-pass-title" class="text-[14px] font-semibold text-on-surface">بطاقة الدخول</h2>
-              <span class="text-[12px] tabular-nums text-on-surface-variant">${escapeHtml(formatTime(next.start_time))}</span>
-            </div>
-            <p class="mt-2 truncate text-[14px] font-medium text-on-surface">${escapeHtml(next.patient_name)}</p>
-            <p class="mt-0.5 truncate text-[12px] text-on-surface-variant">${escapeHtml(contentOf(next.doctor_specialization).clinic.name)}</p>
-            <div class="mt-2 flex items-center justify-between gap-2 text-[12px] text-on-surface-variant">
-              <span class="tabular-nums" dir="ltr">${escapeHtml(fileRef(next.appointment_id))}</span>
-              <span>${toMin(next.start_time) - nowMin() <= 30 ? "جاهزة الآن" : "تُصدر قبل الموعد بـ ٣٠ دقيقة"}</span>
-            </div>
-          </section>` : ""}
         </aside>
       </div>
     </div>`;
@@ -284,15 +404,10 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
 
     paintFilters();
     paintStream();
-    paintQueue();
     paintClinicPanel(profile);
 
     const on = (sel: string, ev: string, fn: (e: Event) => void) => { const el = host.querySelector(sel); if (el) el.addEventListener(ev, fn as EventListener); };
-    on("#db-console", "click", () => { location.hash = "#admin/manage"; });
-    on("#db-manage", "click", () => { location.hash = "#admin/manage"; });
-    on("#db-refresh", "click", () => { void reload(); });
-    on("#db-queue-all", "click", () => { location.hash = "#admin/manage"; });
-    on("#db-clinic-edit", "click", () => { location.hash = "#admin/manage"; });
+    on("#db-clinic-edit", "click", () => { void showView(profile ? "schedule" : "appointments"); });
   };
 
   const paintFilters = () => {
@@ -300,10 +415,9 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     if (!host2) return;
     host2.innerHTML = FILTERS.map((f) => {
       const active = filter === f.key;
-      const n = countOf(rows, f.key);
       return `<button data-filter="${f.key}" class="relative inline-flex h-9 items-center gap-1.5 px-2 text-[13px] transition-colors ${
         active ? "font-semibold text-on-surface" : "text-on-surface-variant hover:text-on-surface"
-      }"><span>${f.label}</span><span class="text-[12px] tabular-nums ${active ? "text-primary" : "text-on-surface-variant"}">${n}</span>${
+      }"><span>${f.label}</span>${
         active ? '<span class="absolute inset-x-1 bottom-0 h-0.5 bg-primary"></span>' : ""
       }</button>`;
     }).join("");
@@ -387,24 +501,6 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     }));
   };
 
-  const paintQueue = () => {
-    const list = host.querySelector("#db-queue");
-    if (!list) return;
-    const upcoming = matches(rows, "waiting", query).filter((r) => toMin(r.start_time) >= nowMin());
-    list.innerHTML = upcoming.length
-      ? upcoming.map((r, i) => `
-        <div class="flex items-center justify-between gap-3 py-2.5">
-          <div class="flex min-w-0 items-center gap-3">
-            <span class="w-4 shrink-0 text-[12px] tabular-nums text-on-surface-variant">${i + 1}</span>
-            <div class="min-w-0">
-              <p class="truncate text-[13px] font-medium text-on-surface">${escapeHtml(r.patient_name)}</p>
-              <p class="mt-0.5 text-[12px] text-on-surface-variant"><span class="tabular-nums">${escapeHtml(formatTime(r.start_time))}</span> · بعد ${waitText(toMin(r.start_time) - nowMin())}</p>
-            </div>
-          </div>
-          <span class="shrink-0 text-[12px] ${i === 0 ? "font-semibold text-primary" : "text-on-surface-variant"}">${i === 0 ? "التالي" : "مؤكد"}</span>
-        </div>`).join("")
-      : `<p class="py-3 text-[13px] text-on-surface-variant">لا مواعيد مؤكدة متبقية اليوم.</p>`;
-  };
 
 
   const paintClinicPanel = (profile: Awaited<ReturnType<typeof getDoctorProfile>>) => {
@@ -427,13 +523,13 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
       return;
     }
     box.innerHTML = [
-      item("التخصص", escapeHtml(specialtyLabel(profile.specialization))),
-      item("الرسوم المعتمدة", escapeHtml(money(profile.consultation_fee)), true),
-      item("الموقع", escapeHtml(profile.hospital_name || "بدون موقع مسجّل")),
       item("التقييم", `<span class="tabular-nums">${profile.rating ? profile.rating.toFixed(1) : "—"}</span> <span class="text-[12px] text-on-surface-variant">(${profile.reviews_count} تقييم)</span>`),
       item("سنوات الخبرة", `<span class="tabular-nums">${profile.experience_years ?? "—"}</span>`),
       item("اللغات", escapeHtml(profile.languages.join(" · ") || "العربية")),
-    ].join("");
+      item("شركات التأمين", `<span class="tabular-nums">${profile.insurances.length}</span>`),
+    ].join("") + (profile.insurances.length
+      ? `<ul class="mt-1 flex flex-col divide-y divide-line">${profile.insurances.map((n) => `<li class="flex items-center justify-between gap-2 py-2 text-[13px] text-on-surface"><span class="truncate">${escapeHtml(n)}</span><span class="material-symbols-outlined text-[16px] text-tertiary" aria-hidden="true">check</span></li>`).join("")}</ul>`
+      : "");
   };
 
 
@@ -445,12 +541,9 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     next.addEventListener("input", () => {
       query = next.value;
       clearTimeout(t);
-      t = window.setTimeout(() => { paintStream(); paintQueue(); }, 200);
+      t = window.setTimeout(() => { paintStream(); }, 200);
     });
   }
-  const newBooking = panel("#db-new-booking");
-  if (newBooking) newBooking.addEventListener("click", () => { location.hash = "#doctors"; });
-
 
   // __FIXTURE__ dev-only preview of the dashboard with sample appointments
   if (import.meta.env.DEV && new URLSearchParams(location.search).has("fixture")) {
@@ -475,12 +568,12 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     ];
     renderBody(null, d, []);
     paintStream();
-    paintQueue();
     paintClinicPanel(null);
     return;
   }
 
   try { await reload(); }
   catch (e) { host.innerHTML = `<div class="rounded-xl border border-line bg-surface-container-lowest p-6 text-center text-[14px] text-on-surface-variant">${escapeHtml(translateAuthError(e))}</div>`; }
+  if (currentView !== "overview") void showView(currentView);
   void live;
 }

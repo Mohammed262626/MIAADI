@@ -36,6 +36,10 @@ export function renderAdminView(
     filters: { status: string; doctorId: string; dateFrom: string; dateTo: string; search: string; sortBy: string; sortDir: string };
     doctors: { id: string; name: string }[];
     roleLabel: string;
+    title?: string;
+    subtitle?: string;
+    /** Doctor accounts only ever see their own bookings — no admin sub-tabs. */
+    showSubTabs?: boolean;
     onFilter: (patch: Partial<{ status: string; doctorId: string; dateFrom: string; dateTo: string; search: string; sortBy: string; sortDir: string }>) => void;
     onPage: (dir: 1 | -1) => void;
     onState: (id: string, state: "completed" | "no_show") => Promise<void>;
@@ -54,8 +58,8 @@ export function renderAdminView(
   <div class="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div class="min-w-0">
-        <h1 class="text-[24px] font-bold leading-tight text-on-surface">لوحة الإدارة</h1>
-        <p class="mt-1 text-[15px] text-on-surface-variant">إدارة الحجوزات والأطباء والحسابات، ومتابعة حركة العيادة اليوم.</p>
+        <h1 class="text-[24px] font-bold leading-tight text-on-surface">${escapeHtml(opts.title || "لوحة الإدارة")}</h1>
+        <p class="mt-1 text-[15px] text-on-surface-variant">${escapeHtml(opts.subtitle || "إدارة الحجوزات والأطباء والحسابات، ومتابعة حركة العيادة اليوم.")}</p>
       </div>
       <div class="flex flex-wrap items-center gap-3 text-[12px] text-on-surface-variant">
         <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-tertiary" aria-hidden="true"></span>متزامن مباشرة مع قاعدة البيانات</span>
@@ -63,13 +67,13 @@ export function renderAdminView(
       </div>
     </div>
 
-    <div class="no-scrollbar mt-6 flex gap-2 overflow-x-auto border-b border-line">
+    ${opts.showSubTabs === false ? "" : `<div class="no-scrollbar mt-6 flex gap-2 overflow-x-auto border-b border-line">
       ${SUB_TABS.map((t) => `<button data-sub="${t.key}" class="-mb-px inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 text-[14px] transition-colors ${
         opts.activeSubTab === t.key ? "border-primary font-semibold text-on-surface" : "border-transparent text-on-surface-variant hover:text-on-surface"
       }">
         <span class="material-symbols-outlined text-[18px]" aria-hidden="true">${t.icon}</span><span>${t.label}</span>
       </button>`).join("")}
-    </div>
+    </div>`}
 
     <div id="admin-sub-root" class="mt-6 flex flex-col gap-4"></div>
   </div>`;
