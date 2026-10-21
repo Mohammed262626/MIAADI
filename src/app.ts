@@ -22,6 +22,12 @@ import { wireDoctorProfile } from "./views/stitch/doctorProfileLive";
 import { wireBookings } from "./views/stitch/bookingsLive";
 import { wireProfile } from "./views/stitch/profileLive";
 
+// dev-only: force a theme for screenshots (?theme=light|dark)
+if (import.meta.env.DEV) {
+  const t = new URLSearchParams(location.search).get("theme");
+  if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+}
+
 type RouteName = "home" | "doctors" | "doctor" | "confirm" | "appointments" | "profile" | "admin";
 type Route = { name: RouteName; param?: string };
 type Pending = { scheduleId: string; doctorId: string; slot: Slot; appointmentId?: string };
@@ -170,6 +176,7 @@ function render() {
         async ({ email, password }) => { const r = await loginUser({ email, password }); state.currentUser = await getCurrentUser(); await refreshAll(); render(); return r as unknown as void; },
         async ({ email, password, fullName, phone }) => { const r = await registerPatient({ email, password, fullName, phone }); state.currentUser = await getCurrentUser(); await refreshAll(); render(); return r as unknown as void; }
       );
+      if (!state.currentUser && !new URLSearchParams(location.search).has("fixture")) authModal?.open();
       void wireDb(appEl, state.currentUser);
     })();
   }
@@ -205,13 +212,13 @@ function render() {
 function wireShell() {
   appEl.querySelectorAll<HTMLElement>('[data-action="open-auth"]').forEach((b) => b.addEventListener("click", () => authModal?.open()));
 
-  const headRow = appEl.querySelector<HTMLElement>("header > div");
+  const headRow = appEl.querySelector<HTMLElement>("#db-actions") || appEl.querySelector<HTMLElement>("header > div");
   if (headRow && !document.getElementById("theme-toggle")) {
     const btn = document.createElement("button");
     btn.id = "theme-toggle";
     btn.type = "button";
     btn.title = "الوضع الداكن";
-    btn.className = "shrink-0 w-11 h-11 rounded-full border border-outline-variant text-on-surface grid place-items-center hover:bg-surface-container-high transition-all";
+    btn.className = "grid h-10 w-10 shrink-0 place-items-center rounded-lg text-on-surface transition-colors hover:bg-surface-container";
     btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">dark_mode</span>';
     btn.setAttribute("aria-label", "تبديل المظهر الداكن أو الفاتح");
     headRow.appendChild(btn);

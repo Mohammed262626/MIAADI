@@ -61,6 +61,8 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
 
   const host = appEl.querySelector<HTMLElement>("#db-content");
   if (!host) return;
+  const fixtureMode = import.meta.env.DEV && new URLSearchParams(location.search).has("fixture");
+  if (!user && fixtureMode) user = { id: "fixture", profile: { full_name: "د. طارق المنصور", role: "doctor" } };
   const role = (user?.profile?.role || "") as string;
   if (!user || (role !== "admin" && role !== "doctor")) return;
 
@@ -73,14 +75,14 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
   let live = false;
 
   setText("#db-sync", "جاري التحديث…");
-  host.innerHTML = `<div class="bg-surface-container-lowest rounded-2xl p-space-xl shadow-sm flex items-center justify-center gap-space-sm text-secondary font-body-md text-body-md">
-    <span class="material-symbols-outlined animate-spin">progress_activity</span> جاري تحميل لوحة العيادة…</div>`;
+  host.innerHTML = `<div class="flex h-64 items-center justify-center gap-2 rounded-xl border border-line bg-surface-container-lowest text-[14px] text-on-surface-variant">
+    <span class="material-symbols-outlined animate-spin text-[18px]" aria-hidden="true">progress_activity</span> جاري تحميل لوحة العيادة…</div>`;
 
   const reload = async () => {
     try { await load(); }
     catch (e) {
       showToast(translateAuthError(e), "error");
-      host.innerHTML = `<div class="bg-error-container/40 rounded-2xl p-space-xl text-center font-body-md text-body-md text-on-error-container flex flex-col items-center gap-space-sm">
+      host.innerHTML = `<div class="flex flex-col items-center gap-2 rounded-xl border border-line bg-surface-container-lowest p-6 text-center text-[14px] text-on-surface-variant">
         <span class="material-symbols-outlined text-[36px]">cloud_off</span>
         <span>تعذر تحميل بيانات العيادة — ${escapeHtml(translateAuthError(e))}</span>
       </div>`;
@@ -138,214 +140,147 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     const revenue = rows.filter((r) => !isCancelled(r.status)).reduce((sum, r) => sum + (r.consultation_fee || 0), 0);
     const feeNote = profile ? `${profile.insurances.length} شركات تأمين مرتبطة` : `${new Set(rows.map((r) => r.doctor_id)).size} عيادات نشطة اليوم`;
 
+    const dayStart = rule ? toMin(rule.start_time) : (times[0] ?? 9 * 60);
+    const dayEnd = rule ? toMin(rule.end_time) : (times.length ? times[times.length - 1] + 30 : 17 * 60);
+    const daySpan = Math.max(dayEnd - dayStart, 60);
+    const nowPct = ((nowMin() - dayStart) / daySpan) * 100;
+    const clock = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+    const finding = cancelled + noShow
+      ? `أُلغي أو لم يحضر ${cancelled + noShow} من مواعيد اليوم، و${upcoming.length} مواعيد ما زالت مؤكدة.`
+      : next
+        ? `المريض التالي ${next.patient_name} الساعة ${formatTime(next.start_time)} — بعد ${waitText(toMin(next.start_time) - nowMin())}.`
+        : total
+          ? `انتهت مواعيد اليوم: ${completed} زيارة مكتملة من ${total}.`
+          : "لا مواعيد على العيادة اليوم بعد.";
+    const dayBlocks = rows.map((r) => {
+      const left = ((toMin(r.start_time) - dayStart) / daySpan) * 100;
+      const width = Math.max((30 / daySpan) * 100, 1);
+      const tone = r.status === "completed"
+        ? "bg-on-surface-variant"
+        : r.status === "no_show"
+          ? "bg-error/50"
+          : isCancelled(r.status)
+            ? "bg-outline-variant"
+            : "bg-primary";
+      return `<span class="absolute top-0 h-6 rounded-[3px] ${tone}" style="inset-inline-start:${left.toFixed(2)}%;width:calc(${width.toFixed(2)}% - 2px)" title="${escapeHtml(`${formatTime(r.start_time)} · ${r.patient_name}`)}"></span>`;
+    }).join("");
+
     host.innerHTML = `
-    <section class="relative overflow-hidden rounded-2xl bg-gradient-to-l from-primary via-primary-container to-surface-container-highest/20 p-space-lg shadow-sm">
-      <div class="absolute -top-24 -end-24 w-80 h-80 rounded-full bg-primary-fixed-dim/20 blur-3xl pointer-events-none"></div>
-      <div class="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-space-lg">
-        <div class="flex flex-col gap-space-xs max-w-3xl">
-          <div class="flex flex-wrap items-center gap-space-xs">
-            <span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-md text-primary font-label-sm text-label-sm shadow-sm">
-              <span class="w-2 h-2 rounded-full bg-tertiary-container animate-ping"></span>
-              <span>${escapeHtml(profile?.hospital_name || "جميع العيادات")}</span>
-            </span>
-            <span class="inline-flex items-center gap-1 px-space-sm py-1 rounded-full bg-surface-container-lowest/80 text-secondary font-label-sm text-label-sm shadow-sm">
-              <span class="material-symbols-outlined text-[16px] text-tertiary">verified</span>
-              <span>متصل مباشرة بقاعدة بيانات العيادة</span>
-            </span>
-          </div>
-          <h1 class="font-display-lg text-display-lg text-on-primary font-bold tracking-tight mt-space-xs">
-            مرحباً، ${escapeHtml(profile?.name || user.profile?.full_name || "مشرف النظام")}
-          </h1>
-          <p class="font-headline-sm text-headline-sm text-primary-fixed font-medium mt-1">
-            ${escapeHtml(profile ? `${profile.title ? profile.title + " " : ""}${specialtyLabel(profile.specialization)}` : "لوحة متابعة العيادات والحجوزات • Clinic Operations")}
-          </p>
-          <div class="flex flex-wrap items-center gap-space-md pt-space-xs text-on-primary/80 font-body-md text-body-md">
-            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">calendar_today</span><span>${escapeHtml(formatArabicDate(today))}</span></span>
-            <span>•</span>
-            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">timer</span><span>نسبة إتمام اليوم: <strong class="text-on-primary font-label-md text-label-md">${rate}%</strong></span></span>
-            <span>•</span>
-            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">nest_clock_farsight_analog</span><span>جلسة اليوم: ${escapeHtml(sessionText)}</span></span>
-          </div>
+    <div class="flex flex-col gap-6">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="min-w-0">
+          <h1 class="text-[24px] font-bold leading-tight text-on-surface">لوحة العيادة</h1>
+          <p class="mt-1 max-w-[70ch] text-[15px] leading-relaxed text-on-surface-variant">${escapeHtml(finding)}</p>
         </div>
-        <div class="flex flex-wrap sm:flex-nowrap items-center gap-space-sm">
-          <button id="db-console" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-space-xs px-space-lg py-3 rounded-full bg-surface-container-lowest text-primary font-label-lg text-label-lg shadow-sm hover:bg-surface-container-low transition-all" type="button">
-            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">list_alt</span><span>سجل الحجوزات اليومية</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="hidden text-[13px] text-on-surface-variant sm:inline">${escapeHtml(formatArabicDate(today))}</span>
+          <button id="db-refresh" class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface-container-lowest px-3 text-[13px] font-medium text-on-surface transition-colors hover:bg-surface-container-low" type="button">
+            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">refresh</span>تحديث
           </button>
-          <button id="db-manage" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-space-xs px-space-md py-3 rounded-full bg-primary-container/70 text-on-primary-container font-label-md text-label-md shadow-sm hover:bg-primary-container transition-all" type="button">
-            <span class="material-symbols-outlined text-[18px]">tune</span><span>إدارة المواعيد</span>
-          </button>
-          <button id="db-refresh" class="p-3 rounded-full bg-surface-container-lowest/15 text-on-primary hover:bg-surface-container-lowest/25 transition-all" title="تحديث البيانات" type="button">
-            <span class="material-symbols-outlined text-[20px]">refresh</span>
-          </button>
+          <button id="db-manage" class="inline-flex h-9 items-center rounded-lg border border-line bg-surface-container-lowest px-3.5 text-[13px] font-semibold text-on-surface transition-colors hover:bg-surface-container-low" type="button">إدارة المواعيد</button>
         </div>
       </div>
-    </section>
 
-    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
-      <div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex flex-col justify-between gap-space-sm">
-        <div class="flex items-center justify-between">
-          <div class="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center text-primary"><span class="material-symbols-outlined text-[22px]">calendar_month</span></div>
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm">
-            <span class="material-symbols-outlined text-[14px]">${cancelled + noShow ? "event_busy" : "check"}</span>
-            <span>${cancelled + noShow ? `${cancelled + noShow} إلغاء أو غياب` : "لا إلغاءات اليوم"}</span>
+      <section class="rounded-xl border border-line bg-surface-container-lowest px-5 py-4" aria-labelledby="db-day-title">
+        <div class="flex items-baseline justify-between gap-3">
+          <h2 id="db-day-title" class="text-[15px] font-semibold text-on-surface">يوم العيادة</h2>
+          <span class="text-[13px] text-on-surface-variant"><span class="tabular-nums">${escapeHtml(sessionText)}</span> · <span class="tabular-nums">${total}</span> موعد</span>
+        </div>
+        <div class="relative mt-3 h-6 overflow-hidden rounded bg-surface-container-low">
+          ${dayBlocks}
+          ${nowPct >= 0 && nowPct <= 100 ? `<span class="absolute -top-1 h-8 w-0.5 bg-error" style="inset-inline-start:${nowPct.toFixed(2)}%" title="الآن"></span>` : ""}
+        </div>
+        <div class="mt-2 flex items-center justify-between gap-3 text-[12px] text-on-surface-variant">
+          <span class="tabular-nums">${escapeHtml(formatTime(clock(dayStart)))}</span>
+          <span class="flex flex-wrap items-center gap-3">
+            <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-[2px] bg-primary"></span>مؤكد</span>
+            <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-[2px] bg-on-surface-variant"></span>مكتمل</span>
+            <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-[2px] bg-outline-variant"></span>ملغي</span>
           </span>
+          <span class="tabular-nums">${escapeHtml(formatTime(clock(dayEnd)))}</span>
         </div>
-        <div>
-          <span class="font-body-sm text-body-sm text-secondary">إجمالي مواعيد اليوم • Today's Agenda</span>
-          <div class="flex items-baseline gap-space-xs mt-1">
-            <span class="font-display-lg text-display-lg font-bold text-on-surface tabular-nums">${total}</span>
-            <span class="font-body-md text-body-md text-secondary">${total ? "مريضاً مسجلاً" : "لا مواعيد اليوم"}</span>
-          </div>
-        </div>
-        <div class="flex items-center justify-between pt-space-xs bg-surface-container-low rounded-xl px-space-sm py-1.5">
-          <span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary"></span>${morning} صباحاً</span>
-          <span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-secondary"></span>${evening} مساءً</span>
-        </div>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex flex-col justify-between gap-space-sm">
-        <div class="flex items-center justify-between">
-          <div class="w-10 h-10 rounded-xl bg-error-container/40 flex items-center justify-center text-error"><span class="material-symbols-outlined text-[22px]">airline_seat_recline_normal</span></div>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full ${upcoming.length ? "bg-error-container text-on-error-container" : "bg-surface-container text-secondary"} font-label-sm text-label-sm">
-            <span class="w-1.5 h-1.5 rounded-full ${upcoming.length ? "bg-error animate-pulse" : "bg-outline"}"></span>
-            <span>${upcoming.length ? "مؤكدة قادمة" : "لا انتظار"}</span>
-          </span>
-        </div>
-        <div>
-          <span class="font-body-sm text-body-sm text-secondary">في صالة الانتظار • Waiting Lounge</span>
-          <div class="flex items-baseline gap-space-xs mt-1">
-            <span class="font-display-lg text-display-lg font-bold text-on-surface tabular-nums">${upcoming.length}</span>
-            <span class="font-body-md text-body-md text-secondary">مؤكدة ولم تبدأ بعد</span>
-          </div>
-        </div>
-        <div class="flex items-center justify-between pt-space-xs bg-surface-container-low rounded-xl px-space-sm py-1.5">
-          <span class="font-label-sm text-label-sm text-on-surface-variant">أقرب موعد:</span>
-          <span class="font-label-sm text-label-sm text-primary font-bold">${next ? `${formatTime(next.start_time)} (بعد ${waitText(toMin(next.start_time) - nowMin())})` : "لا مواعيد متبقية"}</span>
-        </div>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex flex-col justify-between gap-space-sm">
-        <div class="flex items-center justify-between">
-          <div class="w-10 h-10 rounded-xl bg-tertiary-container/15 flex items-center justify-center text-tertiary"><span class="material-symbols-outlined text-[22px]">check_circle</span></div>
-          <span class="font-label-sm text-label-sm text-secondary font-semibold">نسبة الإنجاز ${rate}%</span>
-        </div>
-        <div class="flex items-center justify-between">
-          <div>
-            <span class="font-body-sm text-body-sm text-secondary">الاستشارات المكتملة • Completed</span>
-            <div class="flex items-baseline gap-space-xs mt-1">
-              <span class="font-display-lg text-display-lg font-bold text-on-surface tabular-nums">${completed}</span>
-              <span class="font-headline-sm text-headline-sm text-secondary">/ ${total}</span>
-            </div>
-          </div>
-          <div class="relative w-12 h-12 flex items-center justify-center">
-            <svg class="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
-              <path class="text-surface-container-high" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
-              <path class="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="${rate}, 100" stroke-linecap="round" stroke-width="3.5"></path>
-            </svg>
-            <span class="absolute font-label-sm text-label-sm font-bold text-primary tabular-nums">${rate}%</span>
-          </div>
-        </div>
-        <div class="w-full bg-surface-container-high rounded-full h-2 overflow-hidden"><div class="bg-primary h-2 rounded-full" style="width: ${rate}%;"></div></div>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex flex-col justify-between gap-space-sm">
-        <div class="flex items-center justify-between">
-          <div class="w-10 h-10 rounded-xl bg-secondary-container flex items-center justify-center text-on-secondary-fixed"><span class="material-symbols-outlined text-[22px]">payments</span></div>
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container text-secondary font-label-sm text-label-sm"><span>رسوم العيادة</span></span>
-        </div>
-        <div>
-          <span class="font-body-sm text-body-sm text-secondary">الإيرادات المتوقعة اليوم • Revenue</span>
-          <div class="flex items-baseline gap-space-xs mt-1">
-            <span class="font-display-lg text-display-lg font-bold text-primary tabular-nums">${revenue.toLocaleString("en-US")}</span>
-            <span class="font-label-md text-label-md text-secondary">ج.س (SDG)</span>
-          </div>
-        </div>
-        <div class="flex items-center justify-between pt-space-xs bg-surface-container-low rounded-xl px-space-sm py-1.5">
-          <span class="font-label-sm text-label-sm text-tertiary font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">shield</span>${escapeHtml(feeNote)}</span>
-          <span class="font-label-sm text-label-sm text-secondary">محسوبة من رسوم الأطباء</span>
-        </div>
-      </div>
-    </section>
-
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
-      <section class="lg:col-span-8 flex flex-col gap-space-md">
-        <div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
-          <div class="flex items-center gap-space-sm">
-            <div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-on-primary"><span class="material-symbols-outlined text-[20px]">view_timeline</span></div>
-            <div>
-              <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">جدول الحالات والمواعيد المباشرة</h2>
-              <p class="font-body-sm text-body-sm text-secondary">سير مواعيد اليوم • Live Patient Stream</p>
-            </div>
-          </div>
-          <div id="db-filters" class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl overflow-x-auto"></div>
-        </div>
-        <div id="db-stream" class="flex flex-col gap-space-md"></div>
       </section>
 
-      <aside class="lg:col-span-4 flex flex-col gap-space-md">
-        <div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex flex-col gap-space-sm">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-space-xs">
-              <span class="w-2.5 h-2.5 rounded-full ${upcoming.length ? "bg-error animate-ping" : "bg-outline-variant"}"></span>
-              <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">صالة الانتظار المباشرة (${upcoming.length})</h3>
-            </div>
-            <span class="font-label-sm text-label-sm text-secondary">${escapeHtml(profile?.hospital_name || "عن بُعد")}</span>
-          </div>
-          <p class="font-body-sm text-body-sm text-secondary">المواعيد المؤكدة المتبقية اليوم مرتبة حسب الوقت:</p>
-          <div id="db-queue" class="flex flex-col gap-space-xs mt-space-xs"></div>
-          <button id="db-queue-all" class="w-full py-2 mt-space-xs rounded-xl bg-surface-container-low hover:bg-surface-container text-primary font-label-sm text-label-sm font-semibold transition-colors" type="button">عرض كامل سجل الحجوزات</button>
+      <section class="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4" aria-label="ملخص اليوم">
+        <div class="bg-surface-container-lowest p-4">
+          <p class="text-[13px] text-on-surface-variant">مواعيد اليوم</p>
+          <p class="mt-1 text-[24px] font-semibold tabular-nums text-on-surface">${total}</p>
+          <p class="mt-0.5 text-[12px] text-on-surface-variant">${morning} صباحاً · ${evening} مساءً</p>
         </div>
-
-        <div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex flex-col gap-space-sm">
-          <div class="flex items-center gap-space-xs">
-            <div class="w-8 h-8 rounded-lg bg-primary-container/20 flex items-center justify-center text-primary"><span class="material-symbols-outlined text-[18px]">clinical_notes</span></div>
-            <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">${profile ? "بيانات عيادتك" : "ملخص العيادات"}</h3>
-          </div>
-          <div id="db-clinic-panel" class="flex flex-col gap-space-xs"></div>
-          <button id="db-clinic-edit" class="w-full py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-label-sm text-label-sm font-bold transition-all" type="button">${profile ? "إدارة بيانات العيادة والمواعيد" : "فتح سجل الحجوزات"}</button>
+        <div class="bg-surface-container-lowest p-4">
+          <p class="text-[13px] text-on-surface-variant">في الانتظار</p>
+          <p class="mt-1 text-[24px] font-semibold tabular-nums text-on-surface">${upcoming.length}</p>
+          <p class="mt-0.5 text-[12px] text-on-surface-variant">${next ? `التالية ${escapeHtml(formatTime(next.start_time))}` : "لا مواعيد متبقية"}</p>
         </div>
+        <div class="bg-surface-container-lowest p-4">
+          <p class="text-[13px] text-on-surface-variant">مكتملة</p>
+          <p class="mt-1 text-[24px] font-semibold tabular-nums text-on-surface">${completed}<span class="text-[15px] font-normal text-on-surface-variant"> / ${total}</span></p>
+          <p class="mt-0.5 text-[12px] text-on-surface-variant">نسبة الإنجاز <span class="tabular-nums">${rate}%</span></p>
+        </div>
+        <div class="bg-surface-container-lowest p-4">
+          <p class="text-[13px] text-on-surface-variant">الإيرادات المتوقعة</p>
+          <p class="mt-1 text-[24px] font-semibold tabular-nums text-on-surface">${revenue.toLocaleString("en-US")}<span class="text-[14px] font-normal text-on-surface-variant"> ج.س</span></p>
+          <p class="mt-0.5 text-[12px] text-on-surface-variant"><span class="tabular-nums">${total - cancelled - noShow}</span> زيارة غير ملغاة</p>
+        </div>
+      </section>
 
-        ${profile && profile.insurances.length ? `
-        <div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex flex-col gap-space-sm">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-space-xs">
-              <div class="w-8 h-8 rounded-lg bg-tertiary-container/15 flex items-center justify-center text-tertiary"><span class="material-symbols-outlined text-[18px]">shield</span></div>
-              <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">شركات التأمين المرتبطة</h3>
-            </div>
-            <span class="font-label-sm text-label-sm text-tertiary font-bold tabular-nums">${profile.insurances.length} شركة</span>
+      <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <section aria-labelledby="db-stream-title">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-1">
+            <h2 id="db-stream-title" class="text-[15px] font-semibold text-on-surface">سير المواعيد</h2>
+            <div id="db-filters" class="flex items-center gap-1"></div>
           </div>
-          <div class="flex flex-wrap gap-space-xs">
-            ${profile.insurances.map((n) => `<span class="px-space-sm py-1 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm">${escapeHtml(n)}</span>`).join("")}
-          </div>
-          <div class="flex items-center justify-between pt-space-xs text-on-surface-variant font-label-sm text-label-sm">
-            <span>الرسوم المعتمدة للاستشارة:</span>
-            <span class="font-semibold text-primary">${escapeHtml(money(profile.consultation_fee))}</span>
-          </div>
-        </div>` : ""}
+          <div id="db-stream" class="flex flex-col divide-y divide-line"></div>
+        </section>
 
-        ${next ? `
-        <div class="bg-gradient-to-br from-on-secondary-fixed to-inverse-surface rounded-2xl p-space-md text-on-secondary shadow-sm flex flex-col gap-space-sm">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-space-xs">
-              <span class="material-symbols-outlined text-primary-fixed text-[20px]">badge</span>
-              <span class="font-label-md text-label-md text-primary-fixed font-bold">بطاقة تصريح دخول العيادة الذكية</span>
+        <aside class="flex flex-col gap-6">
+          <section aria-labelledby="db-queue-title">
+            <div class="flex items-baseline justify-between gap-2">
+              <h2 id="db-queue-title" class="text-[14px] font-semibold text-on-surface">صالة الانتظار</h2>
+              <span class="text-[12px] tabular-nums text-on-surface-variant">${upcoming.length}</span>
             </div>
-            <span class="font-label-sm text-label-sm text-outline-variant">Smart Pass</span>
-          </div>
-          <div class="flex items-center justify-between bg-surface-container-lowest/10 rounded-xl p-space-sm">
-            <div class="flex flex-col">
-              <span class="font-label-md text-label-md font-bold">${escapeHtml(next.patient_name)}</span>
-              <span class="font-body-sm text-body-sm text-secondary-fixed-dim">${escapeHtml(contentOf(next.doctor_specialization).clinic.name)}</span>
+            <div id="db-queue" class="mt-1 flex flex-col divide-y divide-line"></div>
+            <button id="db-queue-all" class="mt-3 h-8 w-full rounded-lg border border-line text-[12px] font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low" type="button">عرض سجل الحجوزات</button>
+          </section>
+
+          <section aria-labelledby="db-clinic-title">
+            <h2 id="db-clinic-title" class="text-[14px] font-semibold text-on-surface">${profile ? "بيانات العيادة" : "ملخص العيادات"}</h2>
+            <div id="db-clinic-panel" class="mt-1 flex flex-col"></div>
+            <button id="db-clinic-edit" class="mt-3 h-8 w-full rounded-lg border border-line text-[12px] font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low" type="button">${profile ? "إدارة بيانات العيادة" : "فتح سجل الحجوزات"}</button>
+          </section>
+
+          ${profile && profile.insurances.length ? `
+          <section aria-labelledby="db-ins-title">
+            <div class="flex items-baseline justify-between gap-2">
+              <h2 id="db-ins-title" class="text-[14px] font-semibold text-on-surface">شركات التأمين</h2>
+              <span class="text-[12px] tabular-nums text-on-surface-variant">${profile.insurances.length}</span>
             </div>
-            <span class="font-label-md text-label-md font-bold text-primary-fixed tabular-nums">${escapeHtml(formatTime(next.start_time))}</span>
-          </div>
-          <div class="flex items-center justify-between font-label-sm text-label-sm">
-            <span dir="ltr" class="font-mono">${escapeHtml(fileRef(next.appointment_id))}</span>
-            <span class="text-tertiary-fixed">${toMin(next.start_time) - nowMin() <= 30 ? "نشطة الآن • جاهزة للاستخدام" : "تُصدر قبل الموعد بـ 30 دقيقة"}</span>
-          </div>
-        </div>` : ""}
-      </aside>
+            <ul class="mt-1 flex flex-col divide-y divide-line">
+              ${profile.insurances.map((n) => `<li class="flex items-center justify-between gap-2 py-2 text-[13px] text-on-surface"><span class="truncate">${escapeHtml(n)}</span><span class="material-symbols-outlined text-[16px] text-tertiary" aria-hidden="true">check</span></li>`).join("")}
+            </ul>
+            <div class="mt-2 flex items-baseline justify-between gap-2 text-[12px] text-on-surface-variant">
+              <span>الرسوم المعتمدة</span>
+              <span class="text-[14px] font-semibold tabular-nums text-on-surface">${escapeHtml(money(profile.consultation_fee))}</span>
+            </div>
+          </section>` : ""}
+
+          ${next ? `
+          <section class="rounded-xl border border-line px-4 py-3" aria-labelledby="db-pass-title">
+            <div class="flex items-baseline justify-between gap-2">
+              <h2 id="db-pass-title" class="text-[14px] font-semibold text-on-surface">بطاقة الدخول</h2>
+              <span class="text-[12px] tabular-nums text-on-surface-variant">${escapeHtml(formatTime(next.start_time))}</span>
+            </div>
+            <p class="mt-2 truncate text-[14px] font-medium text-on-surface">${escapeHtml(next.patient_name)}</p>
+            <p class="mt-0.5 truncate text-[12px] text-on-surface-variant">${escapeHtml(contentOf(next.doctor_specialization).clinic.name)}</p>
+            <div class="mt-2 flex items-center justify-between gap-2 text-[12px] text-on-surface-variant">
+              <span class="tabular-nums" dir="ltr">${escapeHtml(fileRef(next.appointment_id))}</span>
+              <span>${toMin(next.start_time) - nowMin() <= 30 ? "جاهزة الآن" : "تُصدر قبل الموعد بـ ٣٠ دقيقة"}</span>
+            </div>
+          </section>` : ""}
+        </aside>
+      </div>
     </div>`;
+
 
     paintFilters();
     paintStream();
@@ -366,12 +301,15 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     host2.innerHTML = FILTERS.map((f) => {
       const active = filter === f.key;
       const n = countOf(rows, f.key);
-      return `<button data-filter="${f.key}" class="flex items-center gap-1 px-space-sm py-1 rounded-lg font-label-sm text-label-sm whitespace-nowrap transition-all ${
-        active ? "bg-surface-container-lowest text-primary font-bold shadow-xs" : "text-secondary hover:text-on-surface"
-      }"><span class="material-symbols-outlined text-[15px]">${f.icon}</span><span>${f.label} (${n})</span></button>`;
+      return `<button data-filter="${f.key}" class="relative inline-flex h-9 items-center gap-1.5 px-2 text-[13px] transition-colors ${
+        active ? "font-semibold text-on-surface" : "text-on-surface-variant hover:text-on-surface"
+      }"><span>${f.label}</span><span class="text-[12px] tabular-nums ${active ? "text-primary" : "text-on-surface-variant"}">${n}</span>${
+        active ? '<span class="absolute inset-x-1 bottom-0 h-0.5 bg-primary"></span>' : ""
+      }</button>`;
     }).join("");
     host2.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((b) => b.addEventListener("click", () => { filter = b.dataset.filter as Filter; paintFilters(); paintStream(); }));
   };
+
 
   const range = (r: Row) => `<span dir="ltr" class="tabular-nums">${escapeHtml(formatTime(r.start_time))}</span> <span class="text-outline">-</span> <span dir="ltr" class="tabular-nums">${escapeHtml(formatTime(plus30(r.start_time)))}</span>`;
 
@@ -384,105 +322,51 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     return "waiting";
   };
 
-  const cardActions = (r: Row) => {
+  const cardActions = (r: Row, primary = false) => {
     if (r.status !== "booked") return "";
-    return `<div class="flex flex-wrap items-center gap-space-xs">
-      <button data-done="${escapeHtml(r.appointment_id)}" class="inline-flex items-center gap-1 px-space-md py-2 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-primary-container transition-all" type="button"><span class="material-symbols-outlined text-[18px]">check</span>تسجيل كمكتمل</button>
-      <button data-cancel="${escapeHtml(r.appointment_id)}" class="inline-flex items-center gap-1 px-space-md py-2 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-error-container/60 hover:text-on-error-container font-label-sm text-label-sm transition-all" type="button"><span class="material-symbols-outlined text-[18px]">event_busy</span>إلغاء</button>
-      <a href="tel:${escapeHtml(r.patient_phone)}" class="p-2 rounded-full bg-surface-container-low text-secondary hover:bg-surface-container transition-all" title="اتصال بالمريض"><span class="material-symbols-outlined text-[20px]">call</span></a>
+    return `<div class="flex items-center gap-1.5">
+      <button data-done="${escapeHtml(r.appointment_id)}" class="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-[12px] font-semibold transition-colors ${primary ? "bg-primary text-on-primary hover:bg-primary-container" : "border border-line bg-surface-container-lowest text-on-surface hover:bg-surface-container-low"}" type="button"><span class="material-symbols-outlined text-[16px]" aria-hidden="true">check</span>تم</button>
+      <button data-cancel="${escapeHtml(r.appointment_id)}" class="inline-flex h-8 items-center rounded-lg px-2 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-error" type="button">إلغاء</button>
+      <a href="tel:${escapeHtml(r.patient_phone)}" class="grid h-8 w-8 place-items-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container-low" title="اتصال بالمريض"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">call</span></a>
     </div>`;
   };
 
-  const card = (r: Row) => {
+  const card = (r: Row, primary = false) => {
     const kind = kindOf(r);
-    const ref = `<span class="px-2 py-0.5 rounded-md bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-mono" dir="ltr">${escapeHtml(fileRef(r.appointment_id))}</span>`;
-    const phone = `<span class="font-label-sm text-label-sm text-secondary font-mono" dir="ltr">${escapeHtml(r.patient_phone)}</span>`;
-    const doctor = `<span class="px-2 py-0.5 rounded-md bg-surface-container-highest text-secondary font-label-sm text-label-sm">${escapeHtml(r.doctor_name)}</span>`;
-    const mins = toMin(r.start_time) - nowMin();
-
-    if (kind === "active") {
-      return `<div class="relative bg-surface-container-lowest rounded-2xl p-space-lg shadow-md overflow-hidden">
-        <div class="absolute top-0 start-0 w-2.5 h-full bg-primary"></div>
-        <div class="ps-space-sm flex flex-col gap-space-md">
-          <div class="flex flex-wrap items-center justify-between gap-space-sm">
-            <div class="flex flex-wrap items-center gap-space-xs">
-              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm">
-                <span class="w-2 h-2 rounded-full bg-tertiary-fixed animate-ping"></span>قيد الكشف الآن • Current Consultation
-              </span>
-              ${ref}
-            </div>
-            <div class="flex items-center gap-space-xs bg-surface-container-low px-space-sm py-1 rounded-full">
-              <span class="material-symbols-outlined text-primary text-[18px]">timelapse</span>
-              <span class="font-label-sm text-label-sm text-on-surface">${range(r)}</span>
-              <span class="font-label-sm text-label-sm text-error font-bold">(متبقي ${waitText(toMin(r.start_time) + 30 - nowMin())})</span>
-            </div>
-          </div>
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md bg-surface-container-low/70 rounded-xl p-space-md">
-            <div class="flex items-center gap-space-md">
-              <span class="w-16 h-16 rounded-2xl bg-surface-container-highest flex-shrink-0 grid place-items-center text-primary font-headline-sm font-bold">${escapeHtml(initials(r.patient_name))}</span>
-              <div class="flex flex-col gap-1">
-                <div class="flex flex-wrap items-center gap-space-sm">
-                  <h3 class="font-headline-md text-headline-md font-bold text-on-surface">${escapeHtml(r.patient_name)}</h3>
-                  ${doctor}
-                </div>
-                <div class="flex flex-wrap items-center gap-space-sm">${phone}<span class="font-label-sm text-label-sm text-secondary">${escapeHtml(specialtyLabel(r.doctor_specialization))}</span></div>
-              </div>
-            </div>
-          </div>
-          <div class="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
-            <div class="flex flex-wrap items-center gap-space-xs">${cardActions(r)}</div>
-            <span class="font-label-sm text-label-sm text-secondary">الرسوم: ${escapeHtml(money(r.consultation_fee))}</span>
-          </div>
-        </div>
-      </div>`;
-    }
-
+    const active = kind === "active";
     const muted = kind === "done" || kind === "cancelled" || kind === "noshow";
-    const tag = kind === "waiting"
-      ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-semibold"><span class="material-symbols-outlined text-[14px]">schedule</span>التالي بالدور • Scheduled</span>`
-      : kind === "pending"
-        ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-warning-soft text-warning font-label-sm text-label-sm font-semibold"><span class="material-symbols-outlined text-[14px]">pending_actions</span>بانتظار التسجيل • Pending</span>`
-      : kind === "done"
-        ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-highest text-secondary font-label-sm text-label-sm"><span class="material-symbols-outlined text-[14px] text-tertiary">check_circle</span>تم الكشف وإغلاق الملف • Completed</span>`
-        : kind === "cancelled"
-          ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container/60 text-on-error-container font-label-sm text-label-sm"><span class="material-symbols-outlined text-[14px]">event_busy</span>ملغي • Cancelled</span>`
-          : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-soft text-warning font-label-sm text-label-sm"><span class="material-symbols-outlined text-[14px]">person_off</span>لم يحضر • No Show</span>`;
-
-    return `<div class="${muted ? "bg-surface-container-low rounded-2xl p-space-md shadow-xs opacity-90" : "bg-surface-container-lowest rounded-2xl p-space-md shadow-sm hover:shadow-md"} transition-all flex flex-col gap-space-sm">
-      <div class="flex flex-wrap items-center justify-between gap-space-xs">
-        <div class="flex flex-wrap items-center gap-space-xs">${tag}${ref}${doctor}</div>
-        <span class="font-label-md text-label-md ${kind === "waiting" ? "text-primary font-bold" : kind === "pending" ? "text-warning font-semibold" : "text-secondary"} flex items-center gap-1">
-          <span class="material-symbols-outlined text-[18px]">schedule</span>
-          ${range(r)}
-          ${kind === "waiting" ? `<span class="text-secondary font-label-sm">(بعد ${waitText(mins)})</span>` : ""}
-        </span>
-      </div>
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md pt-space-xs">
-        <div class="flex items-center gap-space-md">
-          <span class="w-12 h-12 rounded-xl ${muted ? "bg-surface-container-highest text-outline" : "bg-surface-container-low text-secondary"} flex-shrink-0 grid place-items-center font-label-lg font-bold">${escapeHtml(initials(r.patient_name))}</span>
-          <div>
-            <div class="flex flex-wrap items-center gap-space-sm">
-              <h4 class="font-headline-sm text-headline-sm font-bold text-on-surface">${escapeHtml(r.patient_name)}</h4>
-              ${phone}
-            </div>
-            <p class="font-body-md text-body-md text-secondary mt-0.5">${escapeHtml(specialtyLabel(r.doctor_specialization))} · الرسوم ${escapeHtml(money(r.consultation_fee))}</p>
-          </div>
+    const statusText = kind === "active" ? "الآن" : kind === "waiting" ? "التالي" : kind === "pending" ? "بانتظار التسجيل" : kind === "done" ? "مكتمل" : kind === "cancelled" ? "ملغي" : "لم يحضر";
+    const statusTone = kind === "active" ? "text-primary" : kind === "pending" ? "text-warning" : kind === "cancelled" || kind === "noshow" ? "text-error" : "text-on-surface-variant";
+    return `<div class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 ${active ? "border-s-2 border-primary bg-primary/5" : ""}">
+      <div class="w-14 shrink-0 text-[14px] font-semibold tabular-nums ${muted ? "text-on-surface-variant" : "text-on-surface"}">${escapeHtml(formatTime(r.start_time))}</div>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+          <p class="truncate text-[15px] font-semibold ${muted ? "text-on-surface-variant" : "text-on-surface"}">${escapeHtml(r.patient_name)}</p>
+          <span class="shrink-0 text-[12px] ${statusTone}">${statusText}</span>
         </div>
-        ${cardActions(r)}
+        <p class="mt-0.5 truncate text-[13px] text-on-surface-variant">${escapeHtml(specialtyLabel(r.doctor_specialization))} · <span dir="ltr" class="tabular-nums">${escapeHtml(r.patient_phone)}</span></p>
+      </div>
+      <div class="flex items-center justify-between gap-3 sm:justify-end">
+        <span class="text-[14px] tabular-nums ${muted ? "text-on-surface-variant" : "text-on-surface"}">${escapeHtml(money(r.consultation_fee))}</span>
+        ${cardActions(r, primary)}
       </div>
     </div>`;
   };
+
 
   const paintStream = () => {
     const list = host.querySelector("#db-stream");
     if (!list) return;
     const shown = matches(rows, filter, query);
+    const nextId = rows
+      .filter((r) => r.status === "booked" && toMin(r.start_time) > nowMin())
+      .sort((a, b) => toMin(a.start_time) - toMin(b.start_time))[0]?.appointment_id;
     list.innerHTML = shown.length
-      ? shown.map(card).join("")
-      : `<div class="bg-surface-container-lowest rounded-2xl p-space-xl shadow-sm flex flex-col items-center gap-space-sm text-center">
-          <span class="material-symbols-outlined text-outline text-[36px]">event_available</span>
-          <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">لا توجد مواعيد مطابقة</h3>
-          <p class="font-body-md text-body-md text-secondary max-w-[36ch]">${rows.length ? "جرّب تغيير الفلتر أو مسح كلمة البحث." : "لا توجد مواعيد مسجّلة على عيادتك اليوم."}</p>
+      ? shown.map((r) => card(r, r.appointment_id === nextId)).join("")
+      : `<div class="flex flex-col items-center gap-2 px-6 py-12 text-center">
+          <span class="material-symbols-outlined text-[28px] text-on-surface-variant" aria-hidden="true">event_available</span>
+          <p class="text-[15px] font-semibold text-on-surface">لا توجد مواعيد مطابقة</p>
+          <p class="max-w-[40ch] text-[13px] text-on-surface-variant">${rows.length ? "جرّب تغيير الفلتر أو مسح كلمة البحث." : "لا توجد مواعيد مسجّلة على عيادتك اليوم."}</p>
         </div>`;
 
     list.querySelectorAll<HTMLButtonElement>("[data-done]").forEach((b) => b.addEventListener("click", async () => {
@@ -509,26 +393,27 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
     const upcoming = matches(rows, "waiting", query).filter((r) => toMin(r.start_time) >= nowMin());
     list.innerHTML = upcoming.length
       ? upcoming.map((r, i) => `
-        <div class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
-          <div class="flex items-center gap-space-xs">
-            <span class="w-6 h-6 rounded-full ${i === 0 ? "bg-secondary-container text-on-secondary-fixed" : "bg-surface-container-highest text-secondary"} font-label-sm text-label-sm grid place-items-center font-bold">${i + 1}</span>
-            <div class="flex flex-col">
-              <span class="font-label-md text-label-md font-bold text-on-surface">${escapeHtml(r.patient_name)}</span>
-              <span class="font-body-sm text-body-sm text-secondary">${escapeHtml(formatTime(r.start_time))} · بعد ${waitText(toMin(r.start_time) - nowMin())}</span>
+        <div class="flex items-center justify-between gap-3 py-2.5">
+          <div class="flex min-w-0 items-center gap-3">
+            <span class="w-4 shrink-0 text-[12px] tabular-nums text-on-surface-variant">${i + 1}</span>
+            <div class="min-w-0">
+              <p class="truncate text-[13px] font-medium text-on-surface">${escapeHtml(r.patient_name)}</p>
+              <p class="mt-0.5 text-[12px] text-on-surface-variant"><span class="tabular-nums">${escapeHtml(formatTime(r.start_time))}</span> · بعد ${waitText(toMin(r.start_time) - nowMin())}</p>
             </div>
           </div>
-          <span class="px-2 py-0.5 rounded-full ${i === 0 ? "bg-tertiary-fixed text-on-tertiary-fixed" : "bg-surface-container text-secondary"} font-label-sm text-label-sm">${i === 0 ? "التالي • جاهز" : "مؤكد"}</span>
+          <span class="shrink-0 text-[12px] ${i === 0 ? "font-semibold text-primary" : "text-on-surface-variant"}">${i === 0 ? "التالي" : "مؤكد"}</span>
         </div>`).join("")
-      : `<p class="font-body-sm text-body-sm text-secondary py-space-sm text-center">لا مواعيد مؤكدة متبقية اليوم</p>`;
+      : `<p class="py-3 text-[13px] text-on-surface-variant">لا مواعيد مؤكدة متبقية اليوم.</p>`;
   };
+
 
   const paintClinicPanel = (profile: Awaited<ReturnType<typeof getDoctorProfile>>) => {
     const box = host.querySelector("#db-clinic-panel");
     if (!box) return;
     const item = (label: string, value: string, strong = false) => `
-      <div class="flex items-center justify-between p-space-sm rounded-xl bg-surface-container-low">
-        <span class="font-body-sm text-body-sm text-secondary">${escapeHtml(label)}</span>
-        <span class="font-label-md text-label-md ${strong ? "text-primary font-bold" : "text-on-surface font-semibold"}">${value}</span>
+      <div class="flex items-baseline justify-between gap-3 border-b border-line py-2 last:border-0">
+        <span class="text-[12px] text-on-surface-variant">${escapeHtml(label)}</span>
+        <span class="text-[13px] tabular-nums ${strong ? "font-semibold text-on-surface" : "text-on-surface"}">${value}</span>
       </div>`;
     if (!profile) {
       const doctors = new Set(rows.map((r) => r.doctor_id)).size;
@@ -545,11 +430,12 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
       item("التخصص", escapeHtml(specialtyLabel(profile.specialization))),
       item("الرسوم المعتمدة", escapeHtml(money(profile.consultation_fee)), true),
       item("الموقع", escapeHtml(profile.hospital_name || "بدون موقع مسجّل")),
-      item("التقييم", `<span class="tabular-nums">${profile.rating ? profile.rating.toFixed(1) : "—"}</span> <span class="text-secondary font-body-sm">(${profile.reviews_count} تقييم)</span>`),
+      item("التقييم", `<span class="tabular-nums">${profile.rating ? profile.rating.toFixed(1) : "—"}</span> <span class="text-[12px] text-on-surface-variant">(${profile.reviews_count} تقييم)</span>`),
       item("سنوات الخبرة", `<span class="tabular-nums">${profile.experience_years ?? "—"}</span>`),
-      item("اللغات", escapeHtml(profile.languages.join(" • ") || "العربية")),
+      item("اللغات", escapeHtml(profile.languages.join(" · ") || "العربية")),
     ].join("");
   };
+
 
   const search = panel("#db-search") as HTMLInputElement | null;
   if (search) {
@@ -565,7 +451,36 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User) {
   const newBooking = panel("#db-new-booking");
   if (newBooking) newBooking.addEventListener("click", () => { location.hash = "#doctors"; });
 
+
+  // __FIXTURE__ dev-only preview of the dashboard with sample appointments
+  if (import.meta.env.DEV && new URLSearchParams(location.search).has("fixture")) {
+    const t = new URLSearchParams(location.search).get("theme");
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    const d = localDateISO();
+    rows = [
+      { appointment_id: "fix-1", patient_name: "أحمد يوسف محمد", patient_phone: "0912345101", doctor_name: "د. طارق المنصور", doctor_specialization: "قلب وأوعية دموية", consultation_fee: 6000, available_date: d, start_time: "08:30", end_time: "08:30", status: "completed", doctor_id: "fix-doc" },
+      { appointment_id: "fix-2", patient_name: "سارة عثمان إدريس", patient_phone: "0912345102", doctor_name: "د. طارق المنصور", doctor_specialization: "باطنية", consultation_fee: 6000, available_date: d, start_time: "09:00", end_time: "09:00", status: "completed", doctor_id: "fix-doc" },
+      { appointment_id: "fix-3", patient_name: "محمد علي الطيب", patient_phone: "0912345103", doctor_name: "د. طارق المنصور", doctor_specialization: "قلب وأوعية دموية", consultation_fee: 5000, available_date: d, start_time: "09:30", end_time: "09:30", status: "cancelled_by_patient", doctor_id: "fix-doc" },
+      { appointment_id: "fix-4", patient_name: "هدى إبراهيم عبد الرحمن", patient_phone: "0912345104", doctor_name: "د. طارق المنصور", doctor_specialization: "قلب وأوعية دموية", consultation_fee: 7000, available_date: d, start_time: "10:00", end_time: "10:00", status: "completed", doctor_id: "fix-doc" },
+      { appointment_id: "fix-5", patient_name: "خالد مبارك سليمان", patient_phone: "0912345105", doctor_name: "د. طارق المنصور", doctor_specialization: "قلب وأوعية دموية", consultation_fee: 5000, available_date: d, start_time: "10:30", end_time: "10:30", status: "no_show", doctor_id: "fix-doc" },
+      { appointment_id: "fix-6", patient_name: "عمر الصادق النور", patient_phone: "0912345106", doctor_name: "د. طارق المنصور", doctor_specialization: "باطنية", consultation_fee: 6000, available_date: d, start_time: "11:00", end_time: "11:00", status: "booked", doctor_id: "fix-doc" },
+      { appointment_id: "fix-7", patient_name: "مريم خالد حسين", patient_phone: "0912345107", doctor_name: "د. طارق المنصور", doctor_specialization: "قلب وأوعية دموية", consultation_fee: 6000, available_date: d, start_time: "11:30", end_time: "11:30", status: "booked", doctor_id: "fix-doc" },
+      { appointment_id: "fix-8", patient_name: "كمال الأمين عبد الله", patient_phone: "0912345108", doctor_name: "د. طارق المنصور", doctor_specialization: "قلب وأوعية دموية", consultation_fee: 7000, available_date: d, start_time: "12:00", end_time: "12:00", status: "booked", doctor_id: "fix-doc" },
+      { appointment_id: "fix-9", patient_name: "نجلاء موسى عيسى", patient_phone: "0912345109", doctor_name: "د. طارق المنصور", doctor_specialization: "باطنية", consultation_fee: 5000, available_date: d, start_time: "12:30", end_time: "12:30", status: "booked", doctor_id: "fix-doc" },
+      { appointment_id: "fix-10", patient_name: "ياسر عبد الله بابكر", patient_phone: "0912345110", doctor_name: "د. طارق المنصور", doctor_specialization: "قلب وأوعية دموية", consultation_fee: 6000, available_date: d, start_time: "13:00", end_time: "13:00", status: "booked", doctor_id: "fix-doc" },
+      { appointment_id: "fix-11", patient_name: "إسراء يوسف إبراهيم", patient_phone: "0912345111", doctor_name: "د. طارق المنصور", doctor_specialization: "قلب وأوعية دموية", consultation_fee: 6000, available_date: d, start_time: "16:00", end_time: "16:00", status: "booked", doctor_id: "fix-doc" },
+      { appointment_id: "fix-12", patient_name: "طه البدوي عثمان", patient_phone: "0912345112", doctor_name: "د. طارق المنصور", doctor_specialization: "قلب وأوعية دموية", consultation_fee: 7000, available_date: d, start_time: "16:30", end_time: "16:30", status: "booked", doctor_id: "fix-doc" },
+      { appointment_id: "fix-13", patient_name: "أمل فرح أحمد", patient_phone: "0912345113", doctor_name: "د. طارق المنصور", doctor_specialization: "باطنية", consultation_fee: 5000, available_date: d, start_time: "17:00", end_time: "17:00", status: "booked", doctor_id: "fix-doc" },
+      { appointment_id: "fix-14", patient_name: "سامي الترابي علي", patient_phone: "0912345114", doctor_name: "د. طارق المنصور", doctor_specialization: "قلب وأوعية دموية", consultation_fee: 6000, available_date: d, start_time: "17:30", end_time: "17:30", status: "booked", doctor_id: "fix-doc" },
+    ];
+    renderBody(null, d, []);
+    paintStream();
+    paintQueue();
+    paintClinicPanel(null);
+    return;
+  }
+
   try { await reload(); }
-  catch (e) { host.innerHTML = `<div class="bg-error-container/40 rounded-2xl p-space-xl text-center font-body-md text-body-md text-on-error-container">${escapeHtml(translateAuthError(e))}</div>`; }
+  catch (e) { host.innerHTML = `<div class="rounded-xl border border-line bg-surface-container-lowest p-6 text-center text-[14px] text-on-surface-variant">${escapeHtml(translateAuthError(e))}</div>`; }
   void live;
 }
