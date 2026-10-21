@@ -141,7 +141,10 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
             <div class="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-primary/10 text-[18px] font-bold text-primary">${escapeHtml(initials(name))}</div>
             <div class="min-w-0">
               <h2 class="font-headline-sm text-headline-sm font-bold text-on-surface">${escapeHtml(name || "مستخدم ميعادي")}</h2>
-              <span class="mt-1 inline-flex items-center gap-1 rounded-md bg-surface-container px-2 py-0.5 text-[12px] text-on-surface-variant"><span class="material-symbols-outlined text-[14px]" aria-hidden="true">shield_person</span>${escapeHtml(roleLabel)}</span>
+              <div class="mt-1 flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center gap-1 rounded-md bg-surface-container px-2 py-0.5 text-[12px] text-on-surface-variant"><span class="material-symbols-outlined text-[14px]" aria-hidden="true">shield_person</span>${escapeHtml(roleLabel)}</span>
+                ${docProfile && doctorId ? `<a href="#doctor/${escapeHtml(doctorId)}" class="inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary/10" title="كما يراها المرضى">صفحتي العامة<span class="material-symbols-outlined text-[14px]" aria-hidden="true">open_in_new</span></a>` : ""}
+              </div>
             </div>
           </div>
           <button id="ac-logout" type="button" class="flex items-center gap-space-xs rounded-lg px-4 py-2.5 font-label-md text-label-md font-bold text-error transition-colors hover:bg-error-container/40"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">logout</span>تسجيل الخروج</button>
@@ -438,8 +441,10 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
 
   const cardActions = (r: Row, primary = false) => {
     if (r.status !== "booked") return "";
+    const slotPassed = toMin(r.start_time) + 30 <= nowMin();
     return `<div class="flex items-center gap-1.5">
       <button data-done="${escapeHtml(r.appointment_id)}" class="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-[12px] font-semibold transition-colors ${primary ? "bg-primary text-on-primary hover:bg-primary-container" : "border border-line bg-surface-container-lowest text-on-surface hover:bg-surface-container-low"}" type="button"><span class="material-symbols-outlined text-[16px]" aria-hidden="true">check</span>تم</button>
+      ${slotPassed ? `<button data-noshow="${escapeHtml(r.appointment_id)}" class="inline-flex h-8 items-center rounded-lg px-2 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-error" type="button" title="المريض لم يحضر">غياب</button>` : ""}
       <button data-cancel="${escapeHtml(r.appointment_id)}" class="inline-flex h-8 items-center rounded-lg px-2 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-error" type="button">إلغاء</button>
       <a href="tel:${escapeHtml(r.patient_phone)}" class="grid h-8 w-8 place-items-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container-low" title="اتصال بالمريض"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">call</span></a>
     </div>`;
@@ -497,6 +502,14 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
       const ok = await confirmSheet({ title: "إلغاء الموعد من العيادة", body: `إلغاء موعد ${row?.patient_name || "المريض"} وإتاحة الموعد مجدداً للحجز؟`, confirmLabel: "تأكيد الإلغاء", cancelLabel: "تراجع", tone: "danger", iconName: "event_busy" });
       if (!ok) return;
       try { await cancelAppointmentClinic(id); showToast("تم الإلغاء وإتاحة الموعد", "success"); await reload(); }
+      catch (e) { showToast(translateAuthError(e), "error"); }
+    }));
+    list.querySelectorAll<HTMLButtonElement>("[data-noshow]").forEach((b) => b.addEventListener("click", async () => {
+      const id = b.dataset.noshow!;
+      const row = rows.find((r) => r.appointment_id === id);
+      const ok = await confirmSheet({ title: "تسجيل عدم الحضور", body: `تسجيل غياب ${row?.patient_name || "المريض"} عن موعد الساعة ${row ? formatTime(row.start_time) : ""}؟`, confirmLabel: "تسجيل الغياب", cancelLabel: "تراجع", tone: "danger", iconName: "person_off" });
+      if (!ok) return;
+      try { await updateAppointmentState(id, "no_show"); showToast("تم تسجيل عدم الحضور", "success"); await reload(); }
       catch (e) { showToast(translateAuthError(e), "error"); }
     }));
   };

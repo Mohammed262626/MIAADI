@@ -693,7 +693,7 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
               <span class="material-symbols-outlined text-[22px]">stethoscope</span>
             </span>
             <div class="min-w-0">
-              <h3 class="font-label-lg text-label-lg font-bold text-on-surface truncate">${escapeHtml(d.name)}</h3>
+              <h3 class="font-label-lg text-label-lg font-bold text-on-surface truncate"><a href="#doctor/${escapeHtml(d.id)}" class="transition-colors hover:text-primary" title="صفحة الطبيب العامة">${escapeHtml(d.name)}</a></h3>
               <p class="font-body-sm text-body-sm text-secondary truncate">${escapeHtml(d.specialization)} · <span class="tabular-nums">${escapeHtml(String(d.consultation_fee))}</span> ج.س</p>
             </div>
           </div>
@@ -1065,6 +1065,13 @@ async function init() {
   render();
   void refreshAll();
   void runHousekeeping();
-  try { subscribeToRealtimeUpdates(() => void refreshDoctors().then(render), () => void refreshAll().then(render)); } catch { /* ignore */ }
+  // Realtime updates must never yank staff out of the dashboard — a full
+  // re-render would drop the schedule editor's unsaved input; on #admin the
+  // panels still refresh when visited, so update data silently there.
+  const onRealtime = (refresh: () => Promise<unknown>) => {
+    if (state.route.name === "admin") { void refresh(); return; }
+    void refresh().then(render);
+  };
+  try { subscribeToRealtimeUpdates(() => onRealtime(refreshDoctors), () => onRealtime(refreshAll)); } catch { /* ignore */ }
 }
 void init();
