@@ -40,6 +40,8 @@ export function renderAdminView(
     subtitle?: string;
     /** Doctor accounts only ever see their own bookings — no admin sub-tabs. */
     showSubTabs?: boolean;
+    /** A doctor's own bookings: every row is theirs, no clinic-wide doctor filter. */
+    singleDoctor?: boolean;
     onFilter: (patch: Partial<{ status: string; doctorId: string; dateFrom: string; dateTo: string; search: string; sortBy: string; sortDir: string }>) => void;
     onPage: (dir: 1 | -1) => void;
     onState: (id: string, state: "completed" | "no_show") => Promise<void>;
@@ -102,10 +104,10 @@ export function renderAdminView(
             }">${s.label}</button>`;
           }).join("")}
         </div>
-        <select id="admin-doc-filter" class="ms-auto h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface">
+        ${opts.singleDoctor ? "" : `<select id="admin-doc-filter" class="ms-auto h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface">
           <option value="">كل الأطباء</option>
           ${doctors.map((d) => `<option value="${escapeHtml(d.id)}" ${filters.doctorId === d.id ? "selected" : ""}>${escapeHtml(d.name)}</option>`).join("")}
-        </select>
+        </select>`}
       </div>
       <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <input id="admin-search" placeholder="بحث باسم المريض أو رقم الجوال" value="${escapeHtml(filters.search)}" class="h-9 min-w-0 flex-1 rounded-lg border border-line bg-surface-container-lowest px-3 text-[13px] text-on-surface outline-none transition-colors placeholder:text-on-surface-variant focus:border-primary focus:ring-1 focus:ring-primary" />
@@ -127,7 +129,7 @@ export function renderAdminView(
             <tr>
               <th class="px-4 py-2.5 text-start font-medium">المريض</th>
               <th class="px-4 py-2.5 text-start font-medium">الجوال</th>
-              <th class="px-4 py-2.5 text-start font-medium">الطبيب</th>
+              ${opts.singleDoctor ? "" : `<th class="px-4 py-2.5 text-start font-medium">الطبيب</th>`}
               <th class="px-4 py-2.5 text-start font-medium">الموعد</th>
               <th class="px-4 py-2.5 text-start font-medium">الحالة</th>
               <th class="px-4 py-2.5 text-end font-medium">إجراءات</th>
@@ -168,7 +170,7 @@ export function renderAdminView(
 
   const renderRows = () => {
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-10 text-center text-[13px] text-on-surface-variant">لا توجد نتائج مطابقة للفلاتر الحالية</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${opts.singleDoctor ? 5 : 6}" class="px-4 py-10 text-center text-[13px] text-on-surface-variant">لا توجد نتائج مطابقة للفلاتر الحالية</td></tr>`;
       mobile.innerHTML = `<p class="px-4 py-8 text-center text-[13px] text-on-surface-variant">لا توجد نتائج مطابقة للفلاتر الحالية</p>`;
       return;
     }
@@ -176,7 +178,7 @@ export function renderAdminView(
       <tr class="transition-colors hover:bg-surface-container-low/60">
         <td class="px-4 py-3 font-medium text-on-surface">${escapeHtml(r.patient_name)}</td>
         <td class="px-4 py-3 text-[12px] tabular-nums text-on-surface-variant" dir="ltr">${escapeHtml(r.patient_phone)}</td>
-        <td class="px-4 py-3 text-on-surface">${escapeHtml(r.doctor_name)}</td>
+        ${opts.singleDoctor ? "" : `<td class="px-4 py-3 text-on-surface">${escapeHtml(r.doctor_name)}</td>`}
         <td class="px-4 py-3 text-[12px] text-on-surface-variant"><span class="tabular-nums">${escapeHtml(formatArabicDate(r.available_date))}</span> · <span class="tabular-nums">${escapeHtml(formatTime(r.start_time))}</span></td>
         <td class="px-4 py-3">${badge(r.status)}</td>
         <td class="px-4 py-3">${actionsHtml(r)}</td>
@@ -189,7 +191,7 @@ export function renderAdminView(
           ${badge(r.status)}
         </div>
         <span class="text-[12px] tabular-nums text-on-surface-variant" dir="ltr">${escapeHtml(r.patient_phone)}</span>
-        <span class="text-[12px] text-on-surface-variant">${escapeHtml(r.doctor_name)} · <span class="tabular-nums">${escapeHtml(formatArabicDate(r.available_date))}</span> <span class="tabular-nums">${escapeHtml(formatTime(r.start_time))}</span></span>
+        <span class="text-[12px] text-on-surface-variant">${opts.singleDoctor ? "" : `${escapeHtml(r.doctor_name)} · `}<span class="tabular-nums">${escapeHtml(formatArabicDate(r.available_date))}</span> <span class="tabular-nums">${escapeHtml(formatTime(r.start_time))}</span></span>
         ${actionsHtml(r)}
       </div>`).join("");
 
@@ -262,7 +264,7 @@ export function renderAdminView(
   searchEl.addEventListener("input", () => { clearTimeout(t); t = window.setTimeout(() => opts.onFilter({ search: searchEl.value }), 400); });
   fromEl.addEventListener("change", () => opts.onFilter({ dateFrom: fromEl.value || localDateISO() }));
   toEl.addEventListener("change", () => opts.onFilter({ dateTo: toEl.value || localDateISO() }));
-  docEl.addEventListener("change", () => opts.onFilter({ doctorId: docEl.value }));
+  docEl?.addEventListener("change", () => opts.onFilter({ doctorId: docEl.value }));
   sortEl.addEventListener("change", () => {
     const map: Record<string, [string, string]> = { available_date_desc: ["available_date", "desc"], available_date_asc: ["available_date", "asc"], patient_name_asc: ["patient_name", "asc"] };
     const m = map[sortEl.value] || ["available_date", "desc"];

@@ -472,6 +472,8 @@ async function renderAdminTab(main: HTMLElement) {
   }
   const role = state.currentUser?.profile?.role as string;
   const isDoctor = role === "doctor";
+  // Doctor sessions never filter by another doctor — and the control is hidden.
+  if (isDoctor) state.adminFilters.doctorId = "";
   // Doctor accounts have no business in the admin screens: keep them on bookings.
   if (isDoctor && state.adminSubTab !== "appointments") state.adminSubTab = "appointments";
   if (state.adminSubTab !== "appointments") { await renderAdminManagement(main, state.adminSubTab); return; }
@@ -480,8 +482,8 @@ async function renderAdminTab(main: HTMLElement) {
       const my = await findDoctorByUser(state.currentUser!.id);
       state.adminManagementDoctor = my?.id || null;
     }
-    if (!state.adminDoctors.length) state.adminDoctors = await listDoctors();
-    state.adminDoctorsCache = state.adminDoctors;
+    if (!isDoctor && !state.adminDoctors.length) state.adminDoctors = await listDoctors();
+    if (!isDoctor) state.adminDoctorsCache = state.adminDoctors;
   } catch { /* ignore */ }
   let stats = { total: 0, booked: 0, completed: 0, cancelled: 0, noShow: 0, today: 0 };
   try { stats = await getAdminStats(); } catch { /* ignore */ }
@@ -492,10 +494,11 @@ async function renderAdminTab(main: HTMLElement) {
 
   renderAdminView(main, {
     rows: state.adminRows, total: state.adminTotal, page: state.adminPage, pageSize: state.adminPageSize, stats,
-    filters: state.adminFilters, doctors: state.adminDoctors.map((d) => ({ id: d.id, name: d.name })),
+    filters: state.adminFilters, doctors: isDoctor ? [] : state.adminDoctors.map((d) => ({ id: d.id, name: d.name })),
     roleLabel: isDoctor ? "حساب طبيب" : "حساب مشرف",
     ...(isDoctor ? { title: "مواعيد عيادتي", subtitle: "متابعة حجوزاتك وأحوالها — كل ما يخص عيادتك في مكان واحد." } : {}),
     showSubTabs: !isDoctor,
+    singleDoctor: isDoctor,
     onFilter: (patch) => { Object.assign(state.adminFilters, patch); state.adminPage = 0; void renderAdminTab(main); },
     onPage: (dir) => { state.adminPage = Math.max(0, state.adminPage + dir); void renderAdminTab(main); },
     onState: async (id, s) => { try { await updateAppointmentState(id, s); showToast("تم التحديث", "success"); await refreshAdminRows(); void renderAdminTab(main); } catch (e) { showToast(translateAuthError(e), "error"); } },
