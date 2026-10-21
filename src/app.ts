@@ -18,6 +18,7 @@ import { HOSPITALS_MAIN } from "./views/stitch/hospitals";
 import { DOCTORPROFILE_MAIN } from "./views/stitch/doctorProfile";
 import { BOOKINGS_MAIN } from "./views/stitch/bookings";
 import { PROFILE_MAIN } from "./views/stitch/profile";
+import { NOTFOUND_MAIN } from "./views/stitch/notFound";
 import { registerStitchGlobals } from "./views/stitch/interactions";
 import { wireHome } from "./views/stitch/homeLive";
 import { wireDoctorsLive } from "./views/stitch/doctorsLive";
@@ -32,7 +33,7 @@ if (import.meta.env.DEV) {
   if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
 }
 
-type RouteName = "home" | "doctors" | "doctor" | "confirm" | "hospitals" | "appointments" | "profile" | "admin";
+type RouteName = "home" | "doctors" | "doctor" | "confirm" | "hospitals" | "appointments" | "profile" | "admin" | "notfound";
 type Route = { name: RouteName; param?: string };
 type Pending = { scheduleId: string; doctorId: string; slot: Slot; appointmentId?: string };
 
@@ -76,7 +77,7 @@ function parseRoute(): Route {
     case "appointments": return { name: "appointments" };
     case "profile": return { name: "profile" };
     case "admin": return { name: "admin", param };
-    default: return { name: "home" };
+    default: return raw ? { name: "notfound" } : { name: "home" };
   }
 }
 
@@ -94,6 +95,7 @@ const STATIC_VIEWS: Record<string, string> = {
   doctor: DOCTORPROFILE_MAIN,
   appointments: BOOKINGS_MAIN,
   profile: PROFILE_MAIN,
+  notfound: NOTFOUND_MAIN,
 };
 
 /* data-path values found in the Stitch desktop designs -> app routes */
@@ -134,8 +136,10 @@ function render() {
   const route = state.route;
   const role = state.currentUser?.profile?.role as string | undefined;
   const canAdmin = role === "admin" || role === "doctor";
-  const demoMode = !state.currentUser;
-  if (route.name === "admin" && !canAdmin && !demoMode) { location.hash = "#home"; return; }
+  // The dashboard is staff-only: visitors never see it, not even behind the auth
+  // dialog. Dev fixture previews stay available for local QA without a session.
+  const fixturePreview = import.meta.env.DEV && new URLSearchParams(location.search).has("fixture");
+  if (route.name === "admin" && !canAdmin && !fixturePreview) { location.replace("#home"); return; }
   // Staff stay inside the dashboard: the patient catalog, the public doctor
   // dossier, the booking flow and the patient account pages are not for them.
   // The doctor's index is the dashboard, not the consumer landing page.
