@@ -242,6 +242,14 @@ html { scroll-behavior: smooth; }
 html[data-theme="dark"] .advantage-card { background: #005049; }
 html[data-theme="dark"] .advantage-card :is(h2, h3, p, .uppercase) { color: #f4fffc; }
 
+/* the footer spans every page, so it holds a deep brand surface in dark mode
+   instead of the bright mint --color-primary */
+html[data-theme="dark"] .site-footer { background: #06332e; }
+html[data-theme="dark"] .site-footer .text-on-primary { color: #f4fffc; }
+html[data-theme="dark"] .site-footer .text-on-primary\/80 { color: rgb(244 255 252 / 0.8); }
+html[data-theme="dark"] .site-footer .text-on-primary\/70 { color: rgb(244 255 252 / 0.7); }
+html[data-theme="dark"] .site-footer .text-on-primary\/60 { color: rgb(244 255 252 / 0.6); }
+
 /* dark mode: only the tokens flip — every utility keeps working */
 html[data-theme="dark"] {
   color-scheme: dark;
