@@ -70,6 +70,7 @@ function parseRoute(): Route {
   const raw = decodeURIComponent(location.hash.replace(/^#/, "")).trim();
   const [seg, param] = raw.split("/");
   switch (seg) {
+    case "home": return { name: "home" };
     case "doctors": return { name: "doctors" };
     case "hospitals": return { name: "hospitals" };
     case "doctor": return param ? { name: "doctor", param } : { name: "doctors" };
