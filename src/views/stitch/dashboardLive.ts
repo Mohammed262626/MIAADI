@@ -128,73 +128,84 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
   };
 
   /* Account panel: the doctor's own profile — editable name/phone, password,
-     and a logout button, so nothing forces them into the patient pages. */
+     and a logout chip. Professional data is read-only here because the database
+     only lets admins write to the doctors row. */
   const paintAccountPanel = (target: HTMLElement) => {
     const name = me.profile?.full_name || "";
     const phone = me.profile?.phone || "";
     const email = me.email || "";
     const roleLabel = role === "admin" ? "مشرف النظام" : "طبيب";
-    const info: [string, string][] = docProfile
+    const facts: [string, string][] = docProfile
       ? [
         ["التخصص", specialtyLabel(docProfile.specialization)],
-        ["المدينة", docProfile.city || "—"],
-        ["سعر الكشفية", money(docProfile.consultation_fee)],
+        ["المدينة", docProfile.city || "غير مسجّلة"],
+        ["سنوات الخبرة", docProfile.experience_years == null ? "غير مسجّلة" : `${docProfile.experience_years} سنة`],
+        ["اللغات", docProfile.languages?.length ? docProfile.languages.join("، ") : "غير مسجّلة"],
         ["المستشفى", docProfile.hospital_name || "غير مسجّل"],
+        ["سعر الكشفية", money(docProfile.consultation_fee)],
       ]
       : [];
+    const inputCls = "mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2.5 text-[13px] text-on-surface outline-none transition-colors focus:border-primary";
 
     target.innerHTML = `
-      <div class="flex flex-col gap-space-lg">
+      <div class="flex flex-col gap-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex min-w-0 items-center gap-3">
-            <div class="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-primary/10 text-[18px] font-bold text-primary">${escapeHtml(initials(name))}</div>
+            <div class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-[16px] font-bold text-primary">${escapeHtml(initials(name))}</div>
             <div class="min-w-0">
-              <h2 class="font-headline-sm text-headline-sm font-bold text-on-surface">${escapeHtml(name || "مستخدم ميعادي")}</h2>
+              <h2 class="truncate text-[18px] font-bold text-on-surface">${escapeHtml(name || "مستخدم ميعادي")}</h2>
               <div class="mt-1 flex flex-wrap items-center gap-2">
-                <span class="inline-flex items-center gap-1 rounded-md bg-surface-container px-2 py-0.5 text-[12px] text-on-surface-variant"><span class="material-symbols-outlined text-[14px]" aria-hidden="true">shield_person</span>${escapeHtml(roleLabel)}</span>
-                ${docProfile && doctorId ? `<a href="#doctor/${escapeHtml(doctorId)}" class="inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary/10" title="كما يراها المرضى">صفحتي العامة<span class="material-symbols-outlined text-[14px]" aria-hidden="true">open_in_new</span></a>` : ""}
+                <span class="inline-flex items-center gap-1 rounded-md bg-surface-container px-2 py-0.5 text-[11px] text-on-surface-variant"><span class="material-symbols-outlined text-[13px]" aria-hidden="true">shield_person</span>${escapeHtml(roleLabel)}</span>
+                ${docProfile && doctorId ? `<a href="#doctor/${escapeHtml(doctorId)}" class="inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/10" title="كما يراها المرضى">صفحتي العامة<span class="material-symbols-outlined text-[13px]" aria-hidden="true">open_in_new</span></a>` : ""}
               </div>
             </div>
           </div>
-          <button id="ac-logout" type="button" class="flex items-center gap-space-xs rounded-lg px-4 py-2.5 font-label-md text-label-md font-bold text-error transition-colors hover:bg-error-container/40"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">logout</span>تسجيل الخروج</button>
+          <button id="ac-logout" type="button" class="inline-flex h-8 items-center gap-1 rounded-md border border-error/30 px-2.5 text-[12px] font-semibold text-error transition-colors hover:bg-error-container/40"><span class="material-symbols-outlined text-[16px]" aria-hidden="true">logout</span>تسجيل الخروج</button>
         </div>
 
-        <div class="grid grid-cols-1 gap-space-lg lg:grid-cols-2">
-          <section class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
-            <h3 class="font-label-lg text-label-lg font-bold text-on-surface">البيانات الأساسية</h3>
-            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">الاسم والجوال المرتبطان بحسابك.</p>
-            <div class="mt-space-md grid grid-cols-1 gap-space-md sm:grid-cols-2">
-              <label class="font-label-sm text-label-sm text-secondary">الاسم الكامل
-                <input id="ac-name" type="text" value="${escapeHtml(name)}" class="mt-1 h-10 w-full rounded-lg border border-line bg-surface-container-lowest px-3 text-[14px] text-on-surface outline-none transition-colors focus:border-primary" />
-              </label>
-              <label class="font-label-sm text-label-sm text-secondary">رقم الجوال
-                <input id="ac-phone" type="tel" dir="ltr" value="${escapeHtml(phone)}" class="mt-1 h-10 w-full rounded-lg border border-line bg-surface-container-lowest px-3 text-left text-[14px] tabular-nums text-on-surface outline-none transition-colors focus:border-primary" />
-              </label>
+        <section class="rounded-xl border border-line bg-surface-container-lowest p-4">
+          <h3 class="text-[14px] font-semibold text-on-surface">بيانات الحساب</h3>
+          <div class="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <label class="text-[12px] text-on-surface-variant">الاسم الكامل
+              <input id="ac-name" type="text" value="${escapeHtml(name)}" class="${inputCls}" />
+            </label>
+            <label class="text-[12px] text-on-surface-variant">رقم الجوال
+              <input id="ac-phone" type="tel" dir="ltr" value="${escapeHtml(phone)}" class="${inputCls} text-left tabular-nums" />
+            </label>
+            <button id="ac-save" type="button" class="inline-flex h-9 items-center justify-center gap-1 rounded-lg bg-primary px-3.5 text-[12px] font-semibold text-on-primary transition-colors hover:bg-primary-container"><span class="material-symbols-outlined text-[16px]" aria-hidden="true">save</span>حفظ</button>
+          </div>
+          <div class="mt-3 grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
+            <div class="min-w-0">
+              <p class="text-[12px] font-medium text-on-surface-variant">البريد الإلكتروني</p>
+              <p dir="ltr" class="mt-1 truncate rounded-lg bg-surface-container-low px-2.5 py-2 text-start text-[13px] text-on-surface-variant">${escapeHtml(email || "—")}</p>
+              <p class="mt-1 text-[11px] text-on-surface-variant">لا يمكن تغييره من هنا — يُدار من إدارة المنصة.</p>
             </div>
-            <button id="ac-save" type="button" class="mt-space-md flex items-center gap-space-xs rounded-lg bg-primary px-4 py-2.5 font-label-md text-label-md font-bold text-on-primary transition-colors hover:bg-primary-container"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">save</span>حفظ التغييرات</button>
-          </section>
-
-          <section class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
-            <h3 class="font-label-lg text-label-lg font-bold text-on-surface">البريد وكلمة المرور</h3>
-            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">البريد المرتبط بالحساب وكلمة مرور جديدة.</p>
-            <span class="mt-space-md block font-label-sm text-label-sm text-secondary">البريد الإلكتروني</span>
-            <span dir="ltr" class="mt-1 block truncate rounded-lg border border-line bg-surface-container-low px-3 py-2 text-[13px] text-on-surface-variant">${escapeHtml(email || "—")}</span>
-            <div class="mt-space-md grid grid-cols-1 gap-space-md sm:grid-cols-2">
-              <label class="font-label-sm text-label-sm text-secondary">كلمة مرور جديدة
-                <input id="ac-pass" type="password" dir="ltr" autocomplete="new-password" class="mt-1 h-10 w-full rounded-lg border border-line bg-surface-container-lowest px-3 text-left text-[14px] text-on-surface outline-none transition-colors focus:border-primary" />
-              </label>
-              <label class="font-label-sm text-label-sm text-secondary">تأكيد كلمة المرور
-                <input id="ac-pass2" type="password" dir="ltr" autocomplete="new-password" class="mt-1 h-10 w-full rounded-lg border border-line bg-surface-container-lowest px-3 text-left text-[14px] text-on-surface outline-none transition-colors focus:border-primary" />
-              </label>
+            <div>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="text-[12px] text-on-surface-variant">كلمة مرور جديدة
+                  <input id="ac-pass" type="password" dir="ltr" autocomplete="new-password" class="${inputCls} text-left" />
+                </label>
+                <label class="text-[12px] text-on-surface-variant">تأكيد كلمة المرور
+                  <input id="ac-pass2" type="password" dir="ltr" autocomplete="new-password" class="${inputCls} text-left" />
+                </label>
+              </div>
+              <button id="ac-pass-save" type="button" class="mt-2 inline-flex h-9 items-center gap-1 rounded-lg border border-line px-3 text-[12px] font-semibold text-on-surface transition-colors hover:bg-surface-container"><span class="material-symbols-outlined text-[16px] text-primary" aria-hidden="true">lock_reset</span>تغيير كلمة المرور</button>
             </div>
-            <button id="ac-pass-save" type="button" class="mt-space-md flex items-center gap-space-xs rounded-lg border border-line bg-surface-container-lowest px-4 py-2.5 font-label-md text-label-md font-bold text-on-surface transition-colors hover:bg-surface-container"><span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">lock_reset</span>تغيير كلمة المرور</button>
-          </section>
-        </div>
+          </div>
+        </section>
 
-        ${info.length ? `<section class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
-          <h3 class="font-label-lg text-label-lg font-bold text-on-surface">البيانات المهنية</h3>
-          <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">مسجّلة في دليل ميعادي — تُحدَّث من إدارة المنصة.</p>
-          <div class="mt-space-md grid grid-cols-2 gap-space-md sm:grid-cols-4">${info.map(([k, v]) => `<div class="rounded-lg bg-surface-container-low p-3"><span class="block text-[12px] text-on-surface-variant">${escapeHtml(k)}</span><span class="mt-0.5 block font-label-md text-label-md font-semibold text-on-surface">${escapeHtml(v)}</span></div>`).join("")}</div>
+        ${facts.length ? `<section class="rounded-xl border border-line bg-surface-container-lowest p-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-[14px] font-semibold text-on-surface">البيانات المهنية</h3>
+            <span class="inline-flex items-center gap-1 text-[11px] text-on-surface-variant"><span class="material-symbols-outlined text-[14px]" aria-hidden="true">lock</span>تُعدَّل من بوابة الإدارة</span>
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3">
+            ${facts.map(([k, v]) => `<div class="bg-surface-container-lowest px-3 py-2"><p class="text-[11px] text-on-surface-variant">${escapeHtml(k)}</p><p class="mt-0.5 text-[13px] font-semibold text-on-surface">${escapeHtml(v)}</p></div>`).join("")}
+          </div>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            ${docProfile?.telehealth ? `<span class="inline-flex items-center gap-1 rounded-md bg-tertiary-fixed/60 px-2 py-0.5 text-[11px] font-medium text-on-tertiary-fixed-variant"><span class="material-symbols-outlined text-[14px]" aria-hidden="true">videocam</span>الاستشارة عن بُعد متاحة</span>` : ""}
+          </div>
+          ${docProfile?.about ? `<p class="mt-2 text-[12px] leading-6 text-on-surface-variant">${escapeHtml(docProfile.about)}</p>` : ""}
         </section>` : ""}
       </div>`;
 
@@ -237,7 +248,7 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
     if (!target) return;
     try {
       if (view === "overview") { await reload(); return; }
-      target.innerHTML = pendingHtml(view === "appointments" ? "جاري تحميل المواعيد…" : "جاري تحميل جدول العمل…");
+      target.innerHTML = pendingHtml(view === "appointments" ? "جاري تحميل المواعيد…" : view === "schedule" ? "جاري تحميل جدول العمل…" : "جاري تحميل حسابك…");
       if (view === "appointments") {
         if (hooks.renderAppointments) await hooks.renderAppointments(target);
         else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
