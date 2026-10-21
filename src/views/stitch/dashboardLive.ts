@@ -217,7 +217,6 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
         await updatePatientProfile({ fullName, phone });
         if (me.profile) { me.profile.full_name = fullName; me.profile.phone = phone; }
         setText("#db-user-name", fullName);
-        setText("#db-side-name", fullName);
         showToast("تم حفظ البيانات", "success");
       } catch (e) { showToast(translateAuthError(e), "error"); }
     });
@@ -366,10 +365,6 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
     if (!(role === "doctor" && doctorId)) appEl.querySelector("#db-nav-reviews")?.remove();
     const displayName = profile?.name || me.profile?.full_name || "مستخدم";
     setText("#db-user-name", displayName);
-    setText("#db-side-name", displayName);
-    setText("#db-side-role", role === "admin" ? "مشرف النظام" : "طبيب");
-    const sideAvatar = panel("#db-side-avatar");
-    if (sideAvatar) sideAvatar.textContent = initials(displayName);
     const specEl = panel("#db-user-spec");
     if (specEl) { specEl.textContent = profile ? specialtyLabel(profile.specialization) : "مشرف النظام"; specEl.classList.toggle("hidden", false); }
     setText("#db-facility-name", profile ? (profile.hospital_name || "بدون موقع مسجّل") : "جميع العيادات");
