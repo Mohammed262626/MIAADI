@@ -190,7 +190,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <h2 class="text-[18px] font-bold leading-snug text-on-surface sm:text-[24px]">تقييمات المراجعين</h2>
 </div>
 <div class="flex items-center gap-1 text-on-surface font-bold text-headline-sm">
-<span class="material-symbols-outlined text-warning text-[20px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
+<span class="material-symbols-outlined text-warning text-[20px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true" id="dp-rating-star">star</span>
 <span id="dp-rating-big"><span class="inline-block h-5 w-20 rounded bg-surface-container-high align-middle" aria-hidden="true"></span></span>
 </div>
 </div>
@@ -236,10 +236,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 </div>
 </div>
-<button class="w-full mt-space-md py-space-sm rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-label-md text-label-md font-semibold transition-colors flex items-center justify-center gap-1" type="button">
-<span id="dp-reviews-more"><span class="inline-block h-4 w-48 rounded bg-surface-container" aria-hidden="true"></span></span>
-<span class="material-symbols-outlined text-[18px]" aria-hidden="true">expand_more</span>
-</button>
+<div id="dp-review-form-slot"></div>
 </article>
 </div>
 <!-- Left Column: Booking Engine Box (5 Cols on LG) -->

@@ -24,24 +24,6 @@ export function money(fee: number): string {
   return `${n.toLocaleString("en-US")} ج.س`;
 }
 
-function hash(seed: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = ((h ^ seed.charCodeAt(i)) * 16777619) >>> 0;
-  return h >>> 0;
-}
-
-export function pseudoRating(seed: string): number {
-  return 4.6 + (hash(seed) % 5) / 10;
-}
-
-export function ratingInline(seed: string): string {
-  return `<span class="inline-flex items-center gap-1 text-xs font-bold text-on-surface-variant">${icon("star", {
-    size: 15,
-    filled: true,
-    className: "text-warning",
-  })}<span class="tabular-nums">${pseudoRating(seed).toFixed(1)}</span></span>`;
-}
-
 export function durationMin(startTime: string, endTime: string): number {
   if (!startTime || !endTime) return 0;
   const [sh, sm = 0] = startTime.split(":").map(Number);

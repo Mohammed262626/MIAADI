@@ -217,6 +217,73 @@ export async function getPatientAppointments() {
   const { data, error } = await c.from("appointments").select(`id,schedule_id,patient_id,patient_name,patient_phone,status,doctor_schedules(id,available_date,start_time,end_time,doctors(id,name,specialization,consultation_fee,telehealth,hospitals(name)))`).eq("patient_id", user.id).order("id", { ascending: false });
   if (error) throw error; return data || [];
 }
+// --- reviews (real, appointment-verified rows written through submit_doctor_review)
+export type DoctorReview = {
+  id: string;
+  appointment_id: string;
+  doctor_id: string;
+  patient_id: string;
+  patient_name: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+};
+
+export async function getDoctorReviews(doctorId: string, limit = 50): Promise<DoctorReview[]> {
+  const { data, error } = await getClient()
+    .from("doctor_reviews")
+    .select("id,appointment_id,doctor_id,patient_id,patient_name,rating,comment,created_at")
+    .eq("doctor_id", doctorId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []) as DoctorReview[];
+}
+
+// The most recent completed visit with this doctor that has not been reviewed
+// yet. Client-side hint only: submit_doctor_review re-checks the same facts.
+export async function getReviewableAppointmentId(doctorId: string): Promise<string | null> {
+  const c = getClient();
+  const { data: { user } } = await c.auth.getUser();
+  if (!user) return null;
+  const { data: appts, error } = await c.from("appointments")
+    .select("id,schedule_id,created_at,doctor_schedules!inner(doctor_id)")
+    .eq("patient_id", user.id)
+    .eq("status", "completed")
+    .eq("doctor_schedules.doctor_id", doctorId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const ids = (appts || []).map((a: { id: string }) => a.id);
+  if (!ids.length) return null;
+  const { data: reviewed, error: reviewError } = await c.from("doctor_reviews")
+    .select("appointment_id")
+    .in("appointment_id", ids);
+  if (reviewError) throw reviewError;
+  const done = new Set((reviewed || []).map((r: { appointment_id: string }) => r.appointment_id));
+  return ids.find((id: string) => !done.has(id)) || null;
+}
+
+export async function getReviewedAppointmentIds(): Promise<Set<string>> {
+  const c = getClient();
+  const { data: { user } } = await c.auth.getUser();
+  if (!user) return new Set();
+  const { data, error } = await c.from("doctor_reviews")
+    .select("appointment_id")
+    .eq("patient_id", user.id);
+  if (error) throw error;
+  return new Set((data || []).map((r: { appointment_id: string }) => r.appointment_id));
+}
+
+export async function submitDoctorReview(p: { appointmentId: string; rating: number; comment: string }) {
+  const { data, error } = await getClient().rpc("submit_doctor_review", {
+    p_appointment_id: p.appointmentId,
+    p_rating: p.rating,
+    p_comment: p.comment.trim() || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
 export function subscribeToRealtimeUpdates(onSchedule: (p: unknown)=>void, onAppointment: (p: unknown)=>void) {
   const c = getClient();
   const ch = c.channel("medical-booking-realtime")

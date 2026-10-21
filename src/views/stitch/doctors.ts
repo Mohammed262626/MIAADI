@@ -137,10 +137,10 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 </div>
 </div>
 <!-- Minimum Patient Rating -->
-<div class="flex flex-col gap-space-xs">
+<div class="flex flex-col gap-space-xs" id="doc-rating-group">
 <label class="font-label-md text-label-md text-on-surface font-semibold">تقييم المرضى</label>
 <div class="flex items-center gap-2" id="doc-rating">
-<button class="flex h-8 flex-1 items-center justify-center gap-1 rounded-md border border-line bg-surface-container-lowest text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-rating="0" type="button">
+<button class="flex h-8 flex-1 items-center justify-center gap-1 rounded-md bg-surface-container-highest text-[12px] font-semibold text-on-surface" data-rating="0" type="button">
 <span class="material-symbols-outlined text-warning text-[16px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
 <span>الكل</span>
 </button>
@@ -148,7 +148,7 @@ export const DOCTORS_MAIN = `<div class="flex flex-col w-full">
 <span class="material-symbols-outlined text-warning text-[16px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
 <span>4.8+</span>
 </button>
-<button class="flex h-8 flex-1 items-center justify-center gap-1 rounded-md bg-surface-container-highest text-[12px] font-semibold text-on-surface" data-rating="4.5" type="button">
+<button class="flex h-8 flex-1 items-center justify-center gap-1 rounded-md border border-line bg-surface-container-lowest text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container" data-rating="4.5" type="button">
 <span class="material-symbols-outlined text-warning text-[16px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
 <span>4.5+</span>
 </button>

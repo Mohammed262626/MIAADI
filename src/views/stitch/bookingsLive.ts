@@ -6,7 +6,7 @@
 // cancel_appointment RPC; rescheduling hands off to the doctor dossier where a
 // new slot can be picked.
 import { escapeHtml, formatArabicDate, formatRelativeDay, formatTime, localDateISO, translateAuthError } from "../../lib/format";
-import { cancelAppointmentRPC, getPatientAppointments } from "../../lib/supabase";
+import { cancelAppointmentRPC, getPatientAppointments, getReviewedAppointmentIds } from "../../lib/supabase";
 import { initials, money, statusMeta } from "../../components/ui";
 import { qrSvg } from "../../components/qr";
 import { setRescheduleIntent } from "../../lib/reschedule";
@@ -74,6 +74,7 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
   let cancelled: Visit[] = [];
   let primary: Visit | null = null;
   let selectedId: string | null = null;
+  let reviewedIds = new Set<string>();
 
   function switchTab(key: string): void {
     ["upcoming", "past", "cancelled"].forEach((k) => {
@@ -110,6 +111,7 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
       ];
       past = [mk(3, localDateISO(-24), "09:00", "completed", "د. سارة عثمان", "طب الأسرة", "مركز صحي — بحري", 4000)];
       cancelled = [mk(4, localDateISO(-6), "12:00", "cancelled_by_patient", "د. كمال الأمين", "عيون", "مستشفى النور — الخرطوم", 7000)];
+      reviewedIds = new Set();
       primary = upcoming[0];
       return;
     }
@@ -118,6 +120,11 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
       rows = (await getPatientAppointments()) as unknown[];
     } catch {
       showToast("تعذّر تحميل مواعيدك، حاول مرة أخرى", "error");
+    }
+    try {
+      reviewedIds = await getReviewedAppointmentIds();
+    } catch {
+      reviewedIds = new Set();
     }
     const today = localDateISO(0);
     const all: Visit[] = rows.map((raw) => {
@@ -301,6 +308,9 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
           <span class="tabular-nums">${escapeHtml(formatArabicDate(v.date))}</span>
           <span class="tabular-nums">${escapeHtml(formatTime(v.time))}</span>
           <span class="font-medium text-tertiary">مكتمل</span>
+          ${reviewedIds.has(v.id)
+            ? `<span class="font-medium text-tertiary">تم التقييم</span>`
+            : `<a href="#doctor/${escapeHtml(v.doctorId)}" class="press inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[12px] font-semibold text-on-primary transition-colors hover:bg-primary-container">قيّم الزيارة</a>`}
           <a href="#doctor/${escapeHtml(v.doctorId)}" class="font-medium text-primary hover:underline">حجز مراجعة</a>
         </div>
       </div>`)

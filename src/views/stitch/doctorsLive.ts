@@ -84,7 +84,7 @@ export function seedDoctorsFilters(seed: DoctorsSeed) {
 }
 
 function emptyFilters(): Filters {
-  return { q: "", city: "", hospital: "", avail: "any", specs: new Set<SpecialtyKey>(), gender: "all", insurance: "", maxPrice: 8000, minRating: 4.5, sort: "rating" };
+  return { q: "", city: "", hospital: "", avail: "any", specs: new Set<SpecialtyKey>(), gender: "all", insurance: "", maxPrice: 8000, minRating: 0, sort: "rating" };
 }
 
 function daysFromToday(date: string): number {
@@ -191,11 +191,14 @@ function doctorRowHtml(doc: DoctorDirectoryRow): string {
         </span>` : ""}
       </div>
       <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-on-surface-variant">
-        <span class="inline-flex items-center gap-1">
+        ${(doc.reviews_count ?? 0) > 0 ? `<span class="inline-flex items-center gap-1">
           <span class="material-symbols-outlined text-[15px] text-warning" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
-          <span class="font-semibold tabular-nums text-on-surface">${doc.rating === null ? "—" : doc.rating.toFixed(1)}</span>
-          <span class="tabular-nums">(${escapeHtml(doc.reviews_count ?? 0)} تقييم)</span>
-        </span>
+          <span class="font-semibold tabular-nums text-on-surface">${(doc.rating ?? 0).toFixed(1)}</span>
+          <span class="tabular-nums">(${escapeHtml(doc.reviews_count)} تقييم)</span>
+        </span>` : `<span class="inline-flex items-center gap-1">
+          <span class="material-symbols-outlined text-[15px]" aria-hidden="true">rate_review</span>
+          <span>لا تقييمات بعد</span>
+        </span>`}
         <span class="inline-flex min-w-0 items-center gap-1">
           <span class="material-symbols-outlined text-[15px] text-tertiary" aria-hidden="true">health_and_safety</span>
           <span class="truncate">${escapeHtml(coverage)}</span>
@@ -375,6 +378,8 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
   }
 
   const f = emptyFilters();
+  const hasRatings = ROWS.some((d) => (d.reviews_count ?? 0) > 0);
+  appEl.querySelector<HTMLElement>("#doc-rating-group")?.classList.toggle("hidden", !hasRatings);
   const specs = ROWS.map((d) => d.specialization);
   const counts = countSpecialties(specs);
   DEFAULTS = { ...emptyFilters(), specs: new Set(SPECIALTIES.filter((s) => (counts[s.key] || 0) > 0).map((s) => s.key)) };

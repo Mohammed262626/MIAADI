@@ -38,11 +38,22 @@ function fullDateLabel(date: string): string {
 }
 
 function featuredCardHtml(doc: DoctorDirectoryRow, _index: number): string {
-  const rating = doc.rating === null ? "—" : doc.rating.toFixed(1);
+  const hasReviews = (doc.reviews_count ?? 0) > 0;
+  const rating = hasReviews ? (doc.rating ?? 0).toFixed(1) : "";
   const next = nextSlotLabel(doc);
   const coverage = doc.insurances.length
     ? doc.insurances.slice(0, 3).join("، ")
     : "دفع مباشر";
+  const ratingHtml = hasReviews
+    ? `<span class="flex shrink-0 items-center gap-1 text-[14px] text-on-surface-variant">
+          <span class="text-primary material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
+          <span class="font-semibold tabular-nums text-on-surface">${escapeHtml(rating)}</span>
+          <span class="tabular-nums">(${escapeHtml(doc.reviews_count ?? 0)})</span>
+        </span>`
+    : `<span class="flex shrink-0 items-center gap-1 text-[12px] text-on-surface-variant">
+          <span class="material-symbols-outlined text-[15px]" aria-hidden="true">rate_review</span>
+          <span>لا تقييمات بعد</span>
+        </span>`;
   return `
 <article class="press relative rounded-xl bg-surface-container-lowest p-4 sm:p-5">
   <div class="flex items-start gap-4">
@@ -50,11 +61,7 @@ function featuredCardHtml(doc: DoctorDirectoryRow, _index: number): string {
     <div class="min-w-0 flex-1">
       <div class="flex items-start justify-between gap-2">
         <h3 class="truncate text-[19px] font-bold leading-tight text-on-surface"><a href="#doctor/${escapeHtml(doc.id)}" class="after:absolute after:inset-0 after:content-['']">${escapeHtml(doc.name)}</a></h3>
-        <span class="flex shrink-0 items-center gap-1 text-[14px] text-on-surface-variant">
-          <span class="text-primary material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
-          <span class="font-semibold tabular-nums text-on-surface">${escapeHtml(rating)}</span>
-          <span class="tabular-nums">(${escapeHtml(doc.reviews_count ?? 0)})</span>
-        </span>
+        ${ratingHtml}
       </div>
       <p class="mt-1 truncate text-[15px] text-on-surface-variant" title="${escapeHtml(doc.specialization)}">${escapeHtml(shortSpecialty(doc.specialization))}</p>
       <p class="mt-1 truncate text-[14px] text-on-surface-variant">${escapeHtml(doc.hospital_name || "العيادة الخاصة")} · ${escapeHtml(doc.hospital_city || doc.city || "—")}</p>

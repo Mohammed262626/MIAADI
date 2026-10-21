@@ -5,7 +5,7 @@
 // conditions, patient quotes, wayfinding line) come from specialtyContent.ts.
 // Booking is real: it writes through the book_appointment RPC.
 import { escapeHtml, formatArabicDate, formatDayNum, formatMonthShort, formatRelativeDay, formatTime, formatWeekdayShort, localDateISO, translateAuthError } from "../../lib/format";
-import { bookAppointmentRPC, getDoctorProfile, getDoctorProfileSlots, rescheduleAppointmentRPC, type DoctorProfileRow, type ProfileSlot } from "../../lib/supabase";
+import { bookAppointmentRPC, getDoctorProfile, getDoctorProfileSlots, getDoctorReviews, getReviewableAppointmentId, rescheduleAppointmentRPC, submitDoctorReview, type DoctorProfileRow, type DoctorReview, type ProfileSlot } from "../../lib/supabase";
 import { clearRescheduleIntent, getRescheduleIntent } from "../../lib/reschedule";
 import { initials, shortRef } from "../../components/ui";
 import { confirmSheet } from "../../components/ConfirmDialog";
@@ -21,7 +21,6 @@ const WINDOW_DAYS = 5;
 const LOOKAHEAD_DAYS = 30;
 const MORNING_CUTOFF_MIN = 13 * 60;
 
-const STAR = `<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>`;
 
 function dayOf(date: string): Date {
   return new Date(date + "T12:00:00");
@@ -61,11 +60,15 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
 
   let profile: DoctorProfileRow | null = null;
   let slots: ProfileSlot[] = [];
+  let reviews: DoctorReview[] = [];
   try {
     profile = await getDoctorProfile(doctorId);
     if (profile) slots = await getDoctorProfileSlots(doctorId, localDateISO(0), localDateISO(LOOKAHEAD_DAYS));
   } catch {
     setText("summary-datetime-display", "تعذّر تحميل بيانات الطبيب");
+  }
+  if (profile) {
+    try { reviews = await getDoctorReviews(profile.id); } catch { reviews = []; }
   }
   if (!profile) {
     const box = el("morning-slots");
@@ -153,8 +156,13 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
   const expCell = el("dp-exp-cell");
   if (profile.experience_years) setText("dp-exp", `+${profile.experience_years}`);
   else expCell?.remove();
-  setText("dp-rating", profile.rating.toFixed(1));
-  setText("dp-reviews-count", `${profile.reviews_count} تقييم`);
+  if ((profile.reviews_count ?? 0) > 0) {
+    setText("dp-rating", profile.rating.toFixed(1));
+    setText("dp-reviews-count", `${profile.reviews_count} تقييم`);
+  } else {
+    setText("dp-rating", "—");
+    setText("dp-reviews-count", "لا تقييمات بعد");
+  }
 
   // availability pill
   const availability = el("dp-availability");
@@ -227,29 +235,161 @@ export async function wireDoctorProfile(appEl: HTMLElement, doctorId: string, us
   setText("dp-clinic-name", content.clinic.name);
   setText("dp-clinic-line", content.clinic.line);
 
-  // reviews
-  setText("dp-rating-big", `${profile.rating.toFixed(1)} / 5.0`);
-  setText("dp-reviews-more", `عرض جميع آراء المراجعين الـ ${profile.reviews_count}`);
+  // reviews — real rows, each tied to a completed visit
+  const doctor = profile;
   const reviewList = el("dp-review-list");
-  if (reviewList) {
-    reviewList.innerHTML = content.reviews
-      .map((r, i) => `<div class="p-space-md rounded-xl bg-surface-container-low/70 flex flex-col gap-space-xs">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-space-sm">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-label-md ${i % 2 ?"bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"}">${escapeHtml(initials(r.name))}</div>
-            <div class="flex flex-col">
-              <div class="flex items-center gap-1.5">
-                <span class="font-label-md text-label-md font-semibold text-on-surface">${escapeHtml(r.name)}</span>
-              </div>
-              <span class="font-body-sm text-body-sm text-secondary">${escapeHtml(r.meta)}</span>
-            </div>
-          </div>
-          <div class="flex text-[#d97706] text-[16px]">${STAR.repeat(5)}</div>
+  const formSlot = el("dp-review-form-slot");
+
+  const maskName = (name: string) => {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "مريض";
+    return parts.length === 1 ? parts[0] : `${parts[0]} ${parts[1].charAt(0)}.`;
+  };
+
+  const starsHtml = (value: number) => {
+    const filled = Math.max(1, Math.min(5, Math.round(value)));
+    const stars = Array.from({ length: 5 }, (_, i) => {
+      const on = i < filled;
+      return `<span class="material-symbols-outlined text-[15px] ${on ? "text-warning" : "text-line"}" style="font-variation-settings: 'FILL' ${on ? 1 : 0};" aria-hidden="true">star</span>`;
+    }).join("");
+    return `<span class="inline-flex items-center gap-0.5" role="img" aria-label="${filled} من 5 نجوم">${stars}</span>`;
+  };
+
+  const applyRating = (rating: number, count: number) => {
+    el("dp-rating-star")?.classList.toggle("hidden", count === 0);
+    if (count > 0) {
+      setText("dp-rating", rating.toFixed(1));
+      setText("dp-reviews-count", `${count} تقييم`);
+      setText("dp-rating-big", `${rating.toFixed(1)} / 5.0`);
+    } else {
+      setText("dp-rating", "—");
+      setText("dp-reviews-count", "لا تقييمات بعد");
+      setText("dp-rating-big", "لا تقييمات بعد");
+    }
+  };
+
+  const emptyReviewsHtml = `<div class="flex flex-col items-center gap-1 rounded-xl border border-dashed border-line bg-surface-container-low/50 px-4 py-8 text-center">
+    <span class="material-symbols-outlined text-[26px] text-on-surface-variant/60" aria-hidden="true">reviews</span>
+    <p class="mt-1 text-[14px] font-semibold text-on-surface">لا توجد تقييمات بعد</p>
+    <p class="max-w-[42ch] text-[12px] text-on-surface-variant">التقييمات تُنشر فقط بعد زيارة مكتملة، وتظهر هنا مباشرة.</p>
+  </div>`;
+
+  const reviewCard = (r: DoctorReview) => `<div class="p-space-md rounded-xl bg-surface-container-low/70 flex flex-col gap-space-xs">
+    <div class="flex items-start justify-between gap-2">
+      <div class="flex items-center gap-space-sm">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-label-md bg-primary/20 text-primary">${escapeHtml(initials(maskName(r.patient_name)))}</div>
+        <div class="flex flex-col">
+          <span class="font-label-md text-label-md font-semibold text-on-surface">${escapeHtml(maskName(r.patient_name))}</span>
+          <span class="font-body-sm text-body-sm text-secondary">زيارة موثّقة · ${escapeHtml(formatArabicDate(r.created_at.slice(0, 10)))}</span>
         </div>
-        <p class="font-body-md text-body-md text-on-surface leading-relaxed mt-1">"${escapeHtml(r.text)}"</p>
-      </div>`)
-      .join("");
-  }
+      </div>
+      ${starsHtml(r.rating)}
+    </div>
+    ${r.comment ? `<p class="font-body-md text-body-md text-on-surface leading-relaxed mt-1">"${escapeHtml(r.comment)}"</p>` : ""}
+  </div>`;
+
+  const renderReviews = (list: DoctorReview[]) => {
+    if (!reviewList) return;
+    reviewList.innerHTML = list.length ? list.map(reviewCard).join("") : emptyReviewsHtml;
+  };
+
+  applyRating(profile.rating, profile.reviews_count);
+  renderReviews(reviews);
+
+  // Review form: only for a signed-in patient whose visit with this doctor is
+  // completed and not reviewed yet. The RPC re-validates all of it server-side.
+  const mountReviewForm = (appointmentId: string) => {
+    if (!formSlot) return;
+    formSlot.innerHTML = `<form id="dp-review-form" class="mt-space-md rounded-xl border border-line bg-surface-container-lowest p-space-md" novalidate>
+      <div class="flex items-start gap-2">
+        <span class="material-symbols-outlined text-[20px] text-tertiary" aria-hidden="true">verified</span>
+        <div>
+          <p class="text-[15px] font-bold text-on-surface">قيّم زيارتك</p>
+          <p class="mt-0.5 text-[12px] text-on-surface-variant">زيارتك مكتملة ومربوطة بموعدك. يظهر اسمك مختصراً مع كلمة «زيارة موثّقة».</p>
+        </div>
+      </div>
+      <div class="mt-3 flex items-center gap-1" id="dp-star-picker" role="group" aria-label="اختر تقييماً من نجمة إلى خمس نجوم">
+        ${[1, 2, 3, 4, 5].map((n) => `<button type="button" aria-pressed="false" aria-label="${n} من 5" data-star="${n}" class="press grid h-9 w-9 place-items-center rounded-lg text-outline transition-colors hover:bg-surface-container"><span class="material-symbols-outlined text-[24px]" aria-hidden="true">star</span></button>`).join("")}
+      </div>
+      <label class="sr-only" for="dp-review-comment">تعليقك (اختياري)</label>
+      <textarea id="dp-review-comment" rows="3" maxlength="500" placeholder="اكتب عن تجربتك (اختياري)" class="mt-3 w-full rounded-xl border border-line bg-surface-container-lowest p-3 text-[14px] text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none"></textarea>
+      <div class="mt-2 flex items-center justify-between gap-3">
+        <span id="dp-review-chars" class="text-[11px] tabular-nums text-on-surface-variant">0/500</span>
+        <button type="submit" id="dp-review-submit" class="press inline-flex h-9 items-center rounded-lg bg-primary px-4 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-60" disabled>أضف التقييم</button>
+      </div>
+      <p id="dp-review-error" class="mt-2 hidden text-[12px] text-error" role="alert"></p>
+    </form>`;
+
+    const form = formSlot.querySelector<HTMLFormElement>("#dp-review-form");
+    if (!form) return;
+    const starButtons = Array.from(form.querySelectorAll<HTMLButtonElement>("[data-star]"));
+    const submit = form.querySelector<HTMLButtonElement>("#dp-review-submit");
+    const textarea = form.querySelector<HTMLTextAreaElement>("#dp-review-comment");
+    const counter = form.querySelector<HTMLElement>("#dp-review-chars");
+    const errorBox = form.querySelector<HTMLElement>("#dp-review-error");
+    let rating = 0;
+
+    const paintStars = () => {
+      starButtons.forEach((b) => {
+        const n = Number(b.dataset.star);
+        const on = n <= rating;
+        b.className = `press grid h-9 w-9 place-items-center rounded-lg transition-colors ${on ? "bg-surface-container text-warning" : "text-outline hover:bg-surface-container"}`;
+        const iconEl = b.querySelector<HTMLElement>(".material-symbols-outlined");
+        if (iconEl) iconEl.style.fontVariationSettings = `'FILL' ${on ? 1 : 0}`;
+        b.setAttribute("aria-pressed", String(n === rating));
+      });
+      if (submit) submit.disabled = rating === 0;
+    };
+
+    starButtons.forEach((b) => b.addEventListener("click", () => {
+      rating = Number(b.dataset.star);
+      paintStars();
+    }));
+
+    textarea?.addEventListener("input", () => {
+      if (counter) counter.textContent = `${textarea.value.length}/500`;
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!rating || !submit) return;
+      errorBox?.classList.add("hidden");
+      submit.disabled = true;
+      const idleLabel = submit.textContent;
+      submit.textContent = "جارٍ الإرسال…";
+      try {
+        await submitDoctorReview({ appointmentId, rating, comment: textarea?.value || "" });
+        showToast("شكراً! تم نشر تقييمك", "success");
+        formSlot.innerHTML = `<p class="mt-space-md rounded-xl border border-line bg-surface-container-low px-space-md py-space-sm text-[13px] font-semibold text-tertiary">تم نشر تقييمك — شكراً لك.</p>`;
+        try {
+          const [fresh, updated] = await Promise.all([getDoctorReviews(doctor.id), getDoctorProfile(doctor.id)]);
+          reviews = fresh;
+          if (updated) applyRating(updated.rating, updated.reviews_count);
+          renderReviews(reviews);
+        } catch {
+          // the review is saved; the list will refresh on the next visit
+        }
+      } catch (err) {
+        if (errorBox) {
+          errorBox.textContent = translateAuthError(err);
+          errorBox.classList.remove("hidden");
+        }
+        if (submit) {
+          submit.disabled = false;
+          submit.textContent = idleLabel || "أضف التقييم";
+        }
+      }
+    });
+  };
+
+  void (async () => {
+    try {
+      const appointmentId = await getReviewableAppointmentId(doctor.id);
+      if (appointmentId) mountReviewForm(appointmentId);
+    } catch {
+      // eligibility is a nice-to-have; the reviews above are already shown
+    }
+  })();
 
   /* ------------------------------ booking engine ----------------------------- */
 
