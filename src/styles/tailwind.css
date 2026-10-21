@@ -211,6 +211,10 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-outline-variant) tran
 .toast-enter { animation: toast-pop 200ms ease-out; }
 @keyframes modal-pop { 0% { transform: scale(.96); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
 .modal-enter { animation: modal-pop 200ms ease-out; }
+/* Auth errors shake once: short lateral nudge that reads as feedback, never as
+   punishment. Applied only to the message band, not the whole dialog. */
+@keyframes auth-shake { 0%, 100% { transform: none } 20% { transform: translateX(-3px) } 40% { transform: translateX(3px) } 60% { transform: translateX(-2px) } 80% { transform: translateX(2px) } }
+.auth-shake { animation: auth-shake 280ms var(--ease-out-quint); }
 /* Mobile drawer opens with a short drop-in; closing stays instant so dismissal
    never feels held back. */
 @keyframes drawer-in { from { opacity: 0; transform: translateY(-4px) } to { opacity: 1; transform: none } }
