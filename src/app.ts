@@ -785,8 +785,16 @@ type DayDraft = { on: boolean; shifts: ShiftDraft[] };
 type Sched = { id: string; available_date: string; start_time: string; end_time: string; is_booked: boolean };
 
 const SCHED_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-/* Slot-list window (days ahead) survives the panel's re-renders. */
-let scheduleRange = "7";
+const WEEK_SHORT = ["أحد", "إثن", "ثلا", "أرب", "خمي", "جمع", "سبت"];
+/* The calendar keeps its month and selected day across panel re-renders. */
+let schedMonth = "";
+let schedSelected = "";
+const monthOf = (iso: string) => iso.slice(0, 7);
+const addMonths = (ym: string, delta: number) => {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
 
 const hhmm = (t: string | null | undefined) => (t || "").slice(0, 5);
 const clock = (total: number) => `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
@@ -1011,16 +1019,22 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
       </div>
 
       <section class="mt-3 rounded-xl border border-line bg-surface-container-lowest">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
-          <h3 class="flex items-center gap-1.5 text-[14px] font-semibold text-on-surface">
-            <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">event_available</span>المواعيد المتاحة
-            <span id="slot-count" class="text-[12px] font-normal tabular-nums text-on-surface-variant"></span>
-          </h3>
-          <div id="slot-range" class="flex items-center gap-0.5 rounded-md bg-surface-container-low p-0.5" role="group" aria-label="نطاق المواعيد">
-            ${[["7", "٧ أيام"], ["30", "٣٠ يوماً"], ["all", "الكل"]].map(([v, l]) => `<button data-range="${v}" type="button" class="h-6 rounded px-2 text-[11px] transition-colors">${l}</button>`).join("")}
+        <div id="slot-panel">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
+            <h3 class="flex items-center gap-1.5 text-[14px] font-semibold text-on-surface">
+              <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">event_available</span>المواعيد المتاحة
+            </h3>
+            <div class="flex items-center gap-0.5">
+              <button data-cal="-1" type="button" aria-label="الشهر السابق" class="grid h-6 w-6 place-items-center rounded text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface disabled:opacity-30 disabled:hover:bg-transparent"><span class="material-symbols-outlined text-[16px]" aria-hidden="true">chevron_right</span></button>
+              <span id="cal-label" class="min-w-[100px] text-center text-[12px] font-semibold text-on-surface"></span>
+              <button data-cal="1" type="button" aria-label="الشهر التالي" class="grid h-6 w-6 place-items-center rounded text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface disabled:opacity-30 disabled:hover:bg-transparent"><span class="material-symbols-outlined text-[16px]" aria-hidden="true">chevron_left</span></button>
+            </div>
           </div>
+
+          <div id="cal-grid" class="px-2 pt-2"></div>
+          <p id="cal-month" class="px-3 pb-1.5 pt-1 text-[11px] text-on-surface-variant"></p>
+          <div id="day-panel"></div>
         </div>
-        <div id="slot-groups"></div>
       </section>`;
 
     const val = (sel: string) => (root.querySelector(sel) as HTMLInputElement | HTMLSelectElement | null)?.value || "";
@@ -1270,63 +1284,105 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
       } catch (err) { showToast(translateAuthError(err), "error"); }
     });
 
-    const slotGroups = root.querySelector("#slot-groups") as HTMLElement;
-    const paintGroups = () => {
-      const range = scheduleRange;
-      const limit = range === "all" ? "" : localDateISO(Number(range) - 1);
-      const visible = schedules.filter((s) => s.available_date >= today && (!limit || s.available_date <= limit));
-      const countEl = root.querySelector("#slot-count");
-      if (countEl) countEl.textContent = `(${visible.length})`;
-      root.querySelectorAll<HTMLButtonElement>("#slot-range [data-range]").forEach((b) => {
-        const active = b.dataset.range === range;
-        b.className = `h-7 rounded-md px-2.5 text-[12px] transition-colors ${active ? "border border-line bg-surface-container-lowest font-semibold text-on-surface" : "border border-transparent text-on-surface-variant hover:text-on-surface"}`;
-        b.setAttribute("aria-pressed", String(active));
-      });
-      if (!visible.length) {
-        slotGroups.innerHTML = `<div class="flex flex-col items-center gap-2 px-4 py-10 text-center">
-          <span class="material-symbols-outlined text-[26px] text-on-surface-variant" aria-hidden="true">event_busy</span>
-          <p class="text-[14px] font-semibold text-on-surface">لا مواعيد في هذه الفترة</p>
-          <p class="max-w-[42ch] text-[12px] text-on-surface-variant">احفظ أوقات عملك ثم اضغط «توليد (٩٠ يوماً)»، أو أضف نوبات ليوم واحد.</p>
-        </div>`;
-        return;
-      }
-      const byDate = new Map<string, Sched[]>();
-      visible.forEach((s) => { const list = byDate.get(s.available_date) || []; list.push(s); byDate.set(s.available_date, list); });
-      slotGroups.innerHTML = [...byDate.entries()].map(([date, list]) => {
-        const booked = list.filter((s) => s.is_booked).length;
-        return `<details class="group border-b border-line last:border-0" open>
-          <summary class="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-[13px]">
-            <span class="font-semibold text-on-surface">${escapeHtml(formatArabicDate(date))}</span>
-            <span class="text-[12px] text-on-surface-variant"><span class="tabular-nums">${list.length}</span> موعد${booked ? ` · <span class="tabular-nums">${booked}</span> محجوز` : ""}</span>
-          </summary>
-          <div class="flex flex-wrap gap-1.5 px-3 pb-2">
-            ${list.map((s) => {
-              const t = formatTime(s.start_time);
-              return s.is_booked
-                ? `<span class="inline-flex h-7 items-center gap-1 rounded-md bg-warning-soft px-2 text-[12px] font-medium tabular-nums text-warning" title="محجوز">${escapeHtml(t)}<span class="material-symbols-outlined text-[14px]" aria-hidden="true">person</span></span>`
-                : `<span class="inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-[12px] tabular-nums text-on-surface">
-                    ${escapeHtml(t)}
-                    <button type="button" data-del-sch="${escapeHtml(s.id)}" aria-label="حذف موعد ${escapeHtml(t)}" title="حذف" class="grid h-4 w-4 place-items-center rounded text-on-surface-variant transition-colors hover:bg-error-container/60 hover:text-on-error-container"><span class="material-symbols-outlined text-[14px]" aria-hidden="true">close</span></button>
-                  </span>`;
-            }).join("")}
-          </div>
-        </details>`;
-      }).join("");
+    if (!schedMonth) schedMonth = monthOf(today);
+    if (!schedSelected) schedSelected = today;
+    const slotPanel = root.querySelector("#slot-panel") as HTMLElement;
+
+    const chipHtml = (s: Sched) => {
+      const t = formatTime(s.start_time);
+      return s.is_booked
+        ? `<span class="inline-flex h-7 items-center gap-1 rounded-md bg-warning-soft px-2 text-[12px] font-medium tabular-nums text-warning" title="محجوز">${escapeHtml(t)}<span class="material-symbols-outlined text-[14px]" aria-hidden="true">person</span></span>`
+        : `<span class="inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-[12px] tabular-nums text-on-surface">
+            ${escapeHtml(t)}
+            <button type="button" data-del-sch="${escapeHtml(s.id)}" aria-label="حذف موعد ${escapeHtml(t)}" title="حذف" class="grid h-4 w-4 place-items-center rounded text-on-surface-variant transition-colors hover:bg-error-container/60 hover:text-on-error-container"><span class="material-symbols-outlined text-[14px]" aria-hidden="true">close</span></button>
+          </span>`;
     };
 
-    root.querySelectorAll<HTMLButtonElement>("#slot-range [data-range]").forEach((b) => b.addEventListener("click", () => {
-      scheduleRange = b.dataset.range || "7";
-      paintGroups();
-    }));
-    slotGroups.addEventListener("click", async (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-del-sch]");
+    const paintSlots = () => {
+      const monthIso = schedMonth;
+      const [yy, mm] = monthIso.split("-").map(Number);
+      const totalDays = new Date(yy, mm, 0).getDate();
+      const lead = new Date(yy, mm - 1, 1).getDay();
+      const monthSlots = schedules.filter((s) => s.available_date.startsWith(monthIso));
+      const monthFree = monthSlots.filter((s) => !s.is_booked).length;
+
+      const label = root.querySelector("#cal-label");
+      if (label) label.textContent = new Date(yy, mm - 1, 1).toLocaleDateString("ar-SA-u-nu-latn", { month: "long", year: "numeric" });
+      const summary = root.querySelector("#cal-month");
+      if (summary) summary.textContent = monthSlots.length ? `${monthFree} متاح · ${monthSlots.length - monthFree} محجوز` : "لا مواعيد مُولّدة في هذا الشهر";
+
+      const thisMonth = monthOf(today);
+      root.querySelectorAll<HTMLButtonElement>("[data-cal]").forEach((b) => {
+        const dir = Number(b.dataset.cal);
+        const target = addMonths(monthIso, dir);
+        b.disabled = dir < 0 ? target < thisMonth : target > addMonths(thisMonth, 3);
+      });
+
+      const cells: string[] = [];
+      for (let i = 0; i < lead; i++) cells.push("<span></span>");
+      for (let d = 1; d <= totalDays; d++) {
+        const date = `${monthIso}-${String(d).padStart(2, "0")}`;
+        const list = schedules.filter((s) => s.available_date === date);
+        const freeN = list.filter((s) => !s.is_booked).length;
+        const bookedN = list.length - freeN;
+        const closed = blocked.some((b) => date >= b.start_date && date <= b.end_date);
+        const selected = date === schedSelected;
+        const isToday = date === today;
+        const ring = selected ? "border-primary bg-primary/10" : isToday ? "border-primary/50" : "border-line";
+        cells.push(`<button type="button" data-pick="${date}" aria-pressed="${selected}" aria-label="${escapeHtml(formatArabicDate(date))}${closed ? " مغلق" : list.length ? ` — ${freeN} متاح` : ""}"
+          class="flex h-11 flex-col items-center justify-center gap-0.5 rounded-md border text-[12px] tabular-nums transition-colors hover:bg-surface-container-low ${ring} ${selected ? "text-primary" : "text-on-surface"}">
+          <span class="leading-none ${selected ? "font-bold" : isToday ? "font-bold text-primary" : "font-medium"}">${d}</span>
+          ${closed
+            ? `<span class="material-symbols-outlined text-[11px] leading-none text-on-surface-variant" aria-hidden="true">lock</span>`
+            : list.length
+              ? `<span class="flex items-center gap-0.5 leading-none"><span class="h-1 w-1 rounded-full ${freeN ? "bg-tertiary" : "bg-warning"}"></span><span class="text-[10px] ${selected ? "text-primary/70" : "text-on-surface-variant"}">${freeN || bookedN}</span></span>`
+              : `<span class="h-1 w-1 rounded-full bg-line"></span>`}
+        </button>`);
+      }
+      while (cells.length % 7) cells.push("<span></span>");
+      const grid = root.querySelector("#cal-grid") as HTMLElement;
+      grid.innerHTML = `<div class="grid grid-cols-7 gap-1">
+        ${WEEK_SHORT.map((w) => `<span class="pb-0.5 text-center text-[10px] text-on-surface-variant">${w}</span>`).join("")}
+        ${cells.join("")}
+      </div>`;
+
+      const dayList = schedules.filter((s) => s.available_date === schedSelected).sort((a, b) => a.start_time.localeCompare(b.start_time));
+      const dayFree = dayList.filter((s) => !s.is_booked).length;
+      const dayPanel = root.querySelector("#day-panel") as HTMLElement;
+      dayPanel.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2">
+          <p class="text-[12px] font-semibold text-on-surface">${escapeHtml(formatArabicDate(schedSelected))}</p>
+          <p class="text-[11px] text-on-surface-variant">${dayList.length ? `${dayFree} متاح · ${dayList.length - dayFree} محجوز` : "لا مواعيد"}</p>
+        </div>
+        ${dayList.length
+          ? `<div class="flex flex-wrap gap-1.5 px-3 pb-3">${dayList.map(chipHtml).join("")}</div>`
+          : `<p class="px-3 pb-3 text-[11px] text-on-surface-variant">اختر يوماً فيه مواعيد، أو ولّد من أوقات عملك المحفوظة.</p>`}`;
+    };
+
+    slotPanel.addEventListener("click", async (e) => {
+      const t = e.target as HTMLElement;
+      const cal = t.closest<HTMLButtonElement>("[data-cal]");
+      if (cal) {
+        if (cal.disabled) return;
+        schedMonth = addMonths(schedMonth, Number(cal.dataset.cal));
+        if (!schedSelected.startsWith(schedMonth)) schedSelected = `${schedMonth}-01`;
+        paintSlots();
+        return;
+      }
+      const pick = t.closest<HTMLButtonElement>("[data-pick]");
+      if (pick) {
+        schedSelected = pick.dataset.pick!;
+        paintSlots();
+        return;
+      }
+      const btn = t.closest<HTMLButtonElement>("[data-del-sch]");
       if (!btn) return;
       const ok = await confirmSheet({ title: "حذف هذا الموعد؟", body: "سيُحذف الموعد الفارغ ويختفي من صفحة الحجز.", confirmLabel: "حذف", tone: "danger" });
       if (!ok) return;
       try { await deleteDoctorSchedule(btn.dataset.delSch!); showToast("تم الحذف", "success"); await renderSchedules(root, doctorId); await refreshDoctors(); }
       catch (err) { showToast(translateAuthError(err), "error"); }
     });
-    paintGroups();
+    paintSlots();
   } catch (e) {
     root.innerHTML = `<div class="rounded-xl border border-line bg-surface-container-lowest p-6 text-center text-[13px] text-on-surface-variant">تعذر تحميل الجدول: ${escapeHtml(translateAuthError(e))}</div>`;
   }
