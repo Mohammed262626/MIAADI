@@ -3,6 +3,7 @@ import { getDoctorSpecializations, getDoctorsDirectory, getPatientAppointments, 
 import { countSpecialties } from "../../lib/specialties";
 import { initials, money, shortRef } from "../../components/ui";
 import { qrSvg } from "../../components/qr";
+import { NEXT_APPOINTMENT_SKELETON } from "./home";
 import { seedDoctorsFilters } from "./doctorsLive";
 
 type HomeUser = { id?: string; profile?: { full_name?: string | null; role?: string | null } | null } | null;
@@ -27,6 +28,14 @@ function nextSlotLabel(doc: DoctorDirectoryRow): string | null {
   return s ? `${formatRelativeDay(s.available_date)} ${formatTime(s.start_time)}` : null;
 }
 
+const RELATIVE_DAYS = [localDateISO(0), localDateISO(1), localDateISO(2)];
+
+/* The hero has room for the full date, but not for a doubled weekday
+   ("اليوم، الثلاثاء، 20 أكتوبر"). */
+function fullDateLabel(date: string): string {
+  return RELATIVE_DAYS.includes(date) ? formatRelativeDay(date) : formatArabicDate(date);
+}
+
 function featuredCardHtml(doc: DoctorDirectoryRow, _index: number): string {
   const rating = doc.rating === null ? "—" : doc.rating.toFixed(1);
   const next = nextSlotLabel(doc);
@@ -34,12 +43,12 @@ function featuredCardHtml(doc: DoctorDirectoryRow, _index: number): string {
     ? doc.insurances.slice(0, 3).join("، ")
     : "دفع مباشر";
   return `
-<article class="press cursor-pointer rounded-xl bg-surface-container-lowest p-4 sm:p-5" data-doctor-card="${escapeHtml(doc.id)}" data-doctor-id="${escapeHtml(doc.id)}">
+<article class="press relative rounded-xl bg-surface-container-lowest p-4 sm:p-5">
   <div class="flex items-start gap-4">
     ${doctorPhoto(doc)}
     <div class="min-w-0 flex-1">
       <div class="flex items-start justify-between gap-2">
-        <h3 class="truncate text-[19px] font-bold leading-tight text-on-surface">${escapeHtml(doc.name)}</h3>
+        <h3 class="truncate text-[19px] font-bold leading-tight text-on-surface"><a href="#doctor/${escapeHtml(doc.id)}" class="after:absolute after:inset-0 after:content-['']">${escapeHtml(doc.name)}</a></h3>
         <span class="flex shrink-0 items-center gap-1 text-[14px] text-on-surface-variant">
           <span class="text-primary material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
           <span class="font-semibold tabular-nums text-on-surface">${escapeHtml(rating)}</span>
@@ -61,7 +70,7 @@ function featuredCardHtml(doc: DoctorDirectoryRow, _index: number): string {
         <p class="text-[13px] text-on-surface-variant">رسوم الكشف</p>
         <p class="text-[17px] font-bold tabular-nums text-on-surface">${escapeHtml(money(doc.consultation_fee))}</p>
       </div>
-      <button class="press h-11 rounded-xl bg-primary px-4 text-[15px] font-semibold text-on-primary transition-colors hover:bg-primary-container" type="button" data-book-doctor="${escapeHtml(doc.id)}">
+      <button class="press relative z-10 h-11 rounded-xl bg-primary px-4 text-[15px] font-semibold text-on-primary transition-colors hover:bg-primary-container" type="button" data-book-doctor="${escapeHtml(doc.id)}">
         احجز
       </button>
     </div>
@@ -93,7 +102,7 @@ function renderFeaturedDoctors(root: HTMLElement, docs: DoctorDirectoryRow[]) {
   grid.setAttribute("aria-busy", "false");
   if (!docs.length) {
     grid.innerHTML = `<div class="rise-in flex flex-col items-center gap-3 rounded-xl bg-surface-container-lowest px-5 py-8 text-center">
-      <span class="material-symbols-outlined text-[28px] text-outline">event_busy</span>
+      <span aria-hidden="true" class="material-symbols-outlined text-[28px] text-outline">event_busy</span>
       <p class="text-[16px] text-on-surface-variant">لا يوجد أطباء لديهم مواعيد متاحة خلال الأسبوع القادم.</p>
       <a href="#doctors" class="press inline-flex h-11 items-center rounded-xl bg-primary px-5 text-[15px] font-semibold text-on-primary">تصفح جميع الأطباء</a>
     </div>`;
@@ -106,12 +115,17 @@ function renderFeaturedDoctors(root: HTMLElement, docs: DoctorDirectoryRow[]) {
 
 /* ------------------------------ specialty counts ------------------------------ */
 
-function renderSpecialtyCounts(root: HTMLElement, specializations: string[]) {
-  const counts = countSpecialties(specializations);
+function renderSpecialtyCounts(root: HTMLElement, specializations: string[] | null) {
+  const counts = specializations ? countSpecialties(specializations) : null;
   root.querySelectorAll<HTMLButtonElement>("[data-specialty-link]").forEach((btn) => {
     const key = btn.dataset.specialtyLink || "";
-    const n = counts[key] ?? 0;
     const badge = btn.querySelector<HTMLElement>(`[data-specialty-count="${key}"]`);
+    if (!counts) {
+      // Doctor table unreachable: keep tiles navigable instead of claiming "no data".
+      if (badge) badge.textContent = "…";
+      return;
+    }
+    const n = counts[key] ?? 0;
     if (badge) badge.textContent = n > 0 ? `${n} طبيب` : "قريباً";
     const off = n === 0;
     btn.disabled = off;
@@ -194,6 +208,24 @@ function pickNextAppointment(rows: AppointmentRow[]): AppointmentRow | null {
   return upcoming[0] || null;
 }
 
+function heroFailureHtml(): string {
+  return `
+<div class="rise-in rounded-xl bg-surface-container-low p-4">
+  <div class="flex items-start gap-3">
+    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-error-container text-on-error-container">
+      <span aria-hidden="true" class="material-symbols-outlined text-[22px]">cloud_off</span>
+    </span>
+    <div class="min-w-0">
+      <p class="text-[16px] font-semibold leading-snug text-on-surface">تعذّر تحميل موعدك القادم</p>
+      <p class="mt-0.5 text-[14px] leading-relaxed text-on-surface-variant">تحقق من اتصالك بالإنترنت ثم أعد المحاولة.</p>
+    </div>
+  </div>
+  <button type="button" data-retry-appt class="press mt-3 h-11 w-full rounded-xl bg-primary text-[15px] font-semibold text-on-primary transition-colors hover:bg-primary-container">
+    إعادة المحاولة
+  </button>
+</div>`;
+}
+
 function emptyHeroHtml(loggedIn: boolean): string {
   const title = loggedIn ? "لا توجد مواعيد قادمة" : "سجّل الدخول لعرض موعدك القادم";
   const body = loggedIn
@@ -205,7 +237,7 @@ function emptyHeroHtml(loggedIn: boolean): string {
 <div class="rise-in rounded-xl bg-surface-container-low p-4">
   <div class="flex items-start gap-3">
     <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-      <span class="material-symbols-outlined text-[22px]">${icon}</span>
+      <span aria-hidden="true" class="material-symbols-outlined text-[22px]">${icon}</span>
     </span>
     <div class="min-w-0">
       <p class="text-[16px] font-semibold leading-snug text-on-surface">${escapeHtml(title)}</p>
@@ -226,7 +258,7 @@ function bookingHeroHtml(appt: AppointmentRow): string {
   const spec = shortSpecialty(String(doc.specialization || ""));
   const place = doc.hospitals?.name ? `${spec} • ${doc.hospitals.name}` : spec;
   const mode = "حضور بالعيادة";
-  const when = `${formatRelativeDay(String(sch.available_date || ""))}، ${formatArabicDate(String(sch.available_date || ""))}`;
+  const when = fullDateLabel(String(sch.available_date || ""));
   const at = formatTime(String(sch.start_time || ""));
   const shareText = [
     "موعدي في ميعادي",
@@ -262,7 +294,7 @@ function bookingHeroHtml(appt: AppointmentRow): string {
       بطاقة الدخول
     </button>
     <a href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener noreferrer" class="press grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-surface-container-lowest text-on-surface transition-colors hover:bg-surface-container-high" aria-label="مشاركة تفاصيل الموعد على واتساب" title="مشاركة على واتساب">
-      <span class="material-symbols-outlined text-[20px]">chat</span>
+      <span aria-hidden="true" class="material-symbols-outlined text-[20px]">chat</span>
     </a>
   </div>
 </div>`;
@@ -270,30 +302,48 @@ function bookingHeroHtml(appt: AppointmentRow): string {
 
 /* ---------------------------------- wiring ---------------------------------- */
 
-export async function wireHome(appEl: HTMLElement, user: HomeUser) {
-  const heroEl = appEl.querySelector<HTMLElement>("#home-next-appointment");
+async function renderNextAppointment(root: HTMLElement, user: HomeUser, rows: AppointmentRow[] | null) {
+  const heroEl = root.querySelector<HTMLElement>("#home-next-appointment");
+  if (!heroEl) return;
+  if (!user) { heroEl.innerHTML = emptyHeroHtml(false); return; }
+  if (rows) {
+    const next = pickNextAppointment(rows);
+    heroEl.innerHTML = next ? bookingHeroHtml(next) : emptyHeroHtml(true);
+    return;
+  }
+  heroEl.innerHTML = heroFailureHtml();
+  heroEl.querySelector("[data-retry-appt]")?.addEventListener("click", () => {
+    heroEl.innerHTML = NEXT_APPOINTMENT_SKELETON;
+    getPatientAppointments()
+      .catch(() => null)
+      .then((r) => void renderNextAppointment(root, user, r as AppointmentRow[] | null));
+  });
+}
 
-  const [specializations, appointments, directory] = await Promise.all([
-    getDoctorSpecializations().catch(() => [] as string[]),
-    user ? getPatientAppointments().catch(() => [] as unknown[]).then((r) => r as AppointmentRow[]) : Promise.resolve([] as AppointmentRow[]),
+export async function wireHome(appEl: HTMLElement, user: HomeUser) {
+  // Signed-out guests have nothing to fetch; signed-in failures surface as a
+  // retryable card instead of a fake "لا توجد مواعيد قادمة" state.
+  const appointmentsPromise: Promise<AppointmentRow[] | null> = user
+    ? getPatientAppointments().catch(() => null).then((r) => r as AppointmentRow[] | null)
+    : Promise.resolve([] as AppointmentRow[]);
+
+  const [specializations, directory] = await Promise.all([
+    getDoctorSpecializations().catch(() => null),
     getDoctorsDirectory(7).catch(() => null),
   ]);
 
   renderSpecialtyCounts(appEl, specializations);
   wireHeroControls(appEl);
 
-  if (heroEl) {
-    const next = pickNextAppointment(appointments);
-    heroEl.innerHTML = next ? bookingHeroHtml(next) : emptyHeroHtml(Boolean(user));
-  }
+  await renderNextAppointment(appEl, user, await appointmentsPromise);
 
   const renderFeaturedFailure = () => {
     const grid = appEl.querySelector<HTMLElement>("#featured-doctors");
     if (!grid) return;
     grid.innerHTML = `<div class="rise-in flex flex-col items-center gap-3 rounded-xl bg-surface-container-lowest px-5 py-8 text-center">
-      <span class="material-symbols-outlined text-[28px] text-outline">cloud_off</span>
+      <span aria-hidden="true" class="material-symbols-outlined text-[28px] text-outline">cloud_off</span>
       <p class="text-[16px] text-on-surface-variant">تعذّر تحميل الأطباء.</p>
-      <button class="press inline-flex h-11 items-center gap-1.5 rounded-xl bg-primary px-5 text-[15px] font-semibold text-on-primary" type="button" data-retry-featured><span class="material-symbols-outlined text-[18px]">refresh</span>إعادة المحاولة</button>
+      <button class="press inline-flex h-11 items-center gap-1.5 rounded-xl bg-primary px-5 text-[15px] font-semibold text-on-primary" type="button" data-retry-featured><span aria-hidden="true" class="material-symbols-outlined text-[18px]">refresh</span>إعادة المحاولة</button>
     </div>`;
     grid.setAttribute("aria-busy", "false");
     grid.querySelector("[data-retry-featured]")?.addEventListener("click", async () => {

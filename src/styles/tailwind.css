@@ -250,6 +250,14 @@ html[data-theme="dark"] .site-footer .text-on-primary\/80 { color: rgb(244 255 2
 html[data-theme="dark"] .site-footer .text-on-primary\/70 { color: rgb(244 255 252 / 0.7); }
 html[data-theme="dark"] .site-footer .text-on-primary\/60 { color: rgb(244 255 252 / 0.6); }
 
+/* full-bleed brand surfaces (photo caption, closing CTA) also hold the deep
+   brand surface in dark mode instead of the bright mint --color-primary */
+html[data-theme="dark"] .brand-surface { background: #06332e; }
+html[data-theme="dark"] .brand-surface .text-on-primary { color: #f4fffc; }
+html[data-theme="dark"] .brand-surface .text-on-primary\/85 { color: rgb(244 255 252 / 0.85); }
+html[data-theme="dark"] .brand-surface .cta-invert { background: #f4fffc; color: #00201d; }
+html[data-theme="dark"] .brand-surface .cta-invert:hover { background: #dfece9; }
+
 /* dark mode: only the tokens flip — every utility keeps working */
 html[data-theme="dark"] {
   color-scheme: dark;

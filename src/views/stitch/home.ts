@@ -22,7 +22,7 @@ const SPECIALTY_ROWS = SPECIALTIES.map(
   (s) => `
 <button type="button" data-specialty-link="${s.id}" class="group -mx-3 flex w-[calc(100%+1.5rem)] items-center justify-between gap-4 rounded-xl px-3 py-3.5 text-start transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
   <span class="text-[17px] font-semibold text-on-surface transition-colors group-hover:text-primary">${s.ar}</span>
-  <span class="shrink-0 text-[14px] tabular-nums text-on-surface-variant" data-specialty-count="${s.id}">—</span>
+  <span class="shrink-0 text-[14px] tabular-nums text-on-surface-variant" data-specialty-count="${s.id}">…</span>
 </button>`
 ).join("");
 
@@ -46,6 +46,19 @@ const DOCTOR_SKELETONS = [0, 1, 2]
   )
   .join("");
 
+// Shared by the paint-time shell and the retry path in homeLive.ts.
+export const NEXT_APPOINTMENT_SKELETON = `
+<div class="rounded-xl bg-surface-container-low p-4">
+  <div class="flex items-center gap-3">
+    <div class="h-10 w-10 shrink-0 rounded-xl bg-surface-container-high"></div>
+    <div class="flex-1">
+      <div class="h-3.5 w-36 rounded bg-surface-container-high"></div>
+      <div class="mt-2 h-3 w-48 rounded bg-surface-container"></div>
+    </div>
+  </div>
+  <div class="mt-3 h-11 rounded-xl bg-surface-container-high"></div>
+</div>`;
+
 export const HOME_MAIN = `<div class="w-full">
 <div class="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:grid lg:grid-cols-2 lg:gap-x-12 lg:px-8 xl:gap-x-16">
 
@@ -60,11 +73,11 @@ export const HOME_MAIN = `<div class="w-full">
   <div class="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
     <a href="#doctors" class="inline-flex min-h-11 items-center gap-1.5 text-[16px] font-semibold text-primary transition-colors hover:text-primary-container">
       تصفح كل الأطباء
-      <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+      <span aria-hidden="true" class="material-symbols-outlined text-[18px]">arrow_back</span>
     </a>
     <a href="#appointments" class="inline-flex min-h-11 items-center gap-1.5 text-[16px] text-on-surface-variant transition-colors hover:text-on-surface">
       مواعيدي
-      <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+      <span aria-hidden="true" class="material-symbols-outlined text-[18px]">calendar_month</span>
     </a>
   </div>
 </header>
@@ -77,7 +90,7 @@ export const HOME_MAIN = `<div class="w-full">
       <img src="/assets/sudan-khartoum-from-air-with-nile-1936.jpg" width="1920" height="1519"
         alt="الخرطوم من الجو سنة ١٩٣٦: النيل يقسم المدينة إلى مربعات" decoding="async"
         class="h-full w-full object-cover photo-drift" />
-      <p class="absolute inset-x-0 bottom-0 bg-primary px-4 py-2 text-[13px] text-on-primary">
+      <p class="brand-surface absolute inset-x-0 bottom-0 bg-primary px-4 py-2 text-[13px] text-on-primary">
         الخرطوم من الجو، ١٩٣٦ · أرشيف ماتسون
       </p>
     </div>
@@ -121,17 +134,7 @@ export const HOME_MAIN = `<div class="w-full">
         </div>
       </form>
 
-      <div id="home-next-appointment" class="mt-auto" aria-live="polite">
-        <div class="rounded-xl bg-surface-container-low p-4">
-          <div class="flex items-center gap-3">
-            <div class="h-10 w-10 shrink-0 rounded-xl bg-surface-container-high"></div>
-            <div class="flex-1">
-              <div class="h-3.5 w-36 rounded bg-surface-container-high"></div>
-              <div class="mt-2 h-3 w-48 rounded bg-surface-container"></div>
-            </div>
-          </div>
-          <div class="mt-3 h-11 rounded-xl bg-surface-container-high"></div>
-        </div>
+      <div id="home-next-appointment" class="mt-auto" aria-live="polite">${NEXT_APPOINTMENT_SKELETON}
       </div>
     </div>
   </div>
@@ -149,7 +152,7 @@ export const HOME_MAIN = `<div class="w-full">
       </div>
       <a href="#doctors" class="inline-flex min-h-11 shrink-0 items-center gap-1 text-[16px] font-semibold text-primary transition-colors hover:text-primary-container">
         الكل
-        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+        <span aria-hidden="true" class="material-symbols-outlined text-[18px]">arrow_back</span>
       </a>
     </div>
     <div id="home-specialties" class="flex flex-col">${SPECIALTY_ROWS}
@@ -165,7 +168,7 @@ export const HOME_MAIN = `<div class="w-full">
       </div>
       <a href="#doctors" class="inline-flex min-h-11 shrink-0 items-center gap-1 text-[16px] font-semibold text-primary transition-colors hover:text-primary-container">
         الجميع
-        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+        <span aria-hidden="true" class="material-symbols-outlined text-[18px]">arrow_back</span>
       </a>
     </div>
     <div id="featured-doctors" class="flex flex-col gap-3" aria-busy="true">${DOCTOR_SKELETONS}
@@ -244,35 +247,35 @@ export const HOME_MAIN = `<div class="w-full">
           <details class="group rounded-xl bg-surface-container-lowest px-4">
             <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-semibold text-on-surface">
               <span>كيف أحجز موعداً؟</span>
-              <span class="material-symbols-outlined text-[20px] text-primary transition-transform group-open:rotate-45">add</span>
+              <span aria-hidden="true" class="material-symbols-outlined text-[20px] text-primary transition-transform group-open:rotate-45">add</span>
             </summary>
             <p class="pb-4 text-[16px] leading-relaxed text-on-surface-variant">اختر التخصص أو ابحث باسم الطبيب، ثم اختر من المواعيد المتاحة وأكّد الحجز. لا تحتاج إلى مكالمة.</p>
           </details>
           <details class="group rounded-xl bg-surface-container-lowest px-4">
             <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-semibold text-on-surface">
               <span>كيف أعرف رسوم الكشف؟</span>
-              <span class="material-symbols-outlined text-[20px] text-primary transition-transform group-open:rotate-45">add</span>
+              <span aria-hidden="true" class="material-symbols-outlined text-[20px] text-primary transition-transform group-open:rotate-45">add</span>
             </summary>
             <p class="pb-4 text-[16px] leading-relaxed text-on-surface-variant">تظهر رسوم الكشف لكل طبيب في بطاقته، وقبل تأكيد الحجز مباشرة.</p>
           </details>
           <details class="group rounded-xl bg-surface-container-lowest px-4">
             <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-semibold text-on-surface">
               <span>هل يمكنني إعادة الجدولة أو الإلغاء؟</span>
-              <span class="material-symbols-outlined text-[20px] text-primary transition-transform group-open:rotate-45">add</span>
+              <span aria-hidden="true" class="material-symbols-outlined text-[20px] text-primary transition-transform group-open:rotate-45">add</span>
             </summary>
             <p class="pb-4 text-[16px] leading-relaxed text-on-surface-variant">نعم، من صفحة حجوزاتك: افتح الموعد القادم واختر إعادة الجدولة أو الإلغاء.</p>
           </details>
           <details class="group rounded-xl bg-surface-container-lowest px-4">
             <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-semibold text-on-surface">
               <span>ما رقم مرجع الموعد؟</span>
-              <span class="material-symbols-outlined text-[20px] text-primary transition-transform group-open:rotate-45">add</span>
+              <span aria-hidden="true" class="material-symbols-outlined text-[20px] text-primary transition-transform group-open:rotate-45">add</span>
             </summary>
             <p class="pb-4 text-[16px] leading-relaxed text-on-surface-variant">رمز مختصر يظهر في بطاقة الدخول، تشاركه عند الاستقبال للتحقق من حجزك.</p>
           </details>
           <details class="group rounded-xl bg-surface-container-lowest px-4">
             <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-semibold text-on-surface">
               <span>في أي مدن تعمل المنصة؟</span>
-              <span class="material-symbols-outlined text-[20px] text-primary transition-transform group-open:rotate-45">add</span>
+              <span aria-hidden="true" class="material-symbols-outlined text-[20px] text-primary transition-transform group-open:rotate-45">add</span>
             </summary>
             <p class="pb-4 text-[16px] leading-relaxed text-on-surface-variant">الخرطوم وأم درمان وبورتسودان، وتُضاف مدن جديدة مع انضمام عيادات إليها.</p>
           </details>
@@ -291,10 +294,10 @@ export const HOME_MAIN = `<div class="w-full">
     <img src="/assets/confluence-of-nile-khartoum-001-cropped.jpg" width="1600" height="701"
       alt="ملتقى النيل الأزرق والنيل الأبيض في الخرطوم" loading="lazy" decoding="async"
       class="h-48 w-full rounded-xl object-cover" />
-    <div class="mt-3 rounded-xl bg-primary px-6 py-10 sm:px-8">
+    <div class="brand-surface mt-3 rounded-xl bg-primary px-6 py-10 sm:px-8">
       <h2 class="max-w-[20ch] text-[clamp(1.75rem,2.6vw,2.5rem)] font-bold leading-tight text-on-primary">موعدك القادم يبدأ بخطوة واحدة.</h2>
       <p class="mt-3 max-w-[48ch] text-[16px] leading-relaxed text-on-primary/85">ابحث عن الطبيب المناسب في مدينتك، واختر الوقت الذي يناسبك من المواعيد المتاحة فعلاً.</p>
-      <a href="#doctors" class="press mt-6 inline-flex h-12 items-center rounded-xl bg-surface-container-lowest px-6 text-[16px] font-semibold text-on-surface transition-colors hover:bg-surface-container-high">
+      <a href="#doctors" class="press cta-invert mt-6 inline-flex h-12 items-center rounded-xl bg-surface-container-lowest px-6 text-[16px] font-semibold text-on-surface transition-colors hover:bg-surface-container-high">
         ابحث عن طبيب
       </a>
     </div>
