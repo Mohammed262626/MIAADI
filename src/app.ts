@@ -1,5 +1,5 @@
 import "./styles/tailwind.css";
-import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, findDoctorByUser, listDoctorSchedules, createDoctorSchedule, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile } from "./lib/supabase";
+import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, findDoctorByUser, listDoctorSchedules, createDoctorSchedules, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile } from "./lib/supabase";
 import { localDateISO, escapeHtml, translateAuthError, formatTime, formatArabicDate } from "./lib/format";
 import { detectNearestCity, locationLabel, rememberCity } from "./lib/geodata";
 import { showToast } from "./components/Toast";
@@ -778,223 +778,453 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
   if (state.adminManagementDoctor) await renderSchedules(main.querySelector("#schedules-root") as HTMLElement, state.adminManagementDoctor);
 }
 
+/* ------------------------------ working hours ------------------------------ */
+
+type ShiftDraft = { start: string; end: string; b1s: string; b1e: string; b2s: string; b2e: string };
+type DayDraft = { on: boolean; shifts: ShiftDraft[] };
+type Sched = { id: string; available_date: string; start_time: string; end_time: string; is_booked: boolean };
+
+const SCHED_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+/* Slot-list window (days ahead) survives the panel's re-renders. */
+let scheduleRange = "7";
+
+const hhmm = (t: string | null | undefined) => (t || "").slice(0, 5);
+const clock = (total: number) => `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+const toMinutes = (t: string) => { const [h, m] = t.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+const emptyShift = (start = "09:00", end = "14:00"): ShiftDraft => ({ start, end, b1s: "", b1e: "", b2s: "", b2e: "" });
+const shiftBreaks = (s: ShiftDraft): [number, number][] => {
+  const out: [number, number][] = [];
+  if (s.b1s && s.b1e) out.push([toMinutes(s.b1s), toMinutes(s.b1e)]);
+  if (s.b2s && s.b2e) out.push([toMinutes(s.b2s), toMinutes(s.b2e)]);
+  return out;
+};
+const shiftIssue = (s: ShiftDraft): string => {
+  if (!s.start || !s.end) return "حدّد بداية ونهاية الفترة";
+  if (toMinutes(s.end) <= toMinutes(s.start)) return "النهاية يجب أن تكون بعد البداية";
+  for (const [a, b] of [[s.b1s, s.b1e], [s.b2s, s.b2e]] as const) {
+    if (!!a !== !!b) return "أكمل طرفي الاستراحة أو امسحهما";
+    if (a && b) {
+      if (toMinutes(b) <= toMinutes(a)) return "نهاية الاستراحة قبل بدايتها";
+      if (toMinutes(a) < toMinutes(s.start) || toMinutes(b) > toMinutes(s.end)) return "الاستراحة خارج الفترة";
+    }
+  }
+  const bs = shiftBreaks(s);
+  for (let i = 0; i < bs.length; i++) {
+    for (let j = i + 1; j < bs.length; j++) {
+      if (bs[i][0] < bs[j][1] && bs[j][0] < bs[i][1]) return "الاستراحتان متداخلتان";
+    }
+  }
+  return "";
+};
+const shiftSlots = (s: ShiftDraft, slot: number): number[] => {
+  if (!slot || slot < 5 || shiftIssue(s)) return [];
+  const bs = shiftBreaks(s);
+  const out: number[] = [];
+  for (let t = toMinutes(s.start); t + slot <= toMinutes(s.end); t += slot) {
+    if (!bs.some(([a, b]) => t + slot > a && t < b)) out.push(t);
+  }
+  return out;
+};
+const daySlots = (d: DayDraft, slot: number): number[] => {
+  const all = d.shifts.flatMap((s) => shiftSlots(s, slot));
+  return [...new Set(all)].sort((a, b) => a - b);
+};
+const dayIssue = (d: DayDraft): string => {
+  if (!d.on) return "";
+  if (!d.shifts.length) return "أضف فترة عمل واحدة على الأقل";
+  for (const s of d.shifts) { const issue = shiftIssue(s); if (issue) return issue; }
+  const ranges = d.shifts.map((s) => [toMinutes(s.start), toMinutes(s.end)] as [number, number]).sort((a, b) => a[0] - b[0]);
+  for (let i = 1; i < ranges.length; i++) {
+    if (ranges[i][0] < ranges[i - 1][1]) return "فترات اليوم متداخلة";
+  }
+  return "";
+};
+/** Next calendar date (ISO) that falls on the given weekday, today included. */
+const nextDowDate = (dow: number) => localDateISO((dow - new Date().getDay() + 7) % 7);
+
 async function renderSchedules(root: HTMLElement, doctorId: string) {
   root.classList.remove("hidden");
-  root.innerHTML = `<p class="font-body-md text-body-md text-secondary py-space-lg text-center">جاري تحميل المواعيد…</p>`;
+  root.innerHTML = `<p class="py-space-lg text-center font-body-md text-body-md text-secondary">جاري تحميل الجدول…</p>`;
   type AvRule = { day_of_week: number; start_time: string; end_time: string; is_enabled: boolean; slot_minutes: number | null; break_start_1: string | null; break_end_1: string | null; break_start_2: string | null; break_end_2: string | null };
   type Blocked = { id: string; start_date: string; end_date: string; reason: string | null };
   const fixture = mgFixture();
   try {
-    let schedules: Awaited<ReturnType<typeof listDoctorSchedules>>;
+    let schedules: Sched[];
     let availability: AvRule[];
     let blocked: Blocked[];
     if (fixture) {
-      schedules = fixtureSchedules() as unknown as typeof schedules;
+      schedules = fixtureSchedules() as unknown as Sched[];
       availability = fixtureAvailability as unknown as AvRule[];
       blocked = fixtureBlocked as unknown as Blocked[];
     } else {
       [schedules, availability, blocked] = await Promise.all([
-        listDoctorSchedules(doctorId),
+        listDoctorSchedules(doctorId) as unknown as Promise<Sched[]>,
         getDoctorAvailability(doctorId).catch(() => []) as Promise<AvRule[]>,
         listBlockedDates(doctorId).catch(() => []) as Promise<Blocked[]>,
       ]);
     }
-    const doc = state.adminDoctorsCache.find((d) => d.id === doctorId);
-    const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-    const enabled = availability.filter((r) => r.is_enabled);
-    const hasRules = enabled.length > 0;
-    const selected = new Set<number>(enabled.map((r) => r.day_of_week));
-    const byDay = new Map(enabled.map((r) => [r.day_of_week, r]));
-    const first = enabled[0];
-    const sharedStart = (first?.start_time || "09:00").slice(0, 5);
-    const sharedEnd = (first?.end_time || "14:00").slice(0, 5);
-    const slotMinutes = String(first?.slot_minutes ?? 30);
-    const pick = (v: string | null | undefined, dflt: string) => (hasRules ? (v || "") : dflt).slice(0, 5);
-    const b1s = pick(first?.break_start_1, "13:00"), b1e = pick(first?.break_end_1, "14:00");
-    const b2s = pick(first?.break_start_2, "15:00"), b2e = pick(first?.break_end_2, "16:00");
+
+    const today = localDateISO();
+    const role = state.currentUser?.profile?.role as string | undefined;
+    const isDoctor = role === "doctor";
+    const docName = state.adminDoctorsCache.find((d) => d.id === doctorId)?.name || (isDoctor ? state.currentUser?.profile?.full_name : "") || "";
+    const heading = isDoctor ? "ساعات عملي" : `مواعيد ${docName || "الطبيب"}`;
+
+    const enabledRules = availability.filter((r) => r.is_enabled);
+    const rulesByDay = new Map<number, AvRule[]>();
+    enabledRules.forEach((r) => rulesByDay.set(r.day_of_week, [...(rulesByDay.get(r.day_of_week) || []), r]));
+    const firstRule = enabledRules[0];
+    const slotFromRule = String(firstRule?.slot_minutes ?? 30);
+
+    /* A day can hold several shifts (e.g. 09:00–13:00 and 16:00–20:00), each
+       with its own breaks — exactly as stored in doctor_availability. */
+    const drafts: DayDraft[] = SCHED_DAYS.map((_, day) => {
+      const rules = (rulesByDay.get(day) || []).slice().sort((a, b) => a.start_time.localeCompare(b.start_time));
+      return {
+        on: rules.length > 0,
+        shifts: rules.length
+          ? rules.map((r) => ({
+            start: hhmm(r.start_time), end: hhmm(r.end_time),
+            b1s: hhmm(r.break_start_1), b1e: hhmm(r.break_end_1),
+            b2s: hhmm(r.break_start_2), b2e: hhmm(r.break_end_2),
+          }))
+          : [emptyShift()],
+      };
+    });
+
+    const weekCapacity = enabledRules.reduce((sum, r) => sum + shiftSlots({
+      start: hhmm(r.start_time), end: hhmm(r.end_time),
+      b1s: hhmm(r.break_start_1), b1e: hhmm(r.break_end_1),
+      b2s: hhmm(r.break_start_2), b2e: hhmm(r.break_end_2),
+    }, r.slot_minutes ?? 30).length, 0);
+    const upcoming = schedules.filter((s) => !s.is_booked && s.available_date >= today);
+    const nearest = upcoming.length ? upcoming.reduce((a, b) => (a.available_date <= b.available_date ? a : b)).available_date : "";
+
+    const stat = (label: string, value: string) => `<div class="bg-surface-container-lowest px-4 py-3">
+      <p class="text-[12px] text-on-surface-variant">${escapeHtml(label)}</p>
+      <p class="mt-1 text-[19px] font-semibold leading-none tabular-nums text-on-surface">${escapeHtml(value)}</p>
+    </div>`;
 
     root.innerHTML = `
-      <div class="flex items-center gap-space-sm mb-space-lg">
-        <span class="w-11 h-11 rounded-lg grid place-items-center bg-primary/10 text-primary shrink-0"><span class="material-symbols-outlined text-[22px]">calendar_month</span></span>
-        <div>
-          <div class="text-[12px] font-medium text-on-surface-variant">جداول العمل</div>
-          <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">مواعيد ${escapeHtml(doc?.name || "الطبيب")}</h3>
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-[12px] font-medium text-on-surface-variant">جدولي وساعات العمل</p>
+          <h2 class="mt-0.5 text-[20px] font-bold text-on-surface">${escapeHtml(heading)}</h2>
         </div>
+        <p class="text-[12px] text-on-surface-variant">التغييرات تُحفظ على أيام الأسبوع — ثم تُولّد المواعيد منها.</p>
       </div>
 
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-space-lg items-start">
-        <section class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
-          <h4 class="flex items-center gap-space-xs font-label-lg text-label-lg font-bold text-on-surface mb-space-md">
-            <span class="material-symbols-outlined text-[20px] text-primary">schedule</span>أوقات العمل الأسبوعية
-          </h4>
-          <div id="day-chips" class="flex flex-wrap gap-space-xs">
-            ${DAYS.map((d, i) => `<button type="button" data-day="${i}" class="px-space-md py-1.5 rounded-lg border font-label-sm text-label-sm font-bold transition-colors ${selected.has(i) ? "bg-primary text-on-primary border-primary" : "border-line text-on-surface-variant hover:bg-surface-container"}">${d}</button>`).join("")}
-          </div>
-          <div class="mt-space-md grid grid-cols-2 sm:grid-cols-4 gap-space-sm items-end">
-            <label class="font-label-sm text-label-sm text-secondary">من <input id="wk-start" type="time" value="${escapeHtml(sharedStart)}" class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-            <label class="font-label-sm text-label-sm text-secondary">إلى <input id="wk-end" type="time" value="${escapeHtml(sharedEnd)}" class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-            <label class="font-label-sm text-label-sm text-secondary">مدة الموعد
-              <select id="wk-slot" class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary">
-                ${[15, 20, 30, 45, 60].map((m) => `<option value="${m}"${String(m) === slotMinutes ? " selected" : ""}>${m} دقيقة</option>`).join("")}
+      <div class="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4">
+        ${stat("أيام العمل أسبوعياً", String(enabledRules.length ? rulesByDay.size : 0))}
+        ${stat("مواعيد الأسبوع", String(weekCapacity))}
+        ${stat("مواعيد متاحة قادمة", String(upcoming.length))}
+        ${stat("أقرب موعد متاح", nearest ? formatArabicDate(nearest) : "—")}
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[1.5fr_1fr]">
+        <section class="rounded-xl border border-line bg-surface-container-lowest p-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="flex items-center gap-1.5 text-[15px] font-semibold text-on-surface">
+              <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">schedule</span>أوقات العمل الأسبوعية
+            </h3>
+            <label class="flex items-center gap-2 text-[12px] text-on-surface-variant">مدة الموعد
+              <select id="wk-slot" class="h-8 rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface">
+                ${[15, 20, 30, 45, 60].map((m) => `<option value="${m}"${String(m) === slotFromRule ? " selected" : ""}>${m} دقيقة</option>`).join("")}
               </select>
             </label>
-            <p id="av-preview" class="font-label-sm text-label-sm text-secondary self-center"></p>
           </div>
-          <div class="mt-space-md grid grid-cols-2 sm:grid-cols-4 gap-space-sm items-end">
-            <label class="font-label-sm text-label-sm text-secondary">استراحة 1 من <input id="brk1-start" type="time" value="${escapeHtml(b1s)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-            <label class="font-label-sm text-label-sm text-secondary">استراحة 1 إلى <input id="brk1-end" type="time" value="${escapeHtml(b1e)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-            <label class="font-label-sm text-label-sm text-secondary">استراحة 2 من <input id="brk2-start" type="time" value="${escapeHtml(b2s)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-            <label class="font-label-sm text-label-sm text-secondary">استراحة 2 إلى <input id="brk2-end" type="time" value="${escapeHtml(b2e)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+
+          <div id="day-rows" class="mt-3 flex flex-col divide-y divide-line"></div>
+
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <button id="apply-all" type="button" class="inline-flex h-8 items-center gap-1 rounded-lg border border-line px-2.5 text-[12px] font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">content_copy</span>طبّق فترات أول يوم على الباقي
+            </button>
+            <p id="av-preview" class="text-[12px] text-on-surface-variant"></p>
           </div>
-          <p class="mt-space-xs font-label-sm text-label-sm text-outline">اترك حقول أي استراحة فارغة لإلغائها.</p>
-          <div class="mt-space-md flex flex-wrap items-center gap-space-sm">
-            <button id="save-availability" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors"><span class="material-symbols-outlined text-[18px]">save</span>حفظ الأوقات</button>
-            <button id="generate-schedule" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg border border-line bg-surface-container-lowest text-on-surface font-label-md text-label-md font-bold hover:bg-surface-container transition-colors"><span class="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>توليد المواعيد (90 يوماً)</button>
+
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
+            <p class="text-[12px] text-on-surface-variant">الفترة الثانية للدوام المقسوم — الاستراحة فارغة = بدون استراحة.</p>
+            <button id="save-availability" type="button" class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50">
+              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">save</span>حفظ أوقات العمل
+            </button>
           </div>
-          <label class="mt-space-xs flex items-center gap-space-xs font-label-sm text-label-sm text-secondary"><input id="gen-replace" type="checkbox" /> استبدال المواعيد الفارغة القادمة</label>
-          <details class="mt-space-md rounded-lg bg-surface-container-low p-space-md">
-            <summary class="cursor-pointer font-label-md text-label-md font-bold text-on-surface">تخصيص ساعات مختلفة لبعض الأيام</summary>
-            <p class="mt-space-xs font-label-sm text-label-sm text-outline">اترك الحقل فارغاً لاستخدام الوقت المشترك بالأعلى.</p>
-            <div class="mt-space-sm space-y-2">
-              ${DAYS.map((d, i) => { const r = byDay.get(i); return `
-                <div class="grid grid-cols-3 gap-space-sm items-center">
-                  <span class="font-label-sm text-label-sm font-bold text-on-surface">${d}</span>
-                  <input type="time" data-av-start="${i}" value="${r ? escapeHtml(r.start_time.slice(0, 5)) : ""}" class="px-space-sm py-1.5 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" />
-                  <input type="time" data-av-end="${i}" value="${r ? escapeHtml(r.end_time.slice(0, 5)) : ""}" class="px-space-sm py-1.5 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" />
-                </div>`; }).join("")}
-            </div>
-          </details>
         </section>
 
-        <div class="flex flex-col gap-space-lg">
-          <section class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
-            <h4 class="flex items-center gap-space-xs font-label-lg text-label-lg font-bold text-on-surface">إجازات وأيام مغلقة</h4>
-            <p class="mt-space-xs font-label-sm text-label-sm text-outline mb-space-md">إغلاق نطاق يحذف المواعيد الفارغة غير المحجوزة فيه ويمنع توليدها لاحقاً.</p>
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-sm items-end font-label-sm text-label-sm text-secondary">
-              <label>من <input id="block-start" type="date" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <label>إلى <input id="block-end" type="date" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <label>السبب <input id="block-reason" placeholder="إجازة" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <button id="add-blocked" class="py-2.5 rounded-lg bg-error text-on-error font-label-md text-label-md font-bold hover:brightness-110 transition-colors">إغلاق التواريخ</button>
-            </div>
-            <div class="mt-space-md grid gap-space-sm">${blocked.length ? blocked.map((b) => `
-              <div class="flex items-center justify-between gap-space-sm rounded-lg bg-surface-container-low p-space-md font-body-sm text-body-sm text-on-surface">
-                <span>${escapeHtml(formatArabicDate(b.start_date))}${b.start_date !== b.end_date ? " – " + escapeHtml(formatArabicDate(b.end_date)) : ""} · ${escapeHtml(b.reason || "إجازة")}</span>
-                <button data-unblock="${escapeHtml(b.id)}" class="px-space-md py-1.5 rounded-lg border border-line font-label-sm text-label-sm text-on-surface hover:bg-surface-container-lowest transition-colors">إلغاء الإغلاق</button>
-              </div>`).join("") : `<p class="font-label-sm text-label-sm text-outline">لا توجد إجازات مسجّلة</p>`}</div>
+        <div class="flex flex-col gap-4">
+          <section class="rounded-xl border border-line bg-surface-container-lowest p-4">
+            <h3 class="flex items-center gap-1.5 text-[15px] font-semibold text-on-surface">
+              <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">auto_awesome</span>توليد المواعيد
+            </h3>
+            <p class="mt-1 text-[12px] text-on-surface-variant">تُبنى المواعيد من أوقات العمل المحفوظة لـ٩٠ يوماً قادمة.</p>
+            <label class="mt-3 block text-[12px] text-on-surface-variant">طريقة التوليد
+              <select id="gen-mode" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface">
+                <option value="add">أضف المواعيد الناقصة فقط</option>
+                <option value="replace">استبدل كل المواعيد الفارغة</option>
+              </select>
+            </label>
+            <button id="generate-schedule" type="button" class="mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-4 text-[13px] font-semibold text-primary transition-colors hover:bg-primary/20">
+              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">event_repeat</span>توليد (٩٠ يوماً)
+            </button>
           </section>
 
-          <details class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
-            <summary class="cursor-pointer font-label-lg text-label-lg font-bold text-on-surface">إضافة موعد ليوم واحد</summary>
-            <form id="add-schedule" class="mt-space-md grid grid-cols-1 sm:grid-cols-4 gap-space-sm items-end font-label-sm text-label-sm text-secondary">
-              <label>التاريخ <input id="sch-date" type="date" min="${escapeHtml(localDateISO())}" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <label>من <input id="sch-start" type="time" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <label>إلى <input id="sch-end" type="time" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <button type="submit" class="py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors">إضافة</button>
+          <section class="rounded-xl border border-line bg-surface-container-lowest p-4">
+            <h3 class="flex items-center gap-1.5 text-[15px] font-semibold text-on-surface">
+              <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">beach_access</span>إجازات وأيام مغلقة
+            </h3>
+            <p class="mt-1 text-[12px] text-on-surface-variant">إغلاق نطاق يحذف المواعيد الفارغة فيه ويمنع توليدها.</p>
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <label class="text-[12px] text-on-surface-variant">من
+                <input id="block-start" type="date" min="${today}" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
+              </label>
+              <label class="text-[12px] text-on-surface-variant">إلى
+                <input id="block-end" type="date" min="${today}" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
+              </label>
+              <label class="col-span-2 text-[12px] text-on-surface-variant">السبب
+                <input id="block-reason" placeholder="إجازة" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-[13px] text-on-surface" />
+              </label>
+            </div>
+            <button id="add-blocked" type="button" class="mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-error-container/60 px-4 text-[13px] font-semibold text-on-error-container transition-colors hover:bg-error-container">
+              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">lock</span>إغلاق التواريخ
+            </button>
+            <div class="mt-3 flex flex-col divide-y divide-line">
+              ${blocked.length ? blocked.map((b) => `
+                <div class="flex items-center justify-between gap-2 py-2 text-[13px] text-on-surface">
+                  <span class="min-w-0 truncate"><span class="tabular-nums">${escapeHtml(formatArabicDate(b.start_date))}${b.start_date !== b.end_date ? " – " + escapeHtml(formatArabicDate(b.end_date)) : ""}</span> · ${escapeHtml(b.reason || "إجازة")}</span>
+                  <button data-unblock="${escapeHtml(b.id)}" type="button" class="shrink-0 rounded-lg px-2 py-1 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">إلغاء</button>
+                </div>`).join("") : `<p class="py-2 text-[12px] text-on-surface-variant">لا توجد إجازات مسجّلة.</p>`}
+            </div>
+          </section>
+
+          <section class="rounded-xl border border-line bg-surface-container-lowest p-4">
+            <h3 class="flex items-center gap-1.5 text-[15px] font-semibold text-on-surface">
+              <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">add_task</span>نوبات ليوم واحد
+            </h3>
+            <p class="mt-1 text-[12px] text-on-surface-variant">تُقسَّم الفترة حسب مدة الموعد المحفوظة لذلك اليوم.</p>
+            <form id="add-schedule" class="mt-3 grid grid-cols-2 gap-2">
+              <label class="col-span-2 text-[12px] text-on-surface-variant">التاريخ
+                <input id="sch-date" type="date" min="${today}" required class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
+              </label>
+              <label class="text-[12px] text-on-surface-variant">من
+                <input id="sch-start" type="time" required class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
+              </label>
+              <label class="text-[12px] text-on-surface-variant">إلى
+                <input id="sch-end" type="time" required class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
+              </label>
+              <button type="submit" class="col-span-2 mt-1 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-line px-4 text-[13px] font-semibold text-on-surface transition-colors hover:bg-surface-container-low">
+                <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">add</span>إضافة النوبات
+              </button>
             </form>
-          </details>
+          </section>
         </div>
       </div>
 
-      <h4 class="mt-space-xl mb-space-md flex items-center gap-space-xs font-label-lg text-label-lg font-bold text-on-surface">
-        <span class="material-symbols-outlined text-[20px] text-primary">event_available</span>المواعيد المتاحة
-        <span class="font-body-md text-body-md text-secondary tabular-nums">(${schedules.length})</span>
-      </h4>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-space-sm">${schedules.length ? schedules.map((s: { id: string; available_date: string; start_time: string; end_time: string; is_booked: boolean }) => `
-        <div class="flex items-center justify-between gap-space-sm rounded-lg p-space-md font-body-sm text-body-sm ${s.is_booked ? "bg-warning-soft/60 text-on-surface" : "bg-surface-container-lowest text-on-surface"}">
-          <span>${escapeHtml(formatArabicDate(s.available_date))} · <span class="tabular-nums">${escapeHtml(formatTime(s.start_time))}–${escapeHtml(formatTime(s.end_time))}</span> ${s.is_booked ? `<span class="ms-space-xs px-space-sm py-0.5 rounded-lg bg-warning-soft text-warning font-label-sm text-label-sm font-bold">محجوز</span>` : ""}</span>
-          ${s.is_booked ? "" : `<button data-del-sch="${escapeHtml(s.id)}" class="px-space-md py-1.5 rounded-lg text-error font-label-sm text-label-sm font-bold hover:bg-error-container/40 transition-colors">حذف</button>`}
-        </div>`).join("") : `<p class="font-body-md text-body-md text-outline">لا مواعيد</p>`}</div>`;
+      <section class="mt-4 rounded-xl border border-line bg-surface-container-lowest">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+          <h3 class="flex items-center gap-1.5 text-[15px] font-semibold text-on-surface">
+            <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">event_available</span>المواعيد المتاحة
+            <span id="slot-count" class="text-[13px] font-normal tabular-nums text-on-surface-variant"></span>
+          </h3>
+          <div id="slot-range" class="flex items-center gap-0.5 rounded-lg bg-surface-container-low p-0.5" role="group" aria-label="نطاق المواعيد">
+            ${[["7", "٧ أيام"], ["30", "٣٠ يوماً"], ["all", "الكل"]].map(([v, l]) => `<button data-range="${v}" type="button" class="h-7 rounded-md px-2.5 text-[12px] transition-colors">${l}</button>`).join("")}
+          </div>
+        </div>
+        <div id="slot-groups"></div>
+      </section>`;
 
-    const startOf = (i: number) => (root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement).value;
-    const endOf = (i: number) => (root.querySelector(`[data-av-end="${i}"]`) as HTMLInputElement).value;
-    const val = (sel: string) => (root.querySelector(sel) as HTMLInputElement).value;
-    const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
-    const shared = () => [val("#wk-start"), val("#wk-end")] as const;
-    const breaks = (): [number, number][] => {
-      const out: [number, number][] = [];
-      const pairs: [string, string][] = [["#brk1-start", "#brk1-end"], ["#brk2-start", "#brk2-end"]];
-      pairs.forEach(([a, b]) => { const s = val(a), e = val(b); if (s && e && toMin(e) > toMin(s)) out.push([toMin(s), toMin(e)]); });
-      return out;
+    const val = (sel: string) => (root.querySelector(sel) as HTMLInputElement | HTMLSelectElement | null)?.value || "";
+    const slotNow = () => Number(val("#wk-slot")) || 30;
+
+    const shiftRowHtml = (day: number, si: number, s: ShiftDraft, canRemove: boolean) => `
+      <div class="mt-1.5 rounded-lg border border-line bg-surface-container-lowest p-2">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-[12px] text-on-surface-variant">من</span>
+          <input type="time" data-f="${day}-${si}-start" value="${escapeHtml(s.start)}" class="h-8 w-[84px] rounded-md border border-line bg-surface-container-lowest px-1 text-[12px] tabular-nums text-on-surface" />
+          <span class="text-[12px] text-on-surface-variant">إلى</span>
+          <input type="time" data-f="${day}-${si}-end" value="${escapeHtml(s.end)}" class="h-8 w-[84px] rounded-md border border-line bg-surface-container-lowest px-1 text-[12px] tabular-nums text-on-surface" />
+          <details class="ms-auto">
+            <summary class="cursor-pointer list-none rounded-md px-1.5 py-0.5 text-[11px] text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">استراحات${s.b1s || s.b2s ? " •" : ""}</summary>
+            <div class="mt-1.5 flex flex-wrap items-center gap-1">
+              <span class="text-[11px] text-on-surface-variant">١</span>
+              <input type="time" data-f="${day}-${si}-b1s" value="${escapeHtml(s.b1s)}" class="h-7 w-[74px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
+              <span class="text-[11px] text-on-surface-variant">–</span>
+              <input type="time" data-f="${day}-${si}-b1e" value="${escapeHtml(s.b1e)}" class="h-7 w-[74px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
+              <span class="ms-1 text-[11px] text-on-surface-variant">٢</span>
+              <input type="time" data-f="${day}-${si}-b2s" value="${escapeHtml(s.b2s)}" class="h-7 w-[74px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
+              <span class="text-[11px] text-on-surface-variant">–</span>
+              <input type="time" data-f="${day}-${si}-b2e" value="${escapeHtml(s.b2e)}" class="h-7 w-[74px] rounded-md border border-line bg-surface-container-lowest px-1 text-[11px] tabular-nums text-on-surface" />
+            </div>
+          </details>
+          ${canRemove ? `<button type="button" data-del-shift="${day}-${si}" aria-label="حذف الفترة" class="grid h-6 w-6 place-items-center rounded-md text-on-surface-variant transition-colors hover:bg-error-container/60 hover:text-on-error-container"><span class="material-symbols-outlined text-[15px]" aria-hidden="true">close</span></button>` : ""}
+        </div>
+        ${shiftIssue(s) ? `<p class="mt-1 text-[11px] font-medium text-error">${escapeHtml(shiftIssue(s))}</p>` : ""}
+      </div>`;
+
+    const renderDayRows = () => {
+      const rows = root.querySelector("#day-rows") as HTMLElement;
+      rows.innerHTML = drafts.map((d, day) => `
+        <div class="py-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" data-day-toggle="${day}" role="switch" aria-checked="${d.on}" aria-label="${SCHED_DAYS[day]}"
+              class="relative h-5 w-9 shrink-0 rounded-full transition-colors ${d.on ? "bg-primary" : "bg-line"}">
+              <span class="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${d.on ? "start-0.5" : "end-0.5"}"></span>
+            </button>
+            <span class="w-16 text-[13px] font-semibold ${d.on ? "text-on-surface" : "text-on-surface-variant"}">${SCHED_DAYS[day]}</span>
+            ${d.on ? `<span data-daycount="${day}" class="text-[12px] text-on-surface-variant"></span>
+              <button type="button" data-add-shift="${day}" class="ms-auto inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/10">
+                <span class="material-symbols-outlined text-[15px]" aria-hidden="true">add</span>فترة
+              </button>`
+              : `<span class="ms-auto text-[12px] text-on-surface-variant">مغلق</span>`}
+          </div>
+          ${d.on ? d.shifts.map((s, si) => shiftRowHtml(day, si, s, d.shifts.length > 1)).join("") : ""}
+          <div data-preview="${day}" class="mt-1.5 flex flex-wrap items-center gap-1"></div>
+        </div>`).join("");
+      paintPreviews();
     };
-    const cellsInDay = (i: number): number => {
-      const [ss, se] = [startOf(i) || shared()[0], endOf(i) || shared()[1]];
-      if (!ss || !se) return 0;
-      const slot = Number(val("#wk-slot")) || 30; const bs = breaks();
-      let n = 0;
-      for (let t = toMin(ss); t + slot <= toMin(se); t += slot) {
-        const e = t + slot;
-        if (!bs.some(([a, b]) => e > a && t < b)) n++;
-      }
-      return n;
+
+    const paintRow = (day: number) => {
+      const box = root.querySelector<HTMLElement>(`[data-preview="${day}"]`);
+      const countEl = root.querySelector<HTMLElement>(`[data-daycount="${day}"]`);
+      const d = drafts[day];
+      if (!d.on) { if (box) box.innerHTML = ""; return; }
+      const issue = dayIssue(d);
+      if (countEl && !issue) countEl.textContent = `${daySlots(d, slotNow()).length} موعداً`;
+      else if (countEl) countEl.textContent = "";
+      if (!box) return;
+      if (issue) { box.innerHTML = `<span class="text-[12px] font-medium text-error">${escapeHtml(issue)}</span>`; return; }
+      const slot = slotNow();
+      const cells = daySlots(d, slot);
+      if (!cells.length) { box.innerHTML = `<span class="text-[12px] font-medium text-error">المدة (${slot} د) لا تتيح أي موعد</span>`; return; }
+      box.innerHTML = `<span class="text-[12px] text-on-surface-variant">${escapeHtml(formatArabicDate(nextDowDate(day)))} · ${cells.length} موعداً</span>`
+        + cells.slice(0, 6).map((t) => `<span class="inline-flex h-6 items-center rounded-md bg-primary/10 px-1.5 text-[11px] font-medium tabular-nums text-primary">${clock(t)}</span>`).join("")
+        + (cells.length > 6 ? `<span class="text-[11px] text-on-surface-variant">+${cells.length - 6}</span>` : "");
     };
+
     const preview = () => {
-      const perWeek = [...selected].reduce((sum, i) => sum + cellsInDay(i), 0);
-      (root.querySelector("#av-preview") as HTMLElement).textContent = selected.size
-        ? `${selected.size} أيام أسبوعياً · ${perWeek} موعداً/أسبوع · ~${Math.round(perWeek * 90 / 7)} لـ90 يوماً`
-        : "لم يتم اختيار أي يوم — حدّد الأيام التي يعمل فيها الطبيب";
+      const on = drafts.filter((d) => d.on);
+      const total = on.reduce((sum, d) => sum + daySlots(d, slotNow()).length, 0);
+      const el = root.querySelector("#av-preview") as HTMLElement | null;
+      if (el) el.textContent = on.length ? `${on.length} أيام · ${total} موعداً أسبوعياً` : "لم تُفعّل أي يوم — لن يعمل الجدول.";
+      (root.querySelector("#save-availability") as HTMLButtonElement).disabled = drafts.some((d) => d.on && !!dayIssue(d));
     };
-    const paintChips = () => {
-      root.querySelectorAll<HTMLButtonElement>("#day-chips [data-day]").forEach((b) => {
-        const on = selected.has(Number(b.dataset.day));
-        b.className = `px-space-md py-1.5 rounded-lg border font-label-sm text-label-sm font-bold transition-colors ${on ? "bg-primary text-on-primary border-primary" : "border-line text-on-surface-variant hover:bg-surface-container"}`;
-        const i = Number(b.dataset.day);
-        const st = root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement | null;
-        const en = root.querySelector(`[data-av-end="${i}"]`) as HTMLInputElement | null;
-        if (st) st.disabled = !on; if (en) en.disabled = !on;
-      });
+
+    const paintPreviews = () => { drafts.forEach((_, day) => paintRow(day)); preview(); };
+
+    const dayRows = root.querySelector("#day-rows") as HTMLElement;
+    dayRows.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement;
+      const toggle = t.closest<HTMLElement>("[data-day-toggle]");
+      if (toggle) {
+        const day = Number(toggle.dataset.dayToggle);
+        drafts[day].on = !drafts[day].on;
+        if (drafts[day].on && !drafts[day].shifts.length) drafts[day].shifts = [emptyShift()];
+        renderDayRows();
+        return;
+      }
+      const add = t.closest<HTMLElement>("[data-add-shift]");
+      if (add) {
+        const d = drafts[Number(add.dataset.addShift)];
+        const last = d.shifts[d.shifts.length - 1];
+        const start = last ? clock(Math.min(toMinutes(last.end) + 60, 23 * 60)) : "16:00";
+        d.shifts.push(emptyShift(start, clock(Math.min(toMinutes(start) + 120, 23 * 60 + 59))));
+        renderDayRows();
+        return;
+      }
+      const del = t.closest<HTMLElement>("[data-del-shift]");
+      if (del) {
+        const [day, si] = (del.dataset.delShift || "").split("-").map(Number);
+        drafts[day].shifts.splice(si, 1);
+        renderDayRows();
+      }
+    });
+    dayRows.addEventListener("input", (e) => {
+      const el = e.target as HTMLInputElement;
+      const key = el.dataset.f;
+      if (!key) return;
+      const parts = key.split("-");
+      const day = Number(parts[0]), si = Number(parts[1]), field = parts[2];
+      const shift = drafts[day]?.shifts[si];
+      if (!shift) return;
+      if (field === "start" || field === "end" || field === "b1s" || field === "b1e" || field === "b2s" || field === "b2e") shift[field] = el.value;
+      paintRow(day);
       preview();
-    };
-    root.querySelectorAll<HTMLButtonElement>("#day-chips [data-day]").forEach((b) => b.addEventListener("click", () => {
-      const i = Number(b.dataset.day);
-      if (selected.has(i)) selected.delete(i); else selected.add(i);
-      paintChips();
-    }));
-    ["#wk-start", "#wk-end", "#brk1-start", "#brk1-end", "#brk2-start", "#brk2-end"].forEach((s) => (root.querySelector(s) as HTMLInputElement).addEventListener("input", preview));
-    (root.querySelector("#wk-slot") as HTMLSelectElement).addEventListener("change", preview);
-    paintChips();
+    });
+    (root.querySelector("#wk-slot") as HTMLSelectElement).addEventListener("change", () => { renderDayRows(); });
+
+    (root.querySelector("#apply-all") as HTMLButtonElement).addEventListener("click", () => {
+      const source = drafts.find((d) => d.on && d.shifts.length);
+      if (!source) { showToast("فعّل يوماً بفترة واحدة على الأقل أولاً", "warning"); return; }
+      drafts.forEach((d) => {
+        if (!d.on) return;
+        d.shifts = source.shifts.map((s) => ({ ...s }));
+      });
+      renderDayRows();
+      showToast("نُسخت فترات أول يوم على كل الأيام المفعّلة", "success");
+    });
+
+    renderDayRows();
 
     (root.querySelector("#save-availability") as HTMLButtonElement).addEventListener("click", async () => {
-      const [ss, se] = shared();
-      if (selected.size && (!ss || !se)) { showToast("حدّد وقت البداية والنهاية", "warning"); return; }
-      const mins = Number(val("#wk-slot")) || 30;
+      const bad = drafts.findIndex((d) => d.on && !!dayIssue(d));
+      if (bad >= 0) { showToast(`${SCHED_DAYS[bad]}: ${dayIssue(drafts[bad])}`, "warning"); return; }
+      const active = drafts.filter((d) => d.on);
+      if (active.some((d) => !daySlots(d, slotNow()).length)) { showToast("مدة الموعد أكبر من نطاق بعض الفترات", "warning"); return; }
+      if (!active.length) {
+        const ok = await confirmSheet({ title: "مسح كل أوقات العمل؟", body: "لن تُولّد مواعيد جديدة حتى تحفظ أوقاتاً.", confirmLabel: "مسح", tone: "danger" });
+        if (!ok) return;
+      }
+      const slot = slotNow();
       const rules: Record<string, unknown>[] = [];
-      selected.forEach((i) => {
-        const st = startOf(i) || ss; const en = endOf(i) || se;
-        if (st && en) rules.push({ doctor_id: doctorId, day_of_week: i, start_time: st, end_time: en, is_enabled: true, slot_minutes: mins,
-          break_start_1: val("#brk1-start") || null, break_end_1: val("#brk1-end") || null,
-          break_start_2: val("#brk2-start") || null, break_end_2: val("#brk2-end") || null });
+      drafts.forEach((d, day) => {
+        if (!d.on) return;
+        d.shifts.forEach((s) => rules.push({
+          doctor_id: doctorId, day_of_week: day, start_time: s.start, end_time: s.end,
+          is_enabled: true, slot_minutes: slot,
+          break_start_1: s.b1s || null, break_end_1: s.b1e || null,
+          break_start_2: s.b2s || null, break_end_2: s.b2e || null,
+        }));
       });
-      try { await saveDoctorAvailability(doctorId, rules); showToast(rules.length ? `تم حفظ ${rules.length} أيام · ${mins} دقيقة للموعد` : "تم مسح الأوقات", "success"); paintChips(); }
-      catch (err) { showToast(translateAuthError(err), "error"); }
+      try {
+        await saveDoctorAvailability(doctorId, rules);
+        showToast(rules.length ? `حُفظت ${rules.length} فترة عمل · ${slot} دقيقة للموعد` : "مُسحت أوقات العمل", "success");
+        await renderSchedules(root, doctorId);
+      } catch (err) { showToast(translateAuthError(err), "error"); }
     });
 
     (root.querySelector("#generate-schedule") as HTMLButtonElement).addEventListener("click", async () => {
-      const replace = (root.querySelector("#gen-replace") as HTMLInputElement).checked;
+      const replace = val("#gen-mode") === "replace";
       if (replace) {
-        const ok = await confirmSheet({ title: "إعادة توليد المواعيد؟", body: "سيُحذف كل موعد فارغ غير محجوز في الـ90 يوماً القادمة ثم يُعاد التوليد.", confirmLabel: "توليد", tone: "primary" });
+        const ok = await confirmSheet({ title: "استبدال المواعيد الفارغة؟", body: "سيُحذف كل موعد فارغ غير محجوز في الـ٩٠ يوماً القادمة ثم يُعاد توليده من أوقاتك المحفوظة.", confirmLabel: "استبدال", tone: "danger" });
         if (!ok) return;
       }
+      const btn = root.querySelector("#generate-schedule") as HTMLButtonElement;
+      btn.disabled = true;
       try {
-        (root.querySelector("#generate-schedule") as HTMLButtonElement).disabled = true;
         const { created } = await generateDoctorSchedule(doctorId, 90, replace);
-        showToast(created ? `أُضيف ${created} موعداً` : "لا مواعيد جديدة — تأكد من حفظ الأوقات أولاً", "success");
-        await renderSchedules(root, doctorId); await refreshDoctors();
-      } catch (err) { showToast(translateAuthError(err), "error"); (root.querySelector("#generate-schedule") as HTMLButtonElement).disabled = false; }
+        showToast(created ? `أُضيف ${created} موعداً` : "لا مواعيد جديدة — احفظ الأوقات أولاً", created ? "success" : "info");
+        await renderSchedules(root, doctorId);
+        await refreshDoctors();
+      } catch (err) { showToast(translateAuthError(err), "error"); btn.disabled = false; }
     });
 
     (root.querySelector("#add-blocked") as HTMLButtonElement).addEventListener("click", async () => {
-      const start = (root.querySelector("#block-start") as HTMLInputElement).value;
-      const end = (root.querySelector("#block-end") as HTMLInputElement).value || start;
-      const reason = (root.querySelector("#block-reason") as HTMLInputElement).value || "إجازة";
+      const start = val("#block-start");
+      const end = val("#block-end") || start;
+      const reason = val("#block-reason") || "إجازة";
       if (!start) { showToast("حدّد تاريخ البداية", "warning"); return; }
+      if (end < start) { showToast("تاريخ النهاية قبل البداية", "warning"); return; }
+      const ok = await confirmSheet({ title: "إغلاق هذه التواريخ؟", body: `سيُحذف كل موعد فارغ غير محجوز بين ${formatArabicDate(start)} و${formatArabicDate(end)}، ولن تُولّد مواعيد فيهما.`, confirmLabel: "إغلاق", tone: "danger" });
+      if (!ok) return;
       try {
         const { deleted } = await blockDoctorDates(doctorId, start, end, reason);
         showToast(deleted ? `أُغلق النطاق وحُذف ${deleted} موعداً فارغاً` : "أُغلق النطاق", "success");
-        await renderSchedules(root, doctorId); await refreshDoctors();
+        await renderSchedules(root, doctorId);
+        await refreshDoctors();
       } catch (err) { showToast(translateAuthError(err), "error"); }
     });
+
     root.querySelectorAll<HTMLButtonElement>("[data-unblock]").forEach((b) => b.addEventListener("click", async () => {
-      const ok = await confirmSheet({ title: "إلغاء إغلاق النطاق؟", body: "لن تعود المواعيد المحذوفة تلقائياً — استخدم زر التوليد.", confirmLabel: "إلغاء الإغلاق", tone: "primary" });
+      const ok = await confirmSheet({ title: "إلغاء إغلاق النطاق؟", body: "لن تعود المواعيد المحذوفة تلقائياً — استخدم التوليد بعد إلغاء الإغلاق.", confirmLabel: "إلغاء الإغلاق", tone: "primary" });
       if (!ok) return;
       try { await unblockDoctorDates(b.dataset.unblock!); showToast("تم إلغاء الإغلاق", "success"); await renderSchedules(root, doctorId); }
       catch (e) { showToast(translateAuthError(e), "error"); }
@@ -1002,17 +1232,89 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
 
     (root.querySelector("#add-schedule") as HTMLFormElement).addEventListener("submit", async (e) => {
       e.preventDefault();
-      const availableDate = (root.querySelector("#sch-date") as HTMLInputElement).value;
-      const startTime = (root.querySelector("#sch-start") as HTMLInputElement).value;
-      const endTime = (root.querySelector("#sch-end") as HTMLInputElement).value;
-      try { await createDoctorSchedule({ doctorId, availableDate, startTime, endTime }); showToast("تمت الإضافة", "success"); await renderSchedules(root, doctorId); await refreshDoctors(); } catch (err) { showToast(translateAuthError(err), "error"); }
+      const date = val("#sch-date"), from = val("#sch-start"), to = val("#sch-end");
+      if (!date || !from || !to) { showToast("أكمل التاريخ والفترة", "warning"); return; }
+      if (date < localDateISO()) { showToast("لا يمكن إضافة مواعيد في الماضي", "warning"); return; }
+      if (toMinutes(to) <= toMinutes(from)) { showToast("وقت النهاية يجب أن يكون بعد البداية", "warning"); return; }
+      const dow = new Date(`${date}T12:00:00`).getDay();
+      const slot = rulesByDay.get(dow)?.[0]?.slot_minutes ?? slotNow();
+      const cells: number[] = [];
+      for (let t = toMinutes(from); t + slot <= toMinutes(to); t += slot) cells.push(t);
+      if (!cells.length) { showToast(`المدة (${slot} د) لا تتيح أي موعد في هذه الفترة`, "warning"); return; }
+      if (cells.length > 60) { showToast("الفترة طويلة — قسّمها على عدة أيام", "warning"); return; }
+      const existing = new Set(schedules.filter((s) => s.available_date === date).map((s) => hhmm(s.start_time)));
+      const rows = cells.filter((t) => !existing.has(clock(t)))
+        .map((t) => ({ doctorId, availableDate: date, startTime: clock(t), endTime: clock(t + slot) }));
+      if (!rows.length) { showToast("كل هذه المواعيد موجودة مسبقاً", "info"); return; }
+      try {
+        await createDoctorSchedules(rows);
+        const skipped = cells.length - rows.length;
+        showToast(`أُضيف ${rows.length} موعداً${skipped ? ` · ${skipped} موجود مسبقاً` : ""}`, "success");
+        await renderSchedules(root, doctorId);
+        await refreshDoctors();
+      } catch (err) { showToast(translateAuthError(err), "error"); }
     });
-    root.querySelectorAll<HTMLButtonElement>("[data-del-sch]").forEach((b) => b.addEventListener("click", async () => {
-      const ok = await confirmSheet({ title: "حذف هذا الموعد؟", confirmLabel: "حذف", tone: "danger" });
-      if (!ok) return;
-      try { await deleteDoctorSchedule(b.dataset.delSch!); showToast("تم الحذف", "success"); await renderSchedules(root, doctorId); await refreshDoctors(); } catch (e) { showToast(translateAuthError(e), "error"); }
+
+    const slotGroups = root.querySelector("#slot-groups") as HTMLElement;
+    const paintGroups = () => {
+      const range = scheduleRange;
+      const limit = range === "all" ? "" : localDateISO(Number(range) - 1);
+      const visible = schedules.filter((s) => s.available_date >= today && (!limit || s.available_date <= limit));
+      const countEl = root.querySelector("#slot-count");
+      if (countEl) countEl.textContent = `(${visible.length})`;
+      root.querySelectorAll<HTMLButtonElement>("#slot-range [data-range]").forEach((b) => {
+        const active = b.dataset.range === range;
+        b.className = `h-7 rounded-md px-2.5 text-[12px] transition-colors ${active ? "border border-line bg-surface-container-lowest font-semibold text-on-surface" : "border border-transparent text-on-surface-variant hover:text-on-surface"}`;
+        b.setAttribute("aria-pressed", String(active));
+      });
+      if (!visible.length) {
+        slotGroups.innerHTML = `<div class="flex flex-col items-center gap-2 px-4 py-10 text-center">
+          <span class="material-symbols-outlined text-[26px] text-on-surface-variant" aria-hidden="true">event_busy</span>
+          <p class="text-[14px] font-semibold text-on-surface">لا مواعيد في هذه الفترة</p>
+          <p class="max-w-[42ch] text-[12px] text-on-surface-variant">احفظ أوقات عملك ثم اضغط «توليد (٩٠ يوماً)»، أو أضف نوبات ليوم واحد.</p>
+        </div>`;
+        return;
+      }
+      const byDate = new Map<string, Sched[]>();
+      visible.forEach((s) => { const list = byDate.get(s.available_date) || []; list.push(s); byDate.set(s.available_date, list); });
+      slotGroups.innerHTML = [...byDate.entries()].map(([date, list]) => {
+        const booked = list.filter((s) => s.is_booked).length;
+        return `<details class="group border-b border-line last:border-0" open>
+          <summary class="flex cursor-pointer items-center justify-between gap-2 px-4 py-2.5 text-[13px]">
+            <span class="font-semibold text-on-surface">${escapeHtml(formatArabicDate(date))}</span>
+            <span class="text-[12px] text-on-surface-variant"><span class="tabular-nums">${list.length}</span> موعد${booked ? ` · <span class="tabular-nums">${booked}</span> محجوز` : ""}</span>
+          </summary>
+          <div class="flex flex-wrap gap-1.5 px-4 pb-3">
+            ${list.map((s) => {
+              const t = formatTime(s.start_time);
+              return s.is_booked
+                ? `<span class="inline-flex h-7 items-center gap-1 rounded-md bg-warning-soft px-2 text-[12px] font-medium tabular-nums text-warning" title="محجوز">${escapeHtml(t)}<span class="material-symbols-outlined text-[14px]" aria-hidden="true">person</span></span>`
+                : `<span class="inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-[12px] tabular-nums text-on-surface">
+                    ${escapeHtml(t)}
+                    <button type="button" data-del-sch="${escapeHtml(s.id)}" aria-label="حذف موعد ${escapeHtml(t)}" title="حذف" class="grid h-4 w-4 place-items-center rounded text-on-surface-variant transition-colors hover:bg-error-container/60 hover:text-on-error-container"><span class="material-symbols-outlined text-[14px]" aria-hidden="true">close</span></button>
+                  </span>`;
+            }).join("")}
+          </div>
+        </details>`;
+      }).join("");
+    };
+
+    root.querySelectorAll<HTMLButtonElement>("#slot-range [data-range]").forEach((b) => b.addEventListener("click", () => {
+      scheduleRange = b.dataset.range || "7";
+      paintGroups();
     }));
-  } catch (e) { root.innerHTML = `<p class="text-sm text-red-600">تعذر التحميل: ${escapeHtml(translateAuthError(e))}</p>`; }
+    slotGroups.addEventListener("click", async (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-del-sch]");
+      if (!btn) return;
+      const ok = await confirmSheet({ title: "حذف هذا الموعد؟", body: "سيُحذف الموعد الفارغ ويختفي من صفحة الحجز.", confirmLabel: "حذف", tone: "danger" });
+      if (!ok) return;
+      try { await deleteDoctorSchedule(btn.dataset.delSch!); showToast("تم الحذف", "success"); await renderSchedules(root, doctorId); await refreshDoctors(); }
+      catch (err) { showToast(translateAuthError(err), "error"); }
+    });
+    paintGroups();
+  } catch (e) {
+    root.innerHTML = `<div class="rounded-xl border border-line bg-surface-container-lowest p-6 text-center text-[13px] text-on-surface-variant">تعذر تحميل الجدول: ${escapeHtml(translateAuthError(e))}</div>`;
+  }
 }
 
 /* ---------------------------------- helpers --------------------------------- */

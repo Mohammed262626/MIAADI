@@ -177,9 +177,11 @@ export async function listDoctorSchedules(doctorId: string) {
   const { data, error } = await getClient().from("doctor_schedules").select("id,available_date,start_time,end_time,is_booked").eq("doctor_id", doctorId).order("available_date").order("start_time");
   if (error) throw error; return data || [];
 }
-export async function createDoctorSchedule(p: { doctorId: string; availableDate: string; startTime: string; endTime: string }) {
-  const { data, error } = await getClient().from("doctor_schedules").insert({ doctor_id: p.doctorId, available_date: p.availableDate, start_time: p.startTime, end_time: p.endTime }).select().single();
-  if (error) throw error; return data;
+/** Insert many slots in one request (a manual shift expands into slot-length cells). */
+export async function createDoctorSchedules(rows: { doctorId: string; availableDate: string; startTime: string; endTime: string }[]) {
+  if (!rows.length) return;
+  const { error } = await getClient().from("doctor_schedules").insert(rows.map((r) => ({ doctor_id: r.doctorId, available_date: r.availableDate, start_time: r.startTime, end_time: r.endTime })));
+  if (error) throw error;
 }
 export async function deleteDoctorSchedule(scheduleId: string) { const { error } = await getClient().from("doctor_schedules").delete().eq("id", scheduleId); if (error) throw error; }
 
@@ -360,14 +362,24 @@ export async function getDoctorAvailability(doctorId: string) {
   const { data, error } = await getClient().from("doctor_availability").select("*").eq("doctor_id", doctorId).order("day_of_week");
   if (error) throw error; return data || [];
 }
-// Replace semantics: wipe the doctor's rules then insert the current set.
+// Replace semantics, made safe: insert the new set first, then delete the old
+// rows — a failed insert can never leave the doctor with no availability at all.
 export async function saveDoctorAvailability(doctorId: string, rules: Record<string,unknown>[]) {
   const c = getClient();
-  const { error: delErr } = await c.from("doctor_availability").delete().eq("doctor_id", doctorId);
-  if (delErr) throw delErr;
-  if (!rules.length) return [];
-  const { data, error } = await c.from("doctor_availability").insert(rules);
-  if (error) throw error; return data;
+  const { data: old, error: readErr } = await c.from("doctor_availability").select("id").eq("doctor_id", doctorId);
+  if (readErr) throw readErr;
+  let inserted: unknown[] = [];
+  if (rules.length) {
+    const { data, error } = await c.from("doctor_availability").insert(rules).select();
+    if (error) throw error;
+    inserted = (data as unknown[]) || [];
+  }
+  const ids = ((old as { id: string }[] | null) || []).map((r) => r.id);
+  if (ids.length) {
+    const { error } = await c.from("doctor_availability").delete().in("id", ids);
+    if (error) throw error;
+  }
+  return inserted;
 }
 export async function listBlockedDates(doctorId: string) {
   const { data, error } = await getClient().from("doctor_unavailable").select("id,start_date,end_date,reason").eq("doctor_id", doctorId).order("start_date", { ascending: false });
