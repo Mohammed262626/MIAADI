@@ -28,6 +28,7 @@ function activeKey(route?: { name: string } | null): string | null {
     case "home": return "home";
     case "doctors":
     case "doctor": return "doctors";
+    case "hospitals": return "hospitals";
     case "appointments": return "bookings";
     case "admin": return "admin";
     default: return null;

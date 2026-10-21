@@ -13,12 +13,14 @@ import { renderAdminView } from "./views/admin";
 import { renderSiteHeader, renderSiteFooter } from "./components/SiteHeader";
 import { HOME_MAIN } from "./views/stitch/home";
 import { DOCTORS_MAIN } from "./views/stitch/doctors";
+import { HOSPITALS_MAIN } from "./views/stitch/hospitals";
 import { DOCTORPROFILE_MAIN } from "./views/stitch/doctorProfile";
 import { BOOKINGS_MAIN } from "./views/stitch/bookings";
 import { PROFILE_MAIN } from "./views/stitch/profile";
 import { registerStitchGlobals } from "./views/stitch/interactions";
 import { wireHome } from "./views/stitch/homeLive";
 import { wireDoctorsLive } from "./views/stitch/doctorsLive";
+import { wireHospitalsLive } from "./views/stitch/hospitalsLive";
 import { wireDoctorProfile } from "./views/stitch/doctorProfileLive";
 import { wireBookings } from "./views/stitch/bookingsLive";
 import { wireProfile } from "./views/stitch/profileLive";
@@ -29,7 +31,7 @@ if (import.meta.env.DEV) {
   if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
 }
 
-type RouteName = "home" | "doctors" | "doctor" | "confirm" | "appointments" | "profile" | "admin";
+type RouteName = "home" | "doctors" | "doctor" | "confirm" | "hospitals" | "appointments" | "profile" | "admin";
 type Route = { name: RouteName; param?: string };
 type Pending = { scheduleId: string; doctorId: string; slot: Slot; appointmentId?: string };
 
@@ -67,6 +69,7 @@ function parseRoute(): Route {
   const [seg, param] = raw.split("/");
   switch (seg) {
     case "doctors": return { name: "doctors" };
+    case "hospitals": return { name: "hospitals" };
     case "doctor": return param ? { name: "doctor", param } : { name: "doctors" };
     case "confirm": return param ? { name: "confirm", param } : { name: "home" };
     case "appointments": return { name: "appointments" };
@@ -86,6 +89,7 @@ function findDoctor(id: string | undefined): Doctor | undefined {
 const STATIC_VIEWS: Record<string, string> = {
   home: HOME_MAIN,
   doctors: DOCTORS_MAIN,
+  hospitals: HOSPITALS_MAIN,
   doctor: DOCTORPROFILE_MAIN,
   appointments: BOOKINGS_MAIN,
   profile: PROFILE_MAIN,
@@ -95,7 +99,7 @@ const STATIC_VIEWS: Record<string, string> = {
 const PATH_ROUTES: Record<string, string> = {
   home: "#home",
   "doctors-and-specialties": "#doctors",
-  "hospitals-and-centers": "#doctors",
+  "hospitals-and-centers": "#hospitals",
   "my-bookings": "#appointments",
   "book-now": "#doctors",
   profile: "#profile",
@@ -150,6 +154,7 @@ function render() {
   wireReveal();
   if (route.name === "home") void wireHome(appEl, state.currentUser);
   if (route.name === "doctors") void wireDoctorsLive(appEl);
+  if (route.name === "hospitals") void wireHospitalsLive(appEl);
   if (route.name === "doctor" && route.param) void wireDoctorProfile(appEl, route.param, state.currentUser);
   if (route.name === "appointments") void wireBookings(appEl, state.currentUser);
   if (route.name === "profile") void wireProfile(appEl, state.currentUser, {

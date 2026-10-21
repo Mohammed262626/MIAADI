@@ -217,6 +217,24 @@ export async function getPatientAppointments() {
   const { data, error } = await c.from("appointments").select(`id,schedule_id,patient_id,patient_name,patient_phone,status,doctor_schedules(id,available_date,start_time,end_time,doctors(id,name,specialization,consultation_fee,telehealth,hospitals(name)))`).eq("patient_id", user.id).order("id", { ascending: false });
   if (error) throw error; return data || [];
 }
+// --- hospitals directory (#hospitals)
+export type HospitalRow = {
+  id: string;
+  name: string;
+  city: string | null;
+  kind: string;
+  address: string | null;
+};
+
+export async function getHospitalsDirectory(): Promise<HospitalRow[]> {
+  const { data, error } = await getClient()
+    .from("hospitals")
+    .select("id,name,city,kind,address")
+    .order("name");
+  if (error) throw error;
+  return (data || []) as HospitalRow[];
+}
+
 // --- reviews (real, appointment-verified rows written through submit_doctor_review)
 export type DoctorReview = {
   id: string;

@@ -73,6 +73,7 @@ let cityListener: ((e: Event) => void) | null = null;
 export type DoctorsSeed = {
   q?: string;
   city?: string;
+  hospital?: string;
   insurance?: string;
   avail?: Avail;
   sort?: SortKey;
@@ -391,6 +392,7 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
   if (seed) {
     if (seed.q) f.q = seed.q;
     if (seed.city) f.city = seed.city;
+    if (seed.hospital) f.hospital = seed.hospital;
     if (seed.insurance) f.insurance = seed.insurance;
     if (seed.avail) f.avail = seed.avail;
     if (seed.sort) f.sort = seed.sort;
