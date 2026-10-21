@@ -135,9 +135,9 @@ function apply(rows: DoctorDirectoryRow[], f: Filters): DoctorDirectoryRow[] {
 
 function doctorAvatar(doc: DoctorDirectoryRow): string {
   if (doc.photo_url) {
-    return `<img class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover shadow-sm" src="${escapeHtml(doc.photo_url)}" alt="${escapeHtml(doc.name)}" loading="lazy"/>`;
+    return `<img class="h-16 w-16 rounded-lg object-cover sm:h-20 sm:w-20" src="${escapeHtml(doc.photo_url)}" alt="${escapeHtml(doc.name)}" loading="lazy"/>`;
   }
-  return `<span class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl shadow-sm grid place-items-center bg-gradient-to-br from-primary-container to-primary text-on-primary font-extrabold text-3xl">${escapeHtml(initials(doc.name))}</span>`;
+  return `<span class="grid h-16 w-16 place-items-center whitespace-nowrap rounded-lg bg-primary text-[20px] font-bold leading-none text-on-primary sm:h-20 sm:w-20 sm:text-2xl">${escapeHtml(initials(doc.name))}</span>`;
 }
 
 function slotChipLabel(slot: DirectorySlot, firstDate: string): string {
@@ -150,93 +150,82 @@ function doctorRowHtml(doc: DoctorDirectoryRow): string {
   const chips = doc.available_schedules.slice(0, 3);
   const today = daysFromToday(first ? first.available_date : "9999-12-31") === 0;
   const hospital = doc.hospital_name || "العيادة الخاصة";
-  const coverage = doc.insurances.length ? `مغطى بالتأمين (${doc.insurances.slice(0, 3).join("، ")})` : "دفع مباشر";
+  const coverage = doc.insurances.length ? `مغطى بالتأمين (${doc.insurances.slice(0, 2).join("، ")})` : "دفع مباشر";
   return `
-<article class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm hover:shadow-md transition-shadow flex flex-col xl:flex-row gap-space-lg justify-between" data-doctor-row="${escapeHtml(doc.id)}">
-<div class="flex gap-space-md flex-1">
-<div class="relative shrink-0">
-${doctorAvatar(doc)}
-<span class="absolute -bottom-2 -left-2 bg-tertiary text-on-tertiary p-1 rounded-full shadow flex items-center justify-center" title="طبيب مرخص">
-<span class="material-symbols-outlined text-[16px]">verified</span>
-</span>
-</div>
-<div class="flex flex-col justify-between flex-1 min-w-0">
-<div>
-<div class="flex items-center gap-2 flex-wrap mb-1">
-<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(doc.name)}</h3>
-<span class="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-label-sm text-label-sm font-semibold">${escapeHtml(doc.title || "طبيب")}</span>
-</div>
-<p class="font-body-md text-body-md text-primary font-semibold mb-1">${escapeHtml(doc.specialization)}</p>
-<div class="flex items-center gap-space-md text-secondary font-body-sm text-body-sm flex-wrap mb-2">
-<span class="flex items-center gap-1">
-<span class="material-symbols-outlined text-[16px] text-primary">local_hospital</span>
-<span>${escapeHtml(hospital)}</span>
-</span>
-<span class="flex items-center gap-1">
-<span class="material-symbols-outlined text-[16px] text-outline">location_on</span>
-<span>${escapeHtml(doc.hospital_city || doc.city || "—")}</span>
-</span>
-${doc.experience_years ? `<span class="flex items-center gap-1">
-<span class="material-symbols-outlined text-[16px] text-tertiary">work_history</span>
-<span>${escapeHtml(doc.experience_years)}+ سنة خبرة</span>
-</span>` : ""}
-</div>
-</div>
-<div class="flex items-center gap-space-md pt-2 flex-wrap">
-<div class="flex items-center gap-1 bg-amber-50 text-amber-900 px-2.5 py-1 rounded-lg">
-<span class="material-symbols-outlined text-warning text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
-<span class="font-label-md text-label-md font-bold tabular-nums">${doc.rating === null ? "—" : doc.rating.toFixed(1)}</span>
-<span class="text-secondary font-label-sm text-label-sm mr-1 tabular-nums">(${escapeHtml(doc.reviews_count ?? 0)} مراجع)</span>
-</div>
-<div class="flex items-center gap-1 text-tertiary font-label-sm text-label-sm bg-tertiary/10 px-2.5 py-1 rounded-lg">
-<span class="material-symbols-outlined text-[16px]">health_and_safety</span>
-<span>${escapeHtml(coverage)}</span>
-</div>
-</div>
-</div>
-</div>
-<div class="xl:w-80 flex flex-col justify-between bg-surface-container-low/60 rounded-xl p-space-md shrink-0">
-<div class="flex items-center justify-between mb-2">
-<span class="font-label-md text-label-md text-on-surface font-semibold flex items-center gap-1">
-<span class="material-symbols-outlined text-[16px] text-primary">event_available</span>
-<span>المواعيد المتاحة (${first ? escapeHtml(formatRelativeDay(first.available_date)) : "—"}):</span>
-</span>
-<span class="text-tertiary font-label-sm text-label-sm font-semibold">${today ? "متاح الآن" : "أقرب موعد"}</span>
-</div>
-<div class="grid grid-cols-3 gap-1.5 mb-space-md">
-${chips.map((s) => {
-  const conflict = slotConflict(doc, s);
-  return `
-<button class="relative min-h-11 lg:min-h-8 py-2 rounded-lg font-label-sm text-label-sm text-center shadow-xs transition-colors ${conflict ? "bg-error-container text-on-error-container ring-1 ring-error" : "bg-surface-container-lowest text-on-surface hover:bg-primary hover:text-on-primary"}" data-book-doctor="${escapeHtml(doc.id)}" type="button"${conflict ? ` title="${CONFLICT_NOTE[conflict]}"` : ""}>
-${escapeHtml(slotChipLabel(s, first!.available_date))}${conflict ? `<span class="absolute -top-1.5 -end-1.5 bg-error text-on-error p-0.5 rounded-full shadow" title="${CONFLICT_NOTE[conflict]}"><span class="material-symbols-outlined text-[12px]">error</span></span>` : ""}
-</button>`;
-}).join("")}
-</div>
-<div class="flex items-center justify-between pt-2">
-<div class="flex flex-col">
-<span class="font-label-sm text-label-sm text-secondary">قيمة الكشفية:</span>
-<div class="flex items-baseline gap-1">
-<span class="font-headline-sm text-headline-sm font-bold text-on-surface tabular-nums">${escapeHtml(doc.consultation_fee)}</span>
-<span class="font-label-sm text-label-sm text-secondary">ج.س</span>
-</div>
-</div>
-<button class="px-space-lg py-2.5 bg-primary hover:bg-primary-container text-on-primary rounded-full font-label-md text-label-md transition-all shadow-sm flex items-center gap-1.5" data-book-doctor="${escapeHtml(doc.id)}" type="button">
-<span>احجز موعداً</span>
-<span class="material-symbols-outlined text-[18px]">arrow_back</span>
-</button>
-</div>
-</div>
+<article class="flex flex-col gap-4 rounded-xl border border-line bg-surface-container-lowest p-4 sm:p-5 xl:flex-row xl:items-center" data-doctor-row="${escapeHtml(doc.id)}">
+  <div class="flex min-w-0 flex-1 items-start gap-3">
+    <div class="shrink-0">${doctorAvatar(doc)}</div>
+    <div class="min-w-0 flex-1">
+      <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <h3 class="text-[17px] font-bold leading-tight text-on-surface">${escapeHtml(doc.name)}</h3>
+        <span class="text-[12px] text-on-surface-variant">${escapeHtml(doc.title || "طبيب")}</span>
+      </div>
+      <p class="mt-0.5 text-[13px] font-medium text-primary">${escapeHtml(doc.specialization)}</p>
+      <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-on-surface-variant">
+        <span class="inline-flex min-w-0 items-center gap-1">
+          <span class="material-symbols-outlined text-[15px] text-on-surface-variant" aria-hidden="true">local_hospital</span>
+          <span class="truncate">${escapeHtml(hospital)}</span>
+        </span>
+        <span class="inline-flex items-center gap-1">
+          <span class="material-symbols-outlined text-[15px] text-on-surface-variant" aria-hidden="true">location_on</span>
+          <span>${escapeHtml(doc.hospital_city || doc.city || "—")}</span>
+        </span>
+        ${doc.experience_years ? `<span class="inline-flex items-center gap-1">
+          <span class="material-symbols-outlined text-[15px] text-on-surface-variant" aria-hidden="true">work_history</span>
+          <span class="tabular-nums">${escapeHtml(doc.experience_years)}+ سنة خبرة</span>
+        </span>` : ""}
+      </div>
+      <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-on-surface-variant">
+        <span class="inline-flex items-center gap-1">
+          <span class="material-symbols-outlined text-[15px] text-warning" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">star</span>
+          <span class="font-semibold tabular-nums text-on-surface">${doc.rating === null ? "—" : doc.rating.toFixed(1)}</span>
+          <span class="tabular-nums">(${escapeHtml(doc.reviews_count ?? 0)} تقييم)</span>
+        </span>
+        <span class="inline-flex min-w-0 items-center gap-1">
+          <span class="material-symbols-outlined text-[15px] text-tertiary" aria-hidden="true">health_and_safety</span>
+          <span class="truncate">${escapeHtml(coverage)}</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex shrink-0 flex-col gap-2 border-t border-line pt-3 xl:w-[292px] xl:border-s xl:border-t-0 xl:ps-4 xl:pt-0">
+    <div class="flex items-center justify-between gap-2 text-[12px] text-on-surface-variant">
+      <span>المواعيد · ${first ? escapeHtml(formatRelativeDay(first.available_date)) : "—"}</span>
+      <span class="font-medium text-tertiary">${today ? "متاح الآن" : "أقرب موعد"}</span>
+    </div>
+    <div class="grid grid-cols-3 gap-1.5">
+      ${chips.map((s) => {
+        const conflict = slotConflict(doc, s);
+        return `
+      <button class="relative h-9 rounded-md text-[12px] tabular-nums transition-colors ${conflict ? "border border-error bg-error-container text-on-error-container" : "border border-line bg-surface-container-lowest text-on-surface hover:bg-surface-container"}" data-book-doctor="${escapeHtml(doc.id)}" type="button"${conflict ? ` title="${CONFLICT_NOTE[conflict]}"` : ""}>
+        ${escapeHtml(slotChipLabel(s, first!.available_date))}${conflict ? `<span class="absolute -end-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-error text-on-error" title="${CONFLICT_NOTE[conflict]}"><span class="material-symbols-outlined text-[11px]" aria-hidden="true">error</span></span>` : ""}
+      </button>`;
+      }).join("")}
+    </div>
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-baseline gap-1">
+        <span class="text-[16px] font-semibold tabular-nums text-on-surface">${escapeHtml(doc.consultation_fee)}</span>
+        <span class="text-[12px] text-on-surface-variant">ج.س</span>
+      </div>
+      <button class="inline-flex h-9 items-center gap-1 rounded-lg bg-primary px-3 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container" data-book-doctor="${escapeHtml(doc.id)}" type="button">
+        <span>احجز موعداً</span>
+        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_back</span>
+      </button>
+    </div>
+  </div>
 </article>`;
 }
 
+
 /* ------------------------------ control painting ------------------------------ */
 
-const CHIP_ACTIVE = "px-space-md py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm flex items-center gap-1";
-const CHIP_IDLE = "px-space-md py-1.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors";
-const GENDER_ACTIVE = "py-1.5 rounded-lg bg-surface-container-lowest font-label-sm text-label-sm text-primary shadow-sm";
-const GENDER_IDLE = "py-1.5 rounded-lg font-label-sm text-label-sm text-secondary hover:text-on-surface";
-const RATING_ACTIVE = "flex-1 py-1.5 bg-primary-container text-on-primary-container rounded-lg flex items-center justify-center gap-1 font-label-sm text-label-sm font-semibold";
-const RATING_IDLE = "flex-1 py-1.5 bg-surface-container-low hover:bg-surface-container rounded-lg flex items-center justify-center gap-1 font-label-sm text-label-sm text-on-surface";
+const CHIP_ACTIVE = "inline-flex h-8 items-center gap-1 rounded-md bg-surface-container-highest px-2.5 text-[12px] font-semibold text-on-surface";
+const CHIP_IDLE = "inline-flex h-8 items-center rounded-md px-2.5 text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container";
+const GENDER_ACTIVE = "h-8 rounded-md border border-line bg-surface-container-lowest text-[12px] font-semibold text-on-surface";
+const GENDER_IDLE = "h-8 rounded-md text-[12px] text-on-surface-variant transition-colors hover:text-on-surface";
+const RATING_ACTIVE = "flex h-8 flex-1 items-center justify-center gap-1 rounded-md bg-surface-container-highest text-[12px] font-semibold text-on-surface";
+const RATING_IDLE = "flex h-8 flex-1 items-center justify-center gap-1 rounded-md border border-line bg-surface-container-lowest text-[12px] text-on-surface-variant transition-colors hover:bg-surface-container";
 
 function paintSpecialties(root: ParentNode, f: Filters) {
   root.querySelectorAll<HTMLInputElement>("#doc-specs input[data-spec]").forEach((input) => {
@@ -294,11 +283,11 @@ function activePills(root: ParentNode, f: Filters) {
     badge.textContent = String(pills.length);
     badge.className = "min-w-5 h-5 px-1 grid place-items-center rounded-full bg-primary text-on-primary text-[11px] font-bold tabular-nums";
   }
-  box.className = "flex items-center gap-space-xs flex-wrap";
-  box.innerHTML = `<span class="font-label-sm text-label-sm text-secondary">الفلاتر النشطة:</span>${pills.map((p) => `
-<span class="inline-flex items-center gap-1 px-3 py-1 bg-surface-container-low text-on-surface rounded-full font-label-sm text-label-sm">
+  box.className = "flex flex-wrap items-center gap-2";
+  box.innerHTML = `<span class="text-[12px] text-on-surface-variant">الفلاتر النشطة:</span>${pills.map((p) => `
+<span class="inline-flex h-7 items-center gap-1 rounded-md bg-surface-container-low ps-2 pe-1 text-[12px] text-on-surface">
 ${escapeHtml(p.label)}
-<button class="material-symbols-outlined text-[14px] hover:text-error cursor-pointer grid place-items-center -my-3 -me-2 min-w-11 min-h-11 lg:min-w-6 lg:min-h-6" data-clear="${p.field}" type="button">close</button>
+<button class="material-symbols-outlined grid h-5 w-5 cursor-pointer place-items-center rounded text-[14px] text-on-surface-variant transition-colors hover:bg-error-container/50 hover:text-error" data-clear="${p.field}" type="button" aria-label="إزالة الفلتر">close</button>
 </span>`).join("")}`;
 }
 
@@ -311,10 +300,10 @@ function render(root: HTMLElement, f: Filters) {
   const shown = rows.slice(0, visibleCount);
   list.innerHTML = shown.length
     ? shown.map(doctorRowHtml).join("")
-    : `<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm text-center flex flex-col items-center gap-2 py-space-xl">
-<span class="material-symbols-outlined text-[40px] text-outline">search_off</span>
-<span class="font-headline-sm text-headline-sm text-on-surface font-bold">لا يوجد أطباء مطابقون</span>
-<span class="font-body-sm text-body-sm text-secondary">جرّب توسيع نطاق البحث أو إعادة تعيين الفلاتر.</span>
+    : `<div class="flex flex-col items-center gap-2 rounded-xl border border-line bg-surface-container-lowest px-6 py-12 text-center">
+<span class="material-symbols-outlined text-[28px] text-on-surface-variant" aria-hidden="true">search_off</span>
+<p class="text-[15px] font-semibold text-on-surface">لا يوجد أطباء مطابقون</p>
+<p class="max-w-[40ch] text-[13px] text-on-surface-variant">جرّب توسيع نطاق البحث أو إعادة تعيين الفلاتر.</p>
 </div>`;
   const count = root.querySelector<HTMLElement>("#doc-count");
   if (count) count.textContent = `${rows.length} طبيب`;
@@ -322,9 +311,9 @@ function render(root: HTMLElement, f: Filters) {
   if (sub) sub.textContent = `متاح للحجز الآن • جميعهم موثّقون ومعتمدون`;
   const pag = root.querySelector<HTMLElement>("#doc-pagination");
   if (pag) {
-    pag.className = rows.length > 10 ? "flex items-center justify-between bg-surface-container-lowest rounded-2xl px-space-lg py-space-md shadow-sm mt-space-sm" : "hidden items-center justify-between bg-surface-container-lowest rounded-2xl px-space-lg py-space-md shadow-sm mt-space-sm";
+    pag.className = rows.length > 10 ? "flex items-center justify-between rounded-xl border border-line bg-surface-container-lowest px-4 py-3" : "hidden";
     pag.innerHTML = rows.length > visibleCount
-      ? `<span class="font-label-sm text-label-sm text-secondary tabular-nums">${rows.length - visibleCount} طبيب آخر</span><button id="doc-more" class="px-space-lg py-2 min-h-11 bg-primary hover:bg-primary-container text-on-primary rounded-full font-label-md text-label-md transition-all shadow-sm" type="button">عرض المزيد</button>`
+      ? `<span class="text-[13px] tabular-nums text-on-surface-variant">${rows.length - visibleCount} طبيب آخر</span><button id="doc-more" class="inline-flex h-9 items-center rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container" type="button">عرض المزيد</button>`
       : "";
   }
   activePills(root, f);
@@ -350,7 +339,7 @@ export async function wireDoctorsLive(appEl: HTMLElement) {
     ROWS = await getDoctorsDirectory(7);
   } catch {
     const list = appEl.querySelector<HTMLElement>("#doc-list");
-    if (list) list.innerHTML = `<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm text-center text-on-surface-variant font-body-md text-body-md flex flex-col items-center gap-space-sm"><span>تعذّر تحميل الأطباء.</span><button class="min-h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md" data-path="doctors-and-specialties" type="button">إعادة المحاولة</button></div>`;
+    if (list) list.innerHTML = `<div class="flex flex-col items-start gap-3 rounded-xl border border-line bg-surface-container-lowest p-6"><span class="material-symbols-outlined text-[24px] text-error" aria-hidden="true">cloud_off</span><p class="text-[14px] text-on-surface">تعذّر تحميل الأطباء.</p><button class="inline-flex h-9 items-center rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-on-primary" data-path="doctors-and-specialties" type="button">إعادة المحاولة</button></div>`;
     return;
   }
 

@@ -98,17 +98,17 @@ export function renderAdminView(
             }">${s.label}</button>`;
           }).join("")}
         </div>
-        <select id="admin-doc-filter" class="ms-auto h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-[13px] text-on-surface">
+        <select id="admin-doc-filter" class="ms-auto h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface">
           <option value="">كل الأطباء</option>
           ${doctors.map((d) => `<option value="${escapeHtml(d.id)}" ${filters.doctorId === d.id ? "selected" : ""}>${escapeHtml(d.name)}</option>`).join("")}
         </select>
       </div>
       <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <input id="admin-search" placeholder="بحث باسم المريض أو رقم الجوال" value="${escapeHtml(filters.search)}" class="h-9 min-w-0 flex-1 rounded-lg border border-line bg-surface-container-lowest px-3 text-[13px] text-on-surface outline-none transition-colors placeholder:text-on-surface-variant focus:border-primary focus:ring-1 focus:ring-primary" />
-        <input id="admin-from" type="date" value="${escapeHtml(filters.dateFrom)}" aria-label="من تاريخ" class="h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-[13px] text-on-surface" />
+        <input id="admin-from" type="date" value="${escapeHtml(filters.dateFrom)}" aria-label="من تاريخ" class="h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
         <span class="self-center text-[12px] text-on-surface-variant">إلى</span>
-        <input id="admin-to" type="date" value="${escapeHtml(filters.dateTo)}" aria-label="إلى تاريخ" class="h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-[13px] text-on-surface" />
-        <select id="admin-sort" class="h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-[13px] text-on-surface">
+        <input id="admin-to" type="date" value="${escapeHtml(filters.dateTo)}" aria-label="إلى تاريخ" class="h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface" />
+        <select id="admin-sort" class="h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface">
           <option value="available_date_desc" ${filters.sortBy === "available_date" && filters.sortDir === "desc" ? "selected" : ""}>الأحدث أولاً</option>
           <option value="available_date_asc" ${filters.sortBy === "available_date" && filters.sortDir === "asc" ? "selected" : ""}>الأقدم أولاً</option>
           <option value="patient_name_asc" ${filters.sortBy === "patient_name" ? "selected" : ""}>اسم المريض</option>

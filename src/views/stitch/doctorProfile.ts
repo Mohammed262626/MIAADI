@@ -1,110 +1,77 @@
 // AUTO-GENERATED from Stitch desktop design: doctorprofile-desktop.html
 export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
-<!-- Sticky / Header Bar Sub-Navigation & Breadcrumbs -->
-<section class="w-full bg-surface-container-low py-space-sm px-margin-desktop shadow-sm">
-<div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-space-sm">
-<nav class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md">
-<a class="hover:text-primary transition-colors flex items-center gap-1 min-h-11 lg:min-h-7 px-1 -mx-1" href="#">
-<span class="material-symbols-outlined text-[16px]">home</span>
+<!-- Sub-Navigation & Breadcrumbs -->
+<section class="w-full border-b border-line bg-surface">
+<div class="mx-auto flex w-full max-w-[1280px] flex-wrap items-center justify-between gap-2 px-4 py-1.5 sm:px-6">
+<nav class="flex items-center gap-0.5 text-[13px] text-on-surface-variant">
+<a class="inline-flex h-8 items-center gap-1 rounded px-1 transition-colors hover:text-primary" href="#home">
+<span class="material-symbols-outlined text-[15px]" aria-hidden="true">home</span>
 <span>الرئيسية</span>
 </a>
-<span class="material-symbols-outlined text-[14px]">chevron_left</span>
-<a class="inline-flex items-center min-h-11 lg:min-h-7 hover:text-primary transition-colors" href="#" id="dp-crumb-spec">أمراض القلب والشرايين</a>
-<span class="material-symbols-outlined text-[14px]">chevron_left</span>
-<span class="text-on-surface font-semibold" id="dp-crumb-name">د. طارق المنصور</span>
+<span class="material-symbols-outlined text-[14px] text-outline" aria-hidden="true">chevron_left</span>
+<a class="inline-flex h-8 items-center px-1 transition-colors hover:text-primary" href="#doctors" id="dp-crumb-spec">أمراض القلب والشرايين</a>
+<span class="material-symbols-outlined text-[14px] text-outline" aria-hidden="true">chevron_left</span>
+<span class="font-medium text-on-surface" id="dp-crumb-name">د. طارق المنصور</span>
 </nav>
-<div class="flex items-center gap-space-md">
-<div class="flex items-center gap-1 bg-surface-container-lowest px-space-md py-1 rounded-full text-secondary font-label-sm text-label-sm shadow-sm">
-<span class="material-symbols-outlined text-[16px] text-tertiary">check_circle</span>
-<span>مقبول عبر نفاذ الوطني • Nafath Verified</span>
-</div>
-<button class="flex items-center gap-1 min-h-11 px-1 -mx-1 rounded-lg text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" type="button">
-<span class="material-symbols-outlined text-[18px]">share</span>
-<span>مشاركة الملف</span>
+<button class="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-[13px] text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface" type="button">
+<span class="material-symbols-outlined text-[16px]" aria-hidden="true">share</span>
+<span>مشاركة</span>
 </button>
-</div>
 </div>
 </section>
 <!-- Doctor Hero Profile Header -->
-<section class="w-full bg-surface-container-lowest py-space-xl px-margin-desktop shadow-sm relative overflow-hidden">
-<div class="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-primary-fixed-dim/20 blur-3xl pointer-events-none"></div>
-<div class="absolute top-1/2 -right-24 w-80 h-80 rounded-full bg-tertiary-fixed/15 blur-3xl pointer-events-none"></div>
-<div class="max-w-7xl mx-auto relative z-10">
-<div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-xl">
+<section class="w-full border-b border-line bg-surface py-8">
+<div class="mx-auto w-full max-w-[1280px] px-4 sm:px-6">
+<div class="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
 <!-- Doctor Avatar & Identity -->
-<div class="flex flex-col sm:flex-row items-start sm:items-center gap-space-lg">
-<div class="relative">
-<div class="w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden shadow-md bg-surface-container">
-<div class="w-full h-full grid place-items-center text-[42px] font-extrabold text-on-primary bg-gradient-to-br from-primary-container to-primary" id="dp-avatar" aria-hidden="true"></div>
+<div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+<div class="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-28 md:w-28">
+<div class="grid h-full w-full place-items-center whitespace-nowrap bg-primary text-[28px] font-bold leading-none text-on-primary" id="dp-avatar" aria-hidden="true"></div>
 </div>
-<div class="absolute -bottom-2 -right-2 bg-primary text-on-primary rounded-xl p-1.5 shadow-sm flex items-center justify-center" title="استشاري مرخص ومعتمد">
-<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">verified</span>
-</div>
-</div>
-<div class="flex flex-col">
-<div class="flex flex-wrap items-center gap-space-xs mb-1">
-<span class="bg-primary/10 text-primary font-label-sm text-label-sm px-space-sm py-0.5 rounded-full font-bold" id="dp-title-pill">
-                استشاري أول معتمد • Senior Consultant
-              </span>
-<span class="bg-tertiary/10 text-tertiary font-label-sm text-label-sm px-space-sm py-0.5 rounded-full flex items-center gap-1 font-semibold" id="dp-availability">
-<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+<div class="flex min-w-0 flex-col">
+<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+<span class="text-[13px] font-semibold text-primary" id="dp-title-pill">استشاري أول معتمد</span>
+<span class="inline-flex items-center gap-1.5 text-[13px] text-tertiary" id="dp-availability">
+<span class="h-1.5 w-1.5 rounded-full bg-tertiary" aria-hidden="true"></span>
                 متاح اليوم للحجز الفوري
               </span>
 </div>
-<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight font-bold" id="dp-name">
+<h1 class="mt-1 text-[28px] font-bold leading-tight tracking-tight text-on-surface md:text-[32px]" id="dp-name">
               د. طارق المنصور
-              <span class="block font-headline-sm text-headline-sm text-secondary font-normal mt-0.5">
-                Dr. Tariq Al-Mansoor, MD, FRCP
-              </span>
-</h1>
-<p class="font-body-md text-body-md text-on-surface-variant mt-1 max-w-xl" id="dp-specialization">
+            </h1>
+<p class="mt-1 max-w-xl text-[14px] text-on-surface-variant" id="dp-specialization">
               استشاري أمراض القلب والأوعية الدموية والقسطرة القلبية التداخلية
             </p>
 <!-- Hospital Affiliation -->
-<div class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md mt-space-sm">
-<span class="material-symbols-outlined text-[20px] text-primary">domain</span>
-<span class="font-semibold text-on-surface" id="dp-hospital">مستشفى رويال كير الدولي</span>
-<span class="text-secondary" id="dp-hospital-city">• الخرطوم | Khartoum</span>
+<div class="mt-2 flex flex-wrap items-center gap-1.5 text-[13px] text-on-surface-variant">
+<span class="material-symbols-outlined text-[17px] text-primary" aria-hidden="true">domain</span>
+<span class="font-medium text-on-surface" id="dp-hospital">مستشفى رويال كير الدولي</span>
+<span aria-hidden="true" id="dp-city-sep">·</span>
+<span id="dp-hospital-city">الخرطوم</span>
 </div>
 <!-- Credentials Badges -->
-<div class="flex flex-wrap items-center gap-space-xs mt-space-sm" id="dp-credentials">
-<span class="bg-surface-container px-space-sm py-1 rounded-md text-on-surface-variant font-label-sm text-label-sm">
+<div class="mt-3 flex flex-wrap items-center gap-1.5" id="dp-credentials">
+<span class="rounded-md bg-surface-container-low px-2 py-1 text-[12px] text-on-surface-variant">
                 زمالة الكلية الملكية للأطباء (FRCP) - بريطانيا
               </span>
-<span class="bg-surface-container px-space-sm py-1 rounded-md text-on-surface-variant font-label-sm text-label-sm">
+<span class="rounded-md bg-surface-container-low px-2 py-1 text-[12px] text-on-surface-variant">
                 البورد السعودي في أمراض القلب التداخلية
               </span>
-<span class="bg-surface-container px-space-sm py-1 rounded-md text-on-surface-variant font-label-sm text-label-sm">
+<span class="rounded-md bg-surface-container-low px-2 py-1 text-[12px] text-on-surface-variant">
                 عضو الجمعية الأمريكية للقلب (AHA)
               </span>
 </div>
 </div>
 </div>
-<!-- Metric Summary Chips -->
-<div class="grid grid-cols-3 gap-space-md w-full lg:w-auto bg-surface-container-low p-space-md rounded-2xl shadow-sm">
-<div class="flex flex-col items-center justify-center p-space-sm bg-surface-container-lowest rounded-xl min-w-0 sm:min-w-[100px] text-center shadow-sm">
-<div class="flex items-center gap-1 text-primary">
-<span class="material-symbols-outlined text-[18px]">history</span>
-<span class="font-headline-sm text-headline-sm font-bold" id="dp-exp">+15</span>
+<!-- Metric Summary -->
+<div class="grid w-full grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line lg:w-auto">
+<div class="bg-surface-container-lowest px-6 py-3 text-center" id="dp-exp-cell">
+<p class="text-[22px] font-semibold leading-none tabular-nums text-on-surface" id="dp-exp">+15</p>
+<p class="mt-1 text-[12px] text-on-surface-variant">سنة خبرة</p>
 </div>
-<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">سنة خبرة</span>
-<span class="text-[10px] text-secondary">Years Exp.</span>
-</div>
-<div class="flex flex-col items-center justify-center p-space-sm bg-surface-container-lowest rounded-xl min-w-0 sm:min-w-[100px] text-center shadow-sm">
-<div class="flex items-center gap-1 text-tertiary">
-<span class="material-symbols-outlined text-[18px]">favorite</span>
-<span class="font-headline-sm text-headline-sm font-bold" id="dp-cases">+3.2k</span>
-</div>
-<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">حالة متعافية</span>
-<span class="text-[10px] text-secondary">Recovered</span>
-</div>
-<div class="flex flex-col items-center justify-center p-space-sm bg-surface-container-lowest rounded-xl min-w-0 sm:min-w-[100px] text-center shadow-sm">
-<div class="flex items-center gap-1 text-[#d97706]">
-<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
-<span class="font-headline-sm text-headline-sm font-bold" id="dp-rating">4.9</span>
-</div>
-<span class="font-label-sm text-label-sm text-on-surface-variant mt-1" id="dp-reviews-count">480 تقييماً</span>
-<span class="text-[10px] text-secondary">Patient Rating</span>
+<div class="bg-surface-container-lowest px-6 py-3 text-center">
+<p class="text-[22px] font-semibold leading-none tabular-nums text-on-surface" id="dp-rating">4.9</p>
+<p class="mt-1 text-[12px] text-on-surface-variant" id="dp-reviews-count">480 تقييم</p>
 </div>
 </div>
 </div>
@@ -116,7 +83,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <!-- Right Column: Doctor Dossier & Clinical Information (7 Cols on LG) -->
 <div class="lg:col-span-7 flex flex-col gap-space-xl">
 <!-- 1. About Section -->
-<article class="bg-surface-container-lowest rounded-2xl p-space-xl shadow-sm">
+<article class="bg-surface-container-lowest rounded-xl p-space-xl">
 <div class="flex items-center justify-between mb-space-md">
 <div class="flex items-center gap-space-sm">
 <div class="w-8 h-8 rounded-lg bg-primary-fixed-dim/40 flex items-center justify-center text-primary">
@@ -124,7 +91,6 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 <h2 class="font-headline-md text-headline-md text-on-surface font-bold">نبذة عن الطبيب والتخصص</h2>
 </div>
-<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">About Doctor</span>
 </div>
 <p class="font-body-lg text-body-lg text-on-surface leading-relaxed mb-space-md" id="dp-bio-1">
             يُعد الدكتور طارق المنصور أحد أبرز استشاريي أمراض القلب والقسطرة التداخلية في المملكة، مع خبرة تتجاوز خمسة عشر عاماً قضاها في إجراء العمليات التداخلية المعقدة لعلاج انسداد الشرايين التاجية، واستبدال الصمامات بالقسطرة (TAVI)، وتركيب أحدث الدعامات الدوائية الذكية.
@@ -153,7 +119,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 </article>
 <!-- 2. Sub-specialties & Conditions Treated -->
-<article class="bg-surface-container-lowest rounded-2xl p-space-xl shadow-sm">
+<article class="bg-surface-container-lowest rounded-xl p-space-xl">
 <div class="flex items-center justify-between mb-space-md">
 <div class="flex items-center gap-space-sm">
 <div class="w-8 h-8 rounded-lg bg-tertiary-fixed-dim/40 flex items-center justify-center text-tertiary">
@@ -161,12 +127,11 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 <h2 class="font-headline-md text-headline-md text-on-surface font-bold">الحالات المعالجة والخدمات التخصصية</h2>
 </div>
-<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">Specialties &amp; Services</span>
 </div>
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md" id="dp-services">
 <!-- Item 1 -->
-<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-all">
-<div class="p-2 bg-surface-container-lowest rounded-lg text-primary shadow-sm">
+<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
+<div class="p-2 bg-surface-container-lowest rounded-lg text-primary">
 <span class="material-symbols-outlined text-[22px]">vital_signs</span>
 </div>
 <div>
@@ -175,8 +140,8 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 </div>
 <!-- Item 2 -->
-<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-all">
-<div class="p-2 bg-surface-container-lowest rounded-lg text-primary shadow-sm">
+<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
+<div class="p-2 bg-surface-container-lowest rounded-lg text-primary">
 <span class="material-symbols-outlined text-[22px]">medical_services</span>
 </div>
 <div>
@@ -185,8 +150,8 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 </div>
 <!-- Item 3 -->
-<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-all">
-<div class="p-2 bg-surface-container-lowest rounded-lg text-primary shadow-sm">
+<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
+<div class="p-2 bg-surface-container-lowest rounded-lg text-primary">
 <span class="material-symbols-outlined text-[22px]">monitor_heart</span>
 </div>
 <div>
@@ -195,8 +160,8 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 </div>
 <!-- Item 4 -->
-<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-all">
-<div class="p-2 bg-surface-container-lowest rounded-lg text-primary shadow-sm">
+<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
+<div class="p-2 bg-surface-container-lowest rounded-lg text-primary">
 <span class="material-symbols-outlined text-[22px]">blood_pressure</span>
 </div>
 <div>
@@ -207,7 +172,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 </article>
 <!-- 3. Hospital Location & Clinic Wayfinding -->
-<article class="bg-surface-container-lowest rounded-2xl p-space-xl shadow-sm">
+<article class="bg-surface-container-lowest rounded-xl p-space-xl">
 <div class="flex items-center justify-between mb-space-md">
 <div class="flex items-center gap-space-sm">
 <div class="w-8 h-8 rounded-lg bg-secondary-container flex items-center justify-center text-secondary">
@@ -215,54 +180,43 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 <h2 class="font-headline-md text-headline-md text-on-surface font-bold">موقع العيادة ومسار الوصول</h2>
 </div>
-<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">Location &amp; Access</span>
 </div>
-<div class="flex flex-col md:flex-row gap-space-lg items-center">
-<!-- Static Map Pipeline -->
-<div class="w-full md:w-1/2 rounded-xl overflow-hidden shadow-sm h-64 bg-surface-container relative">
-<div class="w-full h-full bg-cover bg-center" id="dp-map" data-location="المستشفى، الخرطوم، السودان" style="background-image: linear-gradient(135deg, var(--color-surface-container) 0%, var(--color-surface-container-highest) 60%, var(--color-surface-container-high) 100%)"></div>
-<div class="absolute bottom-3 right-3 left-3 bg-surface-container-lowest/95 backdrop-blur-md px-space-md py-2 rounded-lg shadow-md flex items-center justify-between">
-<div class="flex items-center gap-1.5">
-<span class="material-symbols-outlined text-primary text-[18px]">near_me</span>
-<span class="font-label-sm text-label-sm text-on-surface font-bold" id="dp-gate">بوابة 4 - مواقف كبار الشخصيات والزوار</span>
-</div>
-<span class="text-[11px] text-tertiary font-bold bg-tertiary/10 px-2 py-0.5 rounded">مواقف متوفرة</span>
+<div class="flex flex-col items-stretch gap-4 md:flex-row md:items-center">
+<!-- Location panel -->
+<div class="relative h-56 w-full overflow-hidden rounded-xl border border-line bg-surface-container-low md:w-1/2">
+<div class="grid h-full w-full place-items-center" id="dp-map" data-location="المستشفى، الخرطوم، السودان">
+<div class="flex flex-col items-center gap-1 px-6 text-center">
+<span class="material-symbols-outlined text-[26px] text-primary" aria-hidden="true">location_on</span>
+<span class="text-[14px] font-semibold text-on-surface" id="dp-gate">موقع العيادة</span>
+<span class="text-[12px] text-on-surface-variant">افتح الاتجاهات للوصول إلى المبنى</span>
 </div>
 </div>
-<!-- Clinic Directions details -->
-<div class="w-full md:w-1/2 flex flex-col gap-space-sm">
-<div class="flex items-start gap-space-sm">
-<span class="material-symbols-outlined text-primary text-[20px] mt-0.5">apartment</span>
-<div>
-<h4 class="font-headline-sm text-headline-sm text-on-surface font-semibold" id="dp-building-name">المبنى الرئيسي - المركز التخصصي للقلب</h4>
-<p class="font-body-sm text-body-sm text-on-surface-variant" id="dp-building-line">شارع الجامعة، أمبات، الخرطوم</p>
+</div>
+<!-- Clinic directions -->
+<div class="flex w-full flex-col gap-4 md:w-1/2">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined mt-0.5 text-[19px] text-primary" aria-hidden="true">apartment</span>
+<div class="min-w-0">
+<h4 class="text-[14px] font-semibold text-on-surface" id="dp-building-name">المبنى الرئيسي - المركز التخصصي للقلب</h4>
+<p class="mt-0.5 text-[13px] text-on-surface-variant" id="dp-building-line">شارع الجامعة، أمبات، الخرطوم</p>
 </div>
 </div>
-<div class="flex items-start gap-space-sm">
-<span class="material-symbols-outlined text-primary text-[20px] mt-0.5">meeting_room</span>
-<div>
-<h4 class="font-headline-sm text-headline-sm text-on-surface font-semibold" id="dp-clinic-name">الطابق الثالث - عيادة رقم 304</h4>
-<p class="font-body-sm text-body-sm text-on-surface-variant" id="dp-clinic-line">المصاعد الرئيسية C • مباشرة أمام صالة استراحة المرضى المراجعين</p>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined mt-0.5 text-[19px] text-primary" aria-hidden="true">meeting_room</span>
+<div class="min-w-0">
+<h4 class="text-[14px] font-semibold text-on-surface" id="dp-clinic-name">الطابق الثالث - عيادة رقم 304</h4>
+<p class="mt-0.5 text-[13px] text-on-surface-variant" id="dp-clinic-line">المصاعد الرئيسية C • أمام صالة انتظار المرضى</p>
 </div>
 </div>
-<div class="flex items-start gap-space-sm">
-<span class="material-symbols-outlined text-primary text-[20px] mt-0.5">local_parking</span>
-<div>
-<h4 class="font-headline-sm text-headline-sm text-on-surface font-semibold">مواقف السيارات P2 وخدمة المساعدة</h4>
-<p class="font-body-sm text-body-sm text-on-surface-variant">خدمة صف السيارات متوفرة مجاناً لمرضى ميعادي عبر إبراز تذكرة الحجز</p>
-</div>
-</div>
-<div class="pt-space-xs mt-space-xs">
-<a class="inline-flex items-center gap-1.5 min-h-11 px-1 -mx-1 text-primary hover:text-primary-container font-label-md text-label-md font-semibold transition-colors" href="#" id="dp-map-link">
+<a class="inline-flex h-9 w-fit items-center gap-1.5 rounded-lg border border-line bg-surface-container-lowest px-3 text-[12px] font-medium text-on-surface transition-colors hover:bg-surface-container" href="#" id="dp-map-link" target="_blank" rel="noreferrer">
 <span>فتح الموقع في خرائط Google</span>
-<span class="material-symbols-outlined text-[16px]">open_in_new</span>
+<span class="material-symbols-outlined text-[15px]" aria-hidden="true">open_in_new</span>
 </a>
-</div>
 </div>
 </div>
 </article>
 <!-- 4. Patient Reviews & Verified Ratings -->
-<article class="bg-surface-container-lowest rounded-2xl p-space-xl shadow-sm">
+<article class="bg-surface-container-lowest rounded-xl p-space-xl">
 <div class="flex items-center justify-between mb-space-lg">
 <div class="flex items-center gap-space-sm">
 <div class="w-8 h-8 rounded-lg bg-primary-fixed-dim/40 flex items-center justify-center text-primary">
@@ -271,7 +225,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <h2 class="font-headline-md text-headline-md text-on-surface font-bold">تقييمات المراجعين الموثقة عبر نفاذ</h2>
 </div>
 <div class="flex items-center gap-1 text-on-surface font-bold text-headline-sm">
-<span class="material-symbols-outlined text-[#d97706] text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-warning text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
 <span id="dp-rating-big">4.9 / 5.0</span>
 </div>
 </div>
@@ -287,7 +241,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <div class="flex flex-col">
 <div class="flex items-center gap-1.5">
 <span class="font-label-md text-label-md font-semibold text-on-surface">محمد العتيبي</span>
-<span class="inline-flex items-center gap-0.5 bg-tertiary/10 text-tertiary text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+<span class="inline-flex items-center gap-0.5 bg-tertiary/10 text-tertiary text-[11px] font-bold px-1.5 py-0.5 rounded-full">
 <span class="material-symbols-outlined text-[12px]">verified_user</span>
                         حجز مؤكد عبر نفاذ
                       </span>
@@ -295,7 +249,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <span class="font-body-sm text-body-sm text-secondary">زيارة عيادة • قبل 4 أيام</span>
 </div>
 </div>
-<div class="flex text-[#d97706] text-[16px]">
+<div class="flex text-warning text-[16px]">
 <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
 <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
 <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
@@ -317,7 +271,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <div class="flex flex-col">
 <div class="flex items-center gap-1.5">
 <span class="font-label-md text-label-md font-semibold text-on-surface">نورة الخالدي</span>
-<span class="inline-flex items-center gap-0.5 bg-tertiary/10 text-tertiary text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+<span class="inline-flex items-center gap-0.5 bg-tertiary/10 text-tertiary text-[11px] font-bold px-1.5 py-0.5 rounded-full">
 <span class="material-symbols-outlined text-[12px]">verified_user</span>
                         حجز مؤكد عبر نفاذ
                       </span>
@@ -325,7 +279,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <span class="font-body-sm text-body-sm text-secondary">استشارة فيديو عن بعد • قبل أسبوع</span>
 </div>
 </div>
-<div class="flex text-[#d97706] text-[16px]">
+<div class="flex text-warning text-[16px]">
 <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
 <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
 <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
@@ -338,7 +292,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
               </p>
 </div>
 </div>
-<button class="w-full mt-space-md py-space-sm rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-label-md text-label-md font-semibold transition-all flex items-center justify-center gap-1" type="button">
+<button class="w-full mt-space-md py-space-sm rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-label-md text-label-md font-semibold transition-colors flex items-center justify-center gap-1" type="button">
 <span id="dp-reviews-more">عرض جميع آراء المراجعين الـ 480</span>
 <span class="material-symbols-outlined text-[18px]">expand_more</span>
 </button>
@@ -346,11 +300,11 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 <!-- Left Column: Booking Engine Box (5 Cols on LG) -->
 <aside class="w-full max-w-md mx-auto lg:col-span-5 lg:mx-0 lg:max-w-none flex flex-col gap-space-md">
-<div class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-xl relative overflow-hidden">
+<div class="relative overflow-hidden rounded-xl border border-line bg-surface-container-lowest p-space-lg">
 <!-- Box Header -->
 <div class="flex items-center justify-between gap-space-sm pb-space-sm">
 <div class="min-w-0 flex-1">
-<span class="font-label-sm text-label-sm text-secondary font-bold uppercase tracking-wider block">جدول المواعيد المباشر</span>
+<span class="block text-[12px] font-medium text-on-surface-variant">جدول المواعيد المباشر</span>
 <h3 class="font-headline-sm sm:font-headline-md text-headline-sm sm:text-headline-md text-on-surface font-bold">احجز استشارتك الطبية</h3>
 </div>
 <div class="w-10 h-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -376,34 +330,34 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <!-- Date Horizontal Strip / Matrix -->
 <div class="grid grid-cols-5 gap-2" id="date-picker-row">
 <!-- Day 1 (Mon 14) -->
-<button class="date-cell flex flex-col items-center py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container transition-all text-center" onclick="selectDate(this, 'الاثنين 14 أكتوبر 2024')" type="button">
+<button class="date-cell flex flex-col items-center py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors text-center" onclick="selectDate(this, 'الاثنين 14 أكتوبر 2024')" type="button">
 <span class="font-label-sm text-label-sm text-secondary">الإثنين</span>
 <span class="font-headline-sm text-headline-sm font-bold text-on-surface mt-0.5">14</span>
-<span class="text-[10px] text-tertiary font-bold mt-1">3 متاح</span>
+<span class="text-[11px] text-tertiary font-bold mt-1">3 متاح</span>
 </button>
 <!-- Day 2 (Tue 15 - Active) -->
-<button class="date-cell active-date flex flex-col items-center py-2.5 px-1 rounded-xl bg-primary text-on-primary shadow-md transition-all text-center" onclick="selectDate(this, 'الثلاثاء 15 أكتوبر 2024')" type="button">
+<button class="date-cell active-date flex flex-col items-center py-2.5 px-1 rounded-xl bg-primary text-on-primary transition-colors text-center" onclick="selectDate(this, 'الثلاثاء 15 أكتوبر 2024')" type="button">
 <span class="font-label-sm text-label-sm opacity-90">الثلاثاء</span>
 <span class="font-headline-sm text-headline-sm font-bold mt-0.5">15</span>
-<span class="text-[10px] bg-on-primary/20 px-1.5 py-0.5 rounded-full font-bold mt-1">محدد</span>
+<span class="text-[11px] bg-on-primary/20 px-1.5 py-0.5 rounded-full font-bold mt-1">محدد</span>
 </button>
 <!-- Day 3 (Wed 16) -->
-<button class="date-cell flex flex-col items-center py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container transition-all text-center" onclick="selectDate(this, 'الأربعاء 16 أكتوبر 2024')" type="button">
+<button class="date-cell flex flex-col items-center py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors text-center" onclick="selectDate(this, 'الأربعاء 16 أكتوبر 2024')" type="button">
 <span class="font-label-sm text-label-sm text-secondary">الأربعاء</span>
 <span class="font-headline-sm text-headline-sm font-bold text-on-surface mt-0.5">16</span>
-<span class="text-[10px] text-tertiary font-bold mt-1">5 متاح</span>
+<span class="text-[11px] text-tertiary font-bold mt-1">5 متاح</span>
 </button>
 <!-- Day 4 (Thu 17) -->
-<button class="date-cell flex flex-col items-center py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container transition-all text-center" onclick="selectDate(this, 'الخميس 17 أكتوبر 2024')" type="button">
+<button class="date-cell flex flex-col items-center py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors text-center" onclick="selectDate(this, 'الخميس 17 أكتوبر 2024')" type="button">
 <span class="font-label-sm text-label-sm text-secondary">الخميس</span>
 <span class="font-headline-sm text-headline-sm font-bold text-on-surface mt-0.5">17</span>
-<span class="text-[10px] text-tertiary font-bold mt-1">2 متاح</span>
+<span class="text-[11px] text-tertiary font-bold mt-1">2 متاح</span>
 </button>
 <!-- Day 5 (Fri 18 - Inactive/Weekend) -->
 <div class="flex flex-col items-center py-2.5 px-1 rounded-xl bg-surface-container-lowest/60 text-secondary-fixed-dim text-center opacity-40 cursor-not-allowed">
 <span class="font-label-sm text-label-sm">الجمعة</span>
 <span class="font-headline-sm text-headline-sm font-bold mt-0.5">18</span>
-<span class="text-[10px] mt-1">مغلق</span>
+<span class="text-[11px] mt-1">مغلق</span>
 </div>
 </div>
 </div>
@@ -413,24 +367,24 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <div class="mb-space-sm">
 <div class="flex items-center gap-1.5 text-on-surface font-label-md text-label-md font-bold mb-2">
 <span class="material-symbols-outlined text-warning text-[18px]">wb_sunny</span>
-<span>الفترة الصباحية • Morning Slots</span>
+<span>الفترة الصباحية</span>
 </div>
 <div class="grid grid-cols-4 gap-space-xs" id="morning-slots">
 <!-- Slot 1 -->
-<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all" onclick="selectTimeSlot(this, '09:30 AM')" type="button">
+<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-colors" onclick="selectTimeSlot(this, '09:30 AM')" type="button">
                   09:30 ص
                 </button>
 <!-- Slot 2 (Selected default) -->
-<button class="time-slot selected-slot py-2 px-1 text-center rounded-xl bg-primary text-on-primary font-label-md text-label-md shadow-sm transition-all font-bold flex items-center justify-center gap-1" onclick="selectTimeSlot(this, '10:15 AM')" type="button">
+<button class="time-slot selected-slot py-2 px-1 text-center rounded-xl bg-primary text-on-primary font-label-md text-label-md transition-colors font-bold flex items-center justify-center gap-1" onclick="selectTimeSlot(this, '10:15 AM')" type="button">
 <span class="material-symbols-outlined text-[14px]">check</span>
 <span>10:15 ص</span>
 </button>
 <!-- Slot 3 -->
-<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all" onclick="selectTimeSlot(this, '11:00 AM')" type="button">
+<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-colors" onclick="selectTimeSlot(this, '11:00 AM')" type="button">
                   11:00 ص
                 </button>
 <!-- Slot 4 -->
-<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all" onclick="selectTimeSlot(this, '11:45 AM')" type="button">
+<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-colors" onclick="selectTimeSlot(this, '11:45 AM')" type="button">
                   11:45 ص
                 </button>
 </div>
@@ -438,16 +392,16 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <!-- Evening Slots -->
 <div>
 <div class="flex items-center gap-1.5 text-on-surface font-label-md text-label-md font-bold mb-2">
-<span class="material-symbols-outlined text-indigo-400 text-[18px]">nights_stay</span>
-<span>الفترة المسائية • Evening Slots</span>
+<span class="material-symbols-outlined text-tertiary text-[18px]">nights_stay</span>
+<span>الفترة المسائية</span>
 </div>
 <div class="grid grid-cols-4 gap-space-xs" id="evening-slots">
 <!-- Slot 5 -->
-<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all" onclick="selectTimeSlot(this, '04:30 PM')" type="button">
+<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-colors" onclick="selectTimeSlot(this, '04:30 PM')" type="button">
                   04:30 م
                 </button>
 <!-- Slot 6 -->
-<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all" onclick="selectTimeSlot(this, '05:15 PM')" type="button">
+<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-colors" onclick="selectTimeSlot(this, '05:15 PM')" type="button">
                   05:15 م
                 </button>
 <!-- Slot 7 (Booked/Disabled) -->
@@ -455,14 +409,14 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
                   06:00 م
                 </div>
 <!-- Slot 8 -->
-<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all" onclick="selectTimeSlot(this, '07:30 PM')" type="button">
+<button class="time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-colors" onclick="selectTimeSlot(this, '07:30 PM')" type="button">
                   07:30 م
                 </button>
 </div>
 </div>
 </div>
 <!-- 4. Selected Slot Banner Summary -->
-<div class="mt-space-md p-space-sm bg-primary/5 rounded-2xl flex items-center justify-between">
+<div class="mt-space-md p-space-sm bg-primary/5 rounded-xl flex items-center justify-between">
 <div class="flex items-center gap-space-xs">
 <span class="material-symbols-outlined text-primary text-[22px]">schedule</span>
 <div class="flex flex-col">
@@ -475,7 +429,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-sm text-label-sm text-tertiary bg-tertiary-fixed/30 px-2 py-0.5 rounded-full font-bold">مؤكد</span>
 </div>
 <!-- 5. Insurance Pre-Check Toggle -->
-<div class="mt-space-md p-space-sm bg-surface-container-low rounded-2xl flex flex-col gap-space-xs">
+<div class="mt-space-md p-space-sm bg-surface-container-low rounded-xl flex flex-col gap-space-xs">
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-2">
 <span class="material-symbols-outlined text-primary text-[20px]">health_and_safety</span>
@@ -486,7 +440,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 </div>
 <label class="relative inline-flex items-center cursor-pointer">
 <input checked="" class="sr-only peer" id="insurance-toggle" onchange="toggleInsuranceDetails()" type="checkbox"/>
-<div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+<div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:rounded-full after:h-5 after:w-5 after:transition-colors peer-checked:bg-primary"></div>
 </label>
 </div>
 <!-- Insurance Selector detail row -->
@@ -507,7 +461,7 @@ export const DOCTORPROFILE_MAIN = `<div class="flex flex-col w-full">
 <span class="font-label-md text-label-md font-semibold text-secondary">ج.س (SDG)</span>
 </div>
 </div>
-<button class="w-full py-3.5 px-space-md bg-primary hover:bg-primary-container active:scale-[0.99] text-on-primary rounded-full font-label-lg text-label-lg font-bold transition-all shadow-md flex items-center justify-center gap-2 group" id="dp-cta" type="button">
+<button class="w-full py-3.5 px-space-md bg-primary hover:bg-primary-container active:scale-[0.99] text-on-primary rounded-full font-label-lg text-label-lg font-bold transition-colors flex items-center justify-center gap-2 group" id="dp-cta" type="button">
 <span class="material-symbols-outlined text-[20px] text-on-primary">lock</span>
 <span id="cta-button-text">تأكيد الحجز | Confirm Booking</span>
 </button>

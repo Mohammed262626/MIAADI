@@ -9,13 +9,13 @@ let selectedDateString = "الثلاثاء 15 أكتوبر 2024";
 let selectedTimeString = "10:15 صباحاً";
 
 const DATE_CELL_IDLE =
-  "date-cell flex flex-col items-center py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container transition-all text-center";
+  "date-cell flex flex-col items-center rounded-lg bg-surface-container-low px-1 py-2.5 text-center transition-colors hover:bg-surface-container";
 const DATE_CELL_ACTIVE =
-  "date-cell active-date flex flex-col items-center py-2.5 px-1 rounded-xl bg-primary text-on-primary shadow-md transition-all text-center";
+  "date-cell active-date flex flex-col items-center rounded-lg bg-primary px-1 py-2.5 text-center text-on-primary transition-colors";
 const SLOT_IDLE =
-  "time-slot py-2 px-1 text-center rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all";
+  "time-slot rounded-lg bg-surface-container-low px-1 py-2 text-center text-[13px] text-on-surface transition-colors hover:bg-surface-container";
 const SLOT_ACTIVE =
-  "time-slot selected-slot py-2 px-1 text-center rounded-xl bg-primary text-on-primary font-label-md text-label-md shadow-sm transition-all font-bold flex items-center justify-center gap-1";
+  "time-slot selected-slot flex items-center justify-center gap-1 rounded-lg bg-primary px-1 py-2 text-center text-[13px] font-semibold text-on-primary transition-colors";
 
 function updateSummaryDisplay() {
   const summaryElem = document.getElementById("summary-datetime-display");
@@ -28,7 +28,7 @@ function selectDate(element: HTMLElement, dateStr: string) {
     btn.className = DATE_CELL_IDLE;
     const badge = btn.querySelector("span:last-child");
     if (badge && badge.textContent === "محدد") {
-      badge.className = "text-[10px] text-tertiary font-bold mt-1";
+      badge.className = "text-[11px] text-tertiary font-bold mt-1";
       badge.textContent = "متاح";
     }
   });
@@ -36,7 +36,7 @@ function selectDate(element: HTMLElement, dateStr: string) {
   element.className = DATE_CELL_ACTIVE;
   const lastChild = element.querySelector("span:last-child");
   if (lastChild) {
-    lastChild.className = "text-[10px] bg-on-primary/20 px-1.5 py-0.5 rounded-full font-bold mt-1";
+    lastChild.className = "mt-1 rounded bg-on-primary/20 px-1.5 py-0.5 text-[11px] font-semibold";
     lastChild.textContent = "محدد";
   }
 
@@ -74,12 +74,12 @@ function switchBookingTab(tabKey: "upcoming" | "past" | "cancelled") {
     const view = document.getElementById("view-" + key);
     if (btn && view) {
       if (key === tabKey) {
-        btn.classList.add("bg-surface-container-lowest", "text-primary", "shadow-sm");
+        btn.classList.add("bg-surface-container-lowest", "text-primary");
         btn.classList.remove("text-secondary");
         view.classList.remove("hidden");
         view.classList.add("flex");
       } else {
-        btn.classList.remove("bg-surface-container-lowest", "text-primary", "shadow-sm");
+        btn.classList.remove("bg-surface-container-lowest", "text-primary");
         btn.classList.add("text-secondary");
         view.classList.add("hidden");
         view.classList.remove("flex");

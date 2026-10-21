@@ -25,7 +25,7 @@ export function renderConfirmView(
     <div class="flex items-center gap-3 py-2.5">
       <span class="w-9 h-9 rounded-xl bg-surface-container-low text-on-surface-variant grid place-items-center shrink-0">${icon(iconName, { size: 18 })}</span>
       <span class="text-sm text-on-surface-variant">${escapeHtml(label)}</span>
-      <span class="ms-auto font-bold text-sm ${mono ? "tabular-nums" : ""}">${escapeHtml(value)}</span>
+      <span class="ms-auto font-bold text-sm ${mono ?"tabular-nums" : ""}">${escapeHtml(value)}</span>
     </div>`;
 
   const name = user?.profile?.full_name || "";
@@ -54,11 +54,11 @@ export function renderConfirmView(
       <div class="panel p-4 space-y-3">
         <label class="block">
           <span class="text-xs font-bold text-on-surface-variant">الاسم الكامل</span>
-          <input id="cf-name" type="text" value="${escapeHtml(name)}" placeholder="اسم المريض" ${isResched ? "readonly" : ""} class="mt-1.5 w-full h-12 px-4 rounded-2xl border border-outline-variant bg-surface-container-lowest outline-none focus:border-primary text-sm ${isResched ? "opacity-70" : ""}" />
+          <input id="cf-name" type="text" value="${escapeHtml(name)}" placeholder="اسم المريض" ${isResched ? "readonly" : ""} class="mt-1.5 w-full h-12 px-4 rounded-xl border border-outline-variant bg-surface-container-lowest outline-none focus:border-primary text-sm ${isResched ?"opacity-70" : ""}" />
         </label>
         <label class="block">
           <span class="text-xs font-bold text-on-surface-variant">رقم الهاتف</span>
-          <input id="cf-phone" type="tel" dir="ltr" value="${escapeHtml(phone)}" placeholder="05xxxxxxxx" ${isResched ? "readonly" : ""} class="mt-1.5 w-full h-12 px-4 rounded-2xl border border-outline-variant bg-surface-container-lowest outline-none focus:border-primary text-sm text-left ${isResched ? "opacity-70" : ""}" />
+          <input id="cf-phone" type="tel" dir="ltr" value="${escapeHtml(phone)}" placeholder="05xxxxxxxx" ${isResched ? "readonly" : ""} class="mt-1.5 w-full h-12 px-4 rounded-xl border border-outline-variant bg-surface-container-lowest outline-none focus:border-primary text-sm text-left ${isResched ?"opacity-70" : ""}" />
         </label>
       </div>
     </section>
@@ -66,7 +66,7 @@ export function renderConfirmView(
     ${
       isResched
         ? `<div class="panel-flat p-4 flex items-center gap-3">
-            <span class="w-10 h-10 rounded-2xl bg-surface-container-lowest text-primary grid place-items-center shrink-0">${icon("event_repeat", { size: 20 })}</span>
+            <span class="w-10 h-10 rounded-xl bg-surface-container-lowest text-primary grid place-items-center shrink-0">${icon("event_repeat", { size: 20 })}</span>
             <p class="text-[12px] text-on-surface-variant">لن تتغيّر أي رسوم — سيُحدَّث موعد الحجز الحالي فقط إلى الوقت الجديد.</p>
           </div>`
         : `<section class="space-y-3">
@@ -106,7 +106,7 @@ export function renderConfirmView(
     ${
       !user
         ? `<div class="panel p-4 flex items-center gap-3 border border-primary/20">
-            <span class="w-10 h-10 rounded-2xl bg-primary/10 text-primary grid place-items-center shrink-0">${icon("login", { size: 20 })}</span>
+            <span class="w-10 h-10 rounded-xl bg-primary/10 text-primary grid place-items-center shrink-0">${icon("login", { size: 20 })}</span>
             <p class="flex-1 text-[12px] text-on-surface-variant">سجّل الدخول لإتمام الحجز ومتابعة مواعيدك.</p>
             <button data-open-auth class="h-10 px-4 rounded-full bg-primary text-on-primary text-sm font-bold shrink-0">دخول</button>
           </div>`
@@ -128,7 +128,7 @@ export function renderConfirmView(
                 <p class="font-extrabold text-[17px] tabular-nums">${money(doctor.consultation_fee)}</p>
               </div>`
         }
-        <button id="cf-submit" class="ms-auto h-12 px-6 rounded-2xl bg-primary text-on-primary font-bold text-sm hover:bg-primary-container transition-colors inline-flex items-center gap-1.5 disabled:opacity-50">
+        <button id="cf-submit" class="ms-auto h-12 px-6 rounded-xl bg-primary text-on-primary font-bold text-sm hover:bg-primary-container transition-colors inline-flex items-center gap-1.5 disabled:opacity-50">
           ${icon(isResched ? "event_repeat" : "check_circle", { size: 19, filled: true })}${isResched ? "تأكيد إعادة الجدولة" : "تأكيد الحجز"}
         </button>
       </div>
@@ -205,7 +205,7 @@ function renderSuccess(
         <h1 class="text-[22px] font-extrabold tracking-tight">${isResched ? "تمت إعادة الجدولة!" : "تم تأكيد حجزك!"}</h1>
         <p class="text-sm text-on-surface-variant mt-1">${isResched ? "حُدِّث موعدك بنجاح، ويمكنك مراجعته من «مواعيدي»." : "أرسلنا تفاصيل الموعد، ويمكنك متابعته من «مواعيدي»."}</p>
       </div>
-      <div class="rounded-2xl bg-surface-container-low p-4 text-start space-y-2">
+      <div class="rounded-xl bg-surface-container-low p-4 text-start space-y-2">
         <div class="flex items-center gap-3">
           ${avatar(o.doctor.name, "sm")}
           <div class="flex-1 min-w-0">
@@ -233,8 +233,8 @@ function renderSuccess(
         </div>
       </div>
       <div class="flex gap-2">
-        <a href="#appointments" class="flex-1 h-12 rounded-2xl bg-primary text-on-primary font-bold text-sm grid place-items-center">عرض مواعيدي</a>
-        <a href="#home" class="flex-1 h-12 rounded-2xl border border-outline-variant font-bold text-sm grid place-items-center">الرئيسية</a>
+        <a href="#appointments" class="flex-1 h-12 rounded-xl bg-primary text-on-primary font-bold text-sm grid place-items-center">عرض مواعيدي</a>
+        <a href="#home" class="flex-1 h-12 rounded-xl border border-outline-variant font-bold text-sm grid place-items-center">الرئيسية</a>
       </div>
     </div>
   </div>`;

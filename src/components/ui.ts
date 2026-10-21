@@ -6,17 +6,17 @@ export function initials(name: string): string {
   const parts = cleaned.split(/\s+/).filter(Boolean);
   if (!parts.length) return "؟";
   if (parts.length === 1) return parts[0].slice(0, 1);
-  return parts[0].slice(0, 1) + " " + parts[1].slice(0, 1);
+  return parts[0].slice(0, 1) + "\u2009" + parts[1].slice(0, 1);
 }
 
 export function avatar(name: string, size: "xs" | "sm" | "md" | "lg" = "md"): string {
   const dims = {
-    xs: "w-9 h-9 text-xs rounded-xl",
-    sm: "w-11 h-11 text-sm rounded-2xl",
-    md: "w-14 h-14 text-base rounded-2xl",
-    lg: "w-[72px] h-[72px] text-2xl rounded-3xl",
+    xs: "w-9 h-9 text-xs rounded-lg",
+    sm: "w-11 h-11 text-sm rounded-lg",
+    md: "w-14 h-14 text-base rounded-lg",
+    lg: "w-[72px] h-[72px] text-2xl rounded-xl",
   }[size];
-  return `<span class="inline-grid place-items-center shrink-0 font-extrabold text-on-primary bg-gradient-to-br from-primary-container to-primary ${dims}">${escapeHtml(initials(name))}</span>`;
+  return `<span class="inline-grid place-items-center shrink-0 whitespace-nowrap font-extrabold leading-none text-on-primary bg-primary ${dims}">${escapeHtml(initials(name))}</span>`;
 }
 
 export function money(fee: number): string {
