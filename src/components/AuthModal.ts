@@ -42,7 +42,7 @@ export function mountAuthModal(
         </div>
 
         <div class="relative mb-5 grid grid-cols-2 gap-1 rounded-lg bg-surface-container-low p-1 text-[13px] font-semibold" role="tablist" aria-label="طريقة الدخول">
-          <span data-indicator class="absolute bottom-1 top-1 rounded-md border border-line bg-surface-container-lowest transition-all duration-200 ease-out" style="width: calc(50% - 0.375rem); right: 0.25rem"></span>
+          <span data-indicator class="absolute bottom-1 top-1 rounded-md border border-line bg-surface-container-lowest transition-[right,width,left] duration-200 ease-out" style="width: calc(50% - 0.375rem); right: 0.25rem"></span>
           <button data-tab="login" role="tab" aria-selected="true" class="relative z-10 h-9 rounded-md transition-colors">دخول</button>
           <button data-tab="register" role="tab" aria-selected="false" class="relative z-10 h-9 rounded-md transition-colors">حساب جديد</button>
         </div>

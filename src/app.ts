@@ -305,7 +305,7 @@ function renderConfirmTab(main: HTMLElement, scheduleId: string) {
       icon: "link_off",
       title: "لا يوجد حجز قيد التأكيد",
       body: "ابدأ من جديد باختيار الطبيب والموعد المناسب لك.",
-      actionHtml: `<a href="#doctors" class="mt-1 h-11 px-5 rounded-full bg-primary text-on-primary font-bold text-sm grid place-items-center">تصفح الأطباء</a>`,
+      actionHtml: `<a href="#doctors" class="mt-1 h-11 px-5 rounded-lg bg-primary text-on-primary font-bold text-sm grid place-items-center">تصفح الأطباء</a>`,
     })}</div>`;
     return;
   }
@@ -424,9 +424,9 @@ async function openApptEditDialog(row: AdminRow, main: HTMLElement) {
   dlg.id = "appt-edit-dialog";
   dlg.className = "p-0 bg-transparent backdrop:bg-inverse-surface/50 backdrop:backdrop-blur-sm open:grid place-items-center min-h-dvh w-full max-w-none";
   dlg.innerHTML = `
-  <div class="bg-surface-container-lowest rounded-[28px] shadow-[0_24px_60px_-20px_rgba(16,24,40,.4)] w-full max-w-[440px] p-space-xl mx-4 flex flex-col gap-space-lg">
+  <div class="bg-surface-container-lowest rounded-xl shadow-[0_24px_60px_-20px_rgba(16,24,40,.4)] w-full max-w-[440px] p-space-xl mx-4 flex flex-col gap-space-lg">
     <div class="flex items-center gap-space-sm">
-      <span class="w-11 h-11 rounded-2xl grid place-items-center bg-primary/10 text-primary"><span class="material-symbols-outlined text-[22px]">edit_calendar</span></span>
+      <span class="w-11 h-11 rounded-lg grid place-items-center bg-primary/10 text-primary"><span class="material-symbols-outlined text-[22px]">edit_calendar</span></span>
       <div class="min-w-0">
         <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">تعديل موعد المريض</h3>
         <p class="font-label-sm text-label-sm text-secondary truncate">${escapeHtml(row.patient_name)} • ${escapeHtml(row.doctor_name)}</p>
@@ -438,15 +438,15 @@ async function openApptEditDialog(row: AdminRow, main: HTMLElement) {
     </div>
     <div class="grid grid-cols-2 gap-space-md">
       <label class="flex flex-col gap-1 font-label-sm text-label-sm text-secondary">التاريخ
-        <select id="appt-date" class="px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface outline-none focus:border-primary"></select>
+        <select id="appt-date" class="px-space-md py-2.5 rounded-xl border border-line bg-surface text-body-md text-on-surface outline-none focus:border-primary"></select>
       </label>
       <label class="flex flex-col gap-1 font-label-sm text-label-sm text-secondary">الوقت
-        <select id="appt-time" class="px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface outline-none focus:border-primary"></select>
+        <select id="appt-time" class="px-space-md py-2.5 rounded-xl border border-line bg-surface text-body-md text-on-surface outline-none focus:border-primary"></select>
       </label>
     </div>
     <div class="flex items-center justify-end gap-space-sm">
-      <button id="appt-cancel" class="px-space-lg py-2.5 rounded-full border border-outline-variant font-label-md text-label-md text-on-surface hover:bg-surface-container transition-all">إلغاء</button>
-      <button id="appt-save" class="px-space-lg py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-primary-container transition-all">حفظ التعديل</button>
+      <button id="appt-cancel" class="px-space-lg py-2.5 rounded-lg border border-line font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">إلغاء</button>
+      <button id="appt-save" class="px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-primary-container transition-colors">حفظ التعديل</button>
     </div>
   </div>`;
   document.body.appendChild(dlg);
@@ -485,33 +485,32 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
     try { state.adminAccounts = await adminListProfiles(); } catch (e) { showToast(translateAuthError(e), "error"); }
     const rows = state.adminAccounts as { user_id: string; full_name: string; email: string; phone: string; role: string }[];
     const rolePill = (role: string) => role === "admin"
-      ? `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full font-label-sm text-label-sm font-bold bg-inverse-surface text-inverse-on-surface"><span class="material-symbols-outlined text-[14px]">shield_person</span>مشرف</span>`
+      ? `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-lg font-label-sm text-label-sm font-bold bg-inverse-surface text-inverse-on-surface"><span class="material-symbols-outlined text-[14px]">shield_person</span>مشرف</span>`
       : role === "doctor"
-        ? `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full font-label-sm text-label-sm font-bold bg-primary/10 text-primary"><span class="material-symbols-outlined text-[14px]">stethoscope</span>طبيب</span>`
-        : `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full font-label-sm text-label-sm font-bold bg-surface-container-high text-on-surface-variant"><span class="material-symbols-outlined text-[14px]">person</span>مريض</span>`;
+        ? `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-lg font-label-sm text-label-sm font-bold bg-primary/10 text-primary"><span class="material-symbols-outlined text-[14px]">stethoscope</span>طبيب</span>`
+        : `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-lg font-label-sm text-label-sm font-bold bg-surface-container-high text-on-surface-variant"><span class="material-symbols-outlined text-[14px]">person</span>مريض</span>`;
     main.innerHTML = `
       <div class="w-full px-margin-desktop py-space-xl">
         <div class="flex flex-wrap items-center justify-between gap-space-md mb-space-lg">
           <div class="flex items-center gap-space-sm text-secondary font-label-md text-label-md">
             <span class="text-on-surface">بوابة الإدارة</span><span>/</span><span class="text-primary font-bold">الحسابات والأدوار</span>
           </div>
-          <button data-back class="flex items-center gap-space-xs px-space-md py-2 rounded-full border border-outline-variant font-label-md text-label-md text-on-surface hover:bg-surface-container transition-all">
+          <button data-back class="flex items-center gap-space-xs px-space-md py-2 rounded-lg border border-line font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">
             <span class="material-symbols-outlined text-[18px]">arrow_forward</span>رجوع للحجوزات
           </button>
         </div>
         <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-lg mb-space-xl">
           <div>
-            <div class="flex items-center gap-space-xs text-primary font-label-sm text-label-sm uppercase tracking-wider mb-space-xs"><span>USER MANAGEMENT</span><span>•</span><span>إدارة المستخدمين</span></div>
-            <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">الحسابات والأدوار
-              <span class="font-body-lg text-body-lg text-secondary font-normal block lg:inline-block lg:mr-space-sm">| Accounts &amp; Roles</span>
+            <div class="mb-space-xs text-[12px] font-medium text-on-surface-variant">إدارة المستخدمين</div>
+            <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">الحسابات والأدوار
             </h1>
           </div>
-          <div class="flex items-center gap-space-sm bg-surface-container-low px-space-md py-space-xs rounded-full">
+          <div class="flex items-center gap-space-sm bg-surface-container-low px-space-md py-space-xs rounded-lg">
             <span class="material-symbols-outlined text-primary text-[20px]">group</span>
             <span class="font-label-sm text-label-sm text-on-surface">إجمالي الحسابات <span class="tabular-nums font-bold">${rows.length}</span></span>
           </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-3xl shadow-sm overflow-hidden">
+        <div class="overflow-hidden rounded-xl border border-line bg-surface-container-lowest">
           <div class="max-sm:hidden overflow-x-auto">
             <table class="w-full font-body-md text-body-md">
               <thead class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm"><tr>
@@ -521,27 +520,27 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
                 <th class="px-space-lg py-space-md text-right font-semibold">الدور</th>
                 <th class="px-space-lg py-space-md text-center font-semibold">تغيير الدور</th>
               </tr></thead>
-              <tbody class="divide-y divide-outline-variant/40">${rows.map((p) => `
+              <tbody class="divide-y divide-line">${rows.map((p) => `
                 <tr class="hover:bg-surface-container-low/60 transition-colors">
                   <td class="px-space-lg py-space-md font-semibold text-on-surface">${escapeHtml(p.full_name || "—")}</td>
-                  <td class="px-space-lg py-space-md font-mono text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.email || "")}</td>
-                  <td class="px-space-lg py-space-md font-mono text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.phone || "—")}</td>
+                  <td class="px-space-lg py-space-md tabular-nums text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.email || "")}</td>
+                  <td class="px-space-lg py-space-md tabular-nums text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.phone || "—")}</td>
                   <td class="px-space-lg py-space-md">${rolePill(p.role)}</td>
-                  <td class="px-space-lg py-space-md text-center"><select data-role-for="${escapeHtml(p.user_id)}" class="px-space-md py-1.5 rounded-xl border border-outline-variant bg-surface text-label-sm text-on-surface"><option value="patient" ${p.role === "patient" ? "selected" : ""}>مريض</option><option value="doctor" ${p.role === "doctor" ? "selected" : ""}>طبيب</option><option value="admin" ${p.role === "admin" ? "selected" : ""}>مشرف</option></select></td>
+                  <td class="px-space-lg py-space-md text-center"><select data-role-for="${escapeHtml(p.user_id)}" class="px-space-md py-1.5 rounded-xl border border-line bg-surface text-label-sm text-on-surface"><option value="patient" ${p.role === "patient" ? "selected" : ""}>مريض</option><option value="doctor" ${p.role === "doctor" ? "selected" : ""}>طبيب</option><option value="admin" ${p.role === "admin" ? "selected" : ""}>مشرف</option></select></td>
                 </tr>`).join("")}</tbody>
             </table>
           </div>
           <div class="sm:hidden flex flex-col gap-space-md p-space-md">${rows.map((p) => `
-            <div class="bg-surface-container-low/60 rounded-2xl p-space-md flex flex-col gap-2">
+            <div class="flex flex-col gap-2 rounded-xl border border-line bg-surface-container-low p-space-md">
               <div class="flex items-center justify-between gap-2">
                 <span class="font-label-md text-label-md font-bold text-on-surface truncate">${escapeHtml(p.full_name || "—")}</span>
                 ${rolePill(p.role)}
               </div>
-              <span class="font-mono text-label-sm text-on-surface-variant truncate" dir="ltr">${escapeHtml(p.email || "")}</span>
-              <span class="font-mono text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.phone || "—")}</span>
-              <label class="flex items-center gap-2 pt-1 border-t border-outline-variant/40">
+              <span class="tabular-nums text-label-sm text-on-surface-variant truncate" dir="ltr">${escapeHtml(p.email || "")}</span>
+              <span class="tabular-nums text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.phone || "—")}</span>
+              <label class="flex items-center gap-2 pt-1 border-t border-line">
                 <span class="font-label-sm text-label-sm text-secondary">تغيير الدور</span>
-                <select data-role-for="${escapeHtml(p.user_id)}" class="flex-1 px-space-md py-1.5 rounded-xl border border-outline-variant bg-surface text-label-sm text-on-surface"><option value="patient" ${p.role === "patient" ? "selected" : ""}>مريض</option><option value="doctor" ${p.role === "doctor" ? "selected" : ""}>طبيب</option><option value="admin" ${p.role === "admin" ? "selected" : ""}>مشرف</option></select>
+                <select data-role-for="${escapeHtml(p.user_id)}" class="flex-1 px-space-md py-1.5 rounded-xl border border-line bg-surface text-label-sm text-on-surface"><option value="patient" ${p.role === "patient" ? "selected" : ""}>مريض</option><option value="doctor" ${p.role === "doctor" ? "selected" : ""}>طبيب</option><option value="admin" ${p.role === "admin" ? "selected" : ""}>مشرف</option></select>
               </label>
             </div>`).join("")}</div>
         </div>
@@ -562,25 +561,24 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
         <div class="flex items-center gap-space-sm text-secondary font-label-md text-label-md">
           <span class="text-on-surface">بوابة الإدارة</span><span>/</span><span class="text-primary font-bold">الأطباء والمواعيد</span>
         </div>
-        <button data-back class="flex items-center gap-space-xs px-space-md py-2 rounded-full border border-outline-variant font-label-md text-label-md text-on-surface hover:bg-surface-container transition-all">
+        <button data-back class="flex items-center gap-space-xs px-space-md py-2 rounded-lg border border-line font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">
           <span class="material-symbols-outlined text-[18px]">arrow_forward</span>رجوع للحجوزات
         </button>
       </div>
       <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-lg mb-space-xl">
         <div>
-          <div class="flex items-center gap-space-xs text-primary font-label-sm text-label-sm uppercase tracking-wider mb-space-xs"><span>PROVIDER MANAGEMENT</span><span>•</span><span>إدارة مقدمي الرعاية</span></div>
-          <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">الأطباء والمواعيد
-            <span class="font-body-lg text-body-lg text-secondary font-normal block lg:inline-block lg:mr-space-sm">| Doctors &amp; Schedules</span>
+          <div class="mb-space-xs text-[12px] font-medium text-on-surface-variant">إدارة مقدمي الرعاية</div>
+          <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">الأطباء والمواعيد
           </h1>
         </div>
-        <button id="add-doctor" class="flex items-center gap-space-xs px-space-lg py-3 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-sm hover:bg-teal-hover transition-colors">
+        <button id="add-doctor" class="flex items-center gap-space-xs px-space-lg py-3 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg font-bold hover:bg-teal-hover transition-colors">
           <span class="material-symbols-outlined text-[20px]">person_add</span>إضافة طبيب
         </button>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-md">${docs.map((d) => `
-        <div class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm flex flex-col gap-space-md">
+        <div class="flex flex-col gap-space-md rounded-xl border border-line bg-surface-container-lowest p-space-lg">
           <div class="flex items-start gap-space-sm">
-            <span class="w-11 h-11 rounded-2xl shrink-0 grid place-items-center bg-primary/10 text-primary">
+            <span class="w-11 h-11 rounded-lg shrink-0 grid place-items-center bg-primary/10 text-primary">
               <span class="material-symbols-outlined text-[22px]">stethoscope</span>
             </span>
             <div class="min-w-0">
@@ -589,37 +587,37 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
             </div>
           </div>
           <div class="flex items-center gap-2 mt-auto">
-            <button data-manage="${escapeHtml(d.id)}" class="flex-1 flex items-center justify-center gap-1 px-space-sm py-2 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-bold hover:bg-primary/20 transition-all">
+            <button data-manage="${escapeHtml(d.id)}" class="flex-1 flex items-center justify-center gap-1 px-space-sm py-2 rounded-lg bg-primary/10 text-primary font-label-sm text-label-sm font-bold hover:bg-primary/20 transition-colors">
               <span class="material-symbols-outlined text-[16px]">calendar_month</span>المواعيد
             </button>
-            <button data-edit="${escapeHtml(d.id)}" class="px-space-md py-2 rounded-full border border-outline-variant font-label-sm text-label-sm text-on-surface hover:bg-surface-container transition-all">تعديل</button>
-            <button data-del="${escapeHtml(d.id)}" class="px-space-md py-2 rounded-full bg-error-container/60 text-on-error-container font-label-sm text-label-sm font-bold hover:bg-error-container transition-all">حذف</button>
+            <button data-edit="${escapeHtml(d.id)}" class="px-space-md py-2 rounded-lg border border-line font-label-sm text-label-sm text-on-surface hover:bg-surface-container transition-colors">تعديل</button>
+            <button data-del="${escapeHtml(d.id)}" class="px-space-md py-2 rounded-lg bg-error-container/60 text-on-error-container font-label-sm text-label-sm font-bold hover:bg-error-container transition-colors">حذف</button>
           </div>
         </div>`).join("")}</div>
       <div id="schedules-root" class="${state.adminManagementDoctor ? "" : "hidden"} mt-space-xl"></div>
     </div>
     <dialog id="doctor-dialog" class="p-0 bg-transparent backdrop:bg-inverse-surface/50 backdrop:backdrop-blur-sm open:grid place-items-center min-h-dvh w-full max-w-none">
-      <div class="bg-surface-container-lowest rounded-[28px] shadow-[0_24px_60px_-20px_rgba(16,24,40,.4)] w-full max-w-[480px] p-space-xl mx-4">
+      <div class="bg-surface-container-lowest rounded-xl shadow-[0_24px_60px_-20px_rgba(16,24,40,.4)] w-full max-w-[480px] p-space-xl mx-4">
         <div class="flex items-center gap-space-sm mb-space-lg">
-          <span class="w-11 h-11 rounded-2xl grid place-items-center bg-primary/10 text-primary"><span class="material-symbols-outlined text-[22px]">stethoscope</span></span>
+          <span class="w-11 h-11 rounded-lg grid place-items-center bg-primary/10 text-primary"><span class="material-symbols-outlined text-[22px]">stethoscope</span></span>
           <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface" id="doctor-dialog-title">طبيب</h3>
         </div>
         <form id="doctor-form" class="space-y-3">
           <label class="block font-label-sm text-label-sm text-secondary">الاسم
-            <input id="doc-name" required placeholder="د. الاسم الكامل" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
+            <input id="doc-name" required placeholder="د. الاسم الكامل" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-line bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
           </label>
           <label class="block font-label-sm text-label-sm text-secondary">التخصص
-            <input id="doc-spec" required placeholder="التخصص" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
+            <input id="doc-spec" required placeholder="التخصص" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-line bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
           </label>
           <label class="block font-label-sm text-label-sm text-secondary">رسوم الكشف (ج.س)
-            <input id="doc-fee" required type="number" min="0" placeholder="3000" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
+            <input id="doc-fee" required type="number" min="0" placeholder="3000" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-line bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
           </label>
           <label class="block font-label-sm text-label-sm text-secondary">حساب المستخدم
-            <select id="doc-user" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface"><option value="">بدون حساب</option>${(state.adminAccounts as { user_id: string; full_name: string; email: string }[]).map((p) => `<option value="${escapeHtml(p.user_id)}">${escapeHtml(p.full_name)} — ${escapeHtml(p.email)}</option>`).join("")}</select>
+            <select id="doc-user" class="mt-1 w-full px-space-md py-2.5 rounded-xl border border-line bg-surface text-body-md text-on-surface"><option value="">بدون حساب</option>${(state.adminAccounts as { user_id: string; full_name: string; email: string }[]).map((p) => `<option value="${escapeHtml(p.user_id)}">${escapeHtml(p.full_name)} — ${escapeHtml(p.email)}</option>`).join("")}</select>
           </label>
           <div class="flex gap-2 pt-1">
-            <button type="button" data-close-doc class="flex-1 py-3 rounded-full border border-outline-variant font-label-md text-label-md text-on-surface hover:bg-surface-container transition-all">إلغاء</button>
-            <button type="submit" class="flex-1 py-3 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors">حفظ</button>
+            <button type="button" data-close-doc class="flex-1 py-3 rounded-lg border border-line font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">إلغاء</button>
+            <button type="submit" class="flex-1 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors">حفظ</button>
           </div>
         </form>
       </div>
@@ -693,81 +691,81 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
 
     root.innerHTML = `
       <div class="flex items-center gap-space-sm mb-space-lg">
-        <span class="w-11 h-11 rounded-2xl grid place-items-center bg-primary/10 text-primary shrink-0"><span class="material-symbols-outlined text-[22px]">calendar_month</span></span>
+        <span class="w-11 h-11 rounded-lg grid place-items-center bg-primary/10 text-primary shrink-0"><span class="material-symbols-outlined text-[22px]">calendar_month</span></span>
         <div>
-          <div class="text-primary font-label-sm text-label-sm uppercase tracking-wider">SCHEDULES • جداول العمل</div>
+          <div class="text-[12px] font-medium text-on-surface-variant">جداول العمل</div>
           <h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">مواعيد ${escapeHtml(doc?.name || "الطبيب")}</h3>
         </div>
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-space-lg items-start">
-        <section class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm">
+        <section class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
           <h4 class="flex items-center gap-space-xs font-label-lg text-label-lg font-bold text-on-surface mb-space-md">
             <span class="material-symbols-outlined text-[20px] text-primary">schedule</span>أوقات العمل الأسبوعية
           </h4>
           <div id="day-chips" class="flex flex-wrap gap-space-xs">
-            ${DAYS.map((d, i) => `<button type="button" data-day="${i}" class="px-space-md py-1.5 rounded-full border font-label-sm text-label-sm font-bold transition-all ${selected.has(i) ? "bg-primary text-on-primary border-primary" : "border-outline-variant text-on-surface-variant hover:bg-surface-container"}">${d}</button>`).join("")}
+            ${DAYS.map((d, i) => `<button type="button" data-day="${i}" class="px-space-md py-1.5 rounded-lg border font-label-sm text-label-sm font-bold transition-colors ${selected.has(i) ? "bg-primary text-on-primary border-primary" : "border-line text-on-surface-variant hover:bg-surface-container"}">${d}</button>`).join("")}
           </div>
           <div class="mt-space-md grid grid-cols-2 sm:grid-cols-4 gap-space-sm items-end">
-            <label class="font-label-sm text-label-sm text-secondary">من <input id="wk-start" type="time" value="${escapeHtml(sharedStart)}" class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-            <label class="font-label-sm text-label-sm text-secondary">إلى <input id="wk-end" type="time" value="${escapeHtml(sharedEnd)}" class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+            <label class="font-label-sm text-label-sm text-secondary">من <input id="wk-start" type="time" value="${escapeHtml(sharedStart)}" class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+            <label class="font-label-sm text-label-sm text-secondary">إلى <input id="wk-end" type="time" value="${escapeHtml(sharedEnd)}" class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
             <label class="font-label-sm text-label-sm text-secondary">مدة الموعد
-              <select id="wk-slot" class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary">
+              <select id="wk-slot" class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary">
                 ${[15, 20, 30, 45, 60].map((m) => `<option value="${m}"${String(m) === slotMinutes ? " selected" : ""}>${m} دقيقة</option>`).join("")}
               </select>
             </label>
             <p id="av-preview" class="font-label-sm text-label-sm text-secondary self-center"></p>
           </div>
           <div class="mt-space-md grid grid-cols-2 sm:grid-cols-4 gap-space-sm items-end">
-            <label class="font-label-sm text-label-sm text-secondary">استراحة 1 من <input id="brk1-start" type="time" value="${escapeHtml(b1s)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-            <label class="font-label-sm text-label-sm text-secondary">استراحة 1 إلى <input id="brk1-end" type="time" value="${escapeHtml(b1e)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-            <label class="font-label-sm text-label-sm text-secondary">استراحة 2 من <input id="brk2-start" type="time" value="${escapeHtml(b2s)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-            <label class="font-label-sm text-label-sm text-secondary">استراحة 2 إلى <input id="brk2-end" type="time" value="${escapeHtml(b2e)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+            <label class="font-label-sm text-label-sm text-secondary">استراحة 1 من <input id="brk1-start" type="time" value="${escapeHtml(b1s)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+            <label class="font-label-sm text-label-sm text-secondary">استراحة 1 إلى <input id="brk1-end" type="time" value="${escapeHtml(b1e)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+            <label class="font-label-sm text-label-sm text-secondary">استراحة 2 من <input id="brk2-start" type="time" value="${escapeHtml(b2s)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+            <label class="font-label-sm text-label-sm text-secondary">استراحة 2 إلى <input id="brk2-end" type="time" value="${escapeHtml(b2e)}" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
           </div>
           <p class="mt-space-xs font-label-sm text-label-sm text-outline">اترك حقول أي استراحة فارغة لإلغائها.</p>
           <div class="mt-space-md flex flex-wrap items-center gap-space-sm">
-            <button id="save-availability" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors"><span class="material-symbols-outlined text-[18px]">save</span>حفظ الأوقات</button>
-            <button id="generate-schedule" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-full bg-secondary text-on-secondary font-label-md text-label-md font-bold hover:brightness-110 transition-all"><span class="material-symbols-outlined text-[18px]">auto_awesome</span>توليد المواعيد (90 يوماً)</button>
+            <button id="save-availability" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors"><span class="material-symbols-outlined text-[18px]">save</span>حفظ الأوقات</button>
+            <button id="generate-schedule" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md font-bold hover:brightness-110 transition-colors"><span class="material-symbols-outlined text-[18px]">auto_awesome</span>توليد المواعيد (90 يوماً)</button>
           </div>
           <label class="mt-space-xs flex items-center gap-space-xs font-label-sm text-label-sm text-secondary"><input id="gen-replace" type="checkbox" /> استبدال المواعيد الفارغة القادمة</label>
-          <details class="mt-space-md rounded-2xl bg-surface-container-low p-space-md">
+          <details class="mt-space-md rounded-lg bg-surface-container-low p-space-md">
             <summary class="cursor-pointer font-label-md text-label-md font-bold text-on-surface">تخصيص ساعات مختلفة لبعض الأيام</summary>
             <p class="mt-space-xs font-label-sm text-label-sm text-outline">اترك الحقل فارغاً لاستخدام الوقت المشترك بالأعلى.</p>
             <div class="mt-space-sm space-y-2">
               ${DAYS.map((d, i) => { const r = byDay.get(i); return `
                 <div class="grid grid-cols-3 gap-space-sm items-center">
                   <span class="font-label-sm text-label-sm font-bold text-on-surface">${d}</span>
-                  <input type="time" data-av-start="${i}" value="${r ? escapeHtml(r.start_time.slice(0, 5)) : ""}" class="px-space-sm py-1.5 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" />
-                  <input type="time" data-av-end="${i}" value="${r ? escapeHtml(r.end_time.slice(0, 5)) : ""}" class="px-space-sm py-1.5 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" />
+                  <input type="time" data-av-start="${i}" value="${r ? escapeHtml(r.start_time.slice(0, 5)) : ""}" class="px-space-sm py-1.5 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" />
+                  <input type="time" data-av-end="${i}" value="${r ? escapeHtml(r.end_time.slice(0, 5)) : ""}" class="px-space-sm py-1.5 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" />
                 </div>`; }).join("")}
             </div>
           </details>
         </section>
 
         <div class="flex flex-col gap-space-lg">
-          <section class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm">
+          <section class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
             <h4 class="flex items-center gap-space-xs font-label-lg text-label-lg font-bold text-on-surface">إجازات وأيام مغلقة</h4>
             <p class="mt-space-xs font-label-sm text-label-sm text-outline mb-space-md">إغلاق نطاق يحذف المواعيد الفارغة غير المحجوزة فيه ويمنع توليدها لاحقاً.</p>
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-space-sm items-end font-label-sm text-label-sm text-secondary">
-              <label>من <input id="block-start" type="date" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <label>إلى <input id="block-end" type="date" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <label>السبب <input id="block-reason" placeholder="إجازة" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <button id="add-blocked" class="py-2.5 rounded-full bg-error text-on-error font-label-md text-label-md font-bold hover:brightness-110 transition-all">إغلاق التواريخ</button>
+              <label>من <input id="block-start" type="date" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <label>إلى <input id="block-end" type="date" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <label>السبب <input id="block-reason" placeholder="إجازة" class="mt-1 w-full px-space-sm py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <button id="add-blocked" class="py-2.5 rounded-lg bg-error text-on-error font-label-md text-label-md font-bold hover:brightness-110 transition-colors">إغلاق التواريخ</button>
             </div>
             <div class="mt-space-md grid gap-space-sm">${blocked.length ? blocked.map((b) => `
-              <div class="flex items-center justify-between gap-space-sm rounded-2xl bg-surface-container-low p-space-md font-body-sm text-body-sm text-on-surface">
+              <div class="flex items-center justify-between gap-space-sm rounded-lg bg-surface-container-low p-space-md font-body-sm text-body-sm text-on-surface">
                 <span>${escapeHtml(formatArabicDate(b.start_date))}${b.start_date !== b.end_date ? " – " + escapeHtml(formatArabicDate(b.end_date)) : ""} · ${escapeHtml(b.reason || "إجازة")}</span>
-                <button data-unblock="${escapeHtml(b.id)}" class="px-space-md py-1.5 rounded-full border border-outline-variant font-label-sm text-label-sm text-on-surface hover:bg-surface-container-lowest transition-all">إلغاء الإغلاق</button>
+                <button data-unblock="${escapeHtml(b.id)}" class="px-space-md py-1.5 rounded-lg border border-line font-label-sm text-label-sm text-on-surface hover:bg-surface-container-lowest transition-colors">إلغاء الإغلاق</button>
               </div>`).join("") : `<p class="font-label-sm text-label-sm text-outline">لا توجد إجازات مسجّلة</p>`}</div>
           </section>
 
-          <details class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm">
+          <details class="rounded-xl border border-line bg-surface-container-lowest p-space-lg">
             <summary class="cursor-pointer font-label-lg text-label-lg font-bold text-on-surface">إضافة موعد ليوم واحد</summary>
             <form id="add-schedule" class="mt-space-md grid grid-cols-1 sm:grid-cols-4 gap-space-sm items-end font-label-sm text-label-sm text-secondary">
-              <label>التاريخ <input id="sch-date" type="date" min="${escapeHtml(localDateISO())}" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <label>من <input id="sch-start" type="time" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <label>إلى <input id="sch-end" type="time" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
-              <button type="submit" class="py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors">إضافة</button>
+              <label>التاريخ <input id="sch-date" type="date" min="${escapeHtml(localDateISO())}" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <label>من <input id="sch-start" type="time" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <label>إلى <input id="sch-end" type="time" required class="mt-1 w-full px-space-md py-2 rounded-xl border border-line bg-surface text-body-sm text-on-surface outline-none focus:border-primary" /></label>
+              <button type="submit" class="py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors">إضافة</button>
             </form>
           </details>
         </div>
@@ -778,9 +776,9 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
         <span class="font-body-md text-body-md text-secondary tabular-nums">(${schedules.length})</span>
       </h4>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-space-sm">${schedules.length ? schedules.map((s: { id: string; available_date: string; start_time: string; end_time: string; is_booked: boolean }) => `
-        <div class="flex items-center justify-between gap-space-sm rounded-2xl p-space-md font-body-sm text-body-sm ${s.is_booked ? "bg-warning-soft/60 text-on-surface" : "bg-surface-container-lowest shadow-sm text-on-surface"}">
-          <span>${escapeHtml(formatArabicDate(s.available_date))} · <span class="tabular-nums">${escapeHtml(formatTime(s.start_time))}–${escapeHtml(formatTime(s.end_time))}</span> ${s.is_booked ? `<span class="ms-space-xs px-space-sm py-0.5 rounded-full bg-warning-soft text-warning font-label-sm text-label-sm font-bold">محجوز</span>` : ""}</span>
-          ${s.is_booked ? "" : `<button data-del-sch="${escapeHtml(s.id)}" class="px-space-md py-1.5 rounded-full bg-error-container/60 text-on-error-container font-label-sm text-label-sm font-bold hover:bg-error-container transition-all">حذف</button>`}
+        <div class="flex items-center justify-between gap-space-sm rounded-lg p-space-md font-body-sm text-body-sm ${s.is_booked ? "bg-warning-soft/60 text-on-surface" : "bg-surface-container-lowest text-on-surface"}">
+          <span>${escapeHtml(formatArabicDate(s.available_date))} · <span class="tabular-nums">${escapeHtml(formatTime(s.start_time))}–${escapeHtml(formatTime(s.end_time))}</span> ${s.is_booked ? `<span class="ms-space-xs px-space-sm py-0.5 rounded-lg bg-warning-soft text-warning font-label-sm text-label-sm font-bold">محجوز</span>` : ""}</span>
+          ${s.is_booked ? "" : `<button data-del-sch="${escapeHtml(s.id)}" class="px-space-md py-1.5 rounded-lg bg-error-container/60 text-on-error-container font-label-sm text-label-sm font-bold hover:bg-error-container transition-colors">حذف</button>`}
         </div>`).join("") : `<p class="font-body-md text-body-md text-outline">لا مواعيد</p>`}</div>`;
 
     const startOf = (i: number) => (root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement).value;
@@ -814,7 +812,7 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
     const paintChips = () => {
       root.querySelectorAll<HTMLButtonElement>("#day-chips [data-day]").forEach((b) => {
         const on = selected.has(Number(b.dataset.day));
-        b.className = `px-space-md py-1.5 rounded-full border font-label-sm text-label-sm font-bold transition-all ${on ? "bg-primary text-on-primary border-primary" : "border-outline-variant text-on-surface-variant hover:bg-surface-container"}`;
+        b.className = `px-space-md py-1.5 rounded-lg border font-label-sm text-label-sm font-bold transition-colors ${on ? "bg-primary text-on-primary border-primary" : "border-line text-on-surface-variant hover:bg-surface-container"}`;
         const i = Number(b.dataset.day);
         const st = root.querySelector(`[data-av-start="${i}"]`) as HTMLInputElement | null;
         const en = root.querySelector(`[data-av-end="${i}"]`) as HTMLInputElement | null;

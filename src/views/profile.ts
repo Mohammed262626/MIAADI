@@ -49,7 +49,7 @@ export function renderProfileView(
 
   const toggle = (id: string, on: boolean) =>
     `<button data-toggle="${id}" aria-pressed="${on}" class="relative w-12 h-7 rounded-full transition-colors ${on ? "bg-primary" : "bg-surface-container-high"}">
-      <span data-knob class="absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all" style="${on ? "inset-inline-start:26px" : "inset-inline-start:4px"}"></span>
+      <span data-knob class="absolute top-1 h-5 w-5 rounded-full bg-white transition-[inset-inline-start]" style="${on ? "inset-inline-start:26px" : "inset-inline-start:4px"}"></span>
     </button>`;
 
   root.innerHTML = `
