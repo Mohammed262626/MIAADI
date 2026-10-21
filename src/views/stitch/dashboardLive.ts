@@ -84,14 +84,13 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
   const savedView = (): DashView | null => {
     try {
       const v = sessionStorage.getItem(VIEW_KEY);
-      return v === "overview" || v === "appointments" || v === "schedule" || v === "account" ? v : null;
+      return v === "overview" || v === "appointments" || v === "schedule" || v === "reviews" || v === "account" ? v : null;
     } catch { return null; }
   };
   let currentView: DashView = hooks.initialView || savedView() || "overview";
 
   setText("#db-sync", "جاري التحديث…");
-  host.innerHTML = `<div class="flex h-64 items-center justify-center gap-2 rounded-xl border border-line bg-surface-container-lowest text-[14px] text-on-surface-variant">
-    <span class="material-symbols-outlined animate-spin text-[18px]" aria-hidden="true">progress_activity</span> جاري تحميل لوحة العيادة…</div>`;
+  host.innerHTML = skeletonHtml("overview");
 
   const reload = async () => {
     try { await load(); }
@@ -115,7 +114,62 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
   };
   const NAV_ON = ["bg-surface-container-highest", "text-on-surface", "font-semibold"];
   const NAV_OFF = ["text-on-surface-variant", "hover:bg-surface-container-high", "hover:text-on-surface"];
-  const pendingHtml = (label: string) => `<div class="flex h-64 items-center justify-center gap-2 rounded-xl border border-line bg-surface-container-lowest text-[14px] text-on-surface-variant"><span class="material-symbols-outlined animate-spin text-[18px]" aria-hidden="true">progress_activity</span> ${escapeHtml(label)}</div>`;
+  /* Layout-shaped skeletons: each panel reserves its final geometry while data
+     loads, so the swap to real content never jumps. Decorative blocks are
+     aria-hidden and a screen-reader label carries the loading state. The account
+     panel renders synchronously, so it needs none. Declared as a function so the
+     very first paint can use it before the panels below are set up. */
+  function skeletonHtml(view: DashView): string {
+    if (view === "account") return "";
+    const line = "rounded bg-surface-container-high";
+    const block = "rounded bg-surface-container";
+    const stat = () => `<div class="bg-surface-container-lowest p-4"><div class="h-3 w-20 ${block}"></div><div class="mt-3 h-6 w-12 ${line}"></div></div>`;
+    const stats = (cols: string, n: number) => `<div class="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line ${cols}">${Array.from({ length: n }, stat).join("")}</div>`;
+    const row = () => `<div class="flex items-center gap-3 border-b border-line px-4 py-3 last:border-0"><div class="h-9 w-9 shrink-0 rounded-full ${block}"></div><div class="min-w-0 flex-1"><div class="h-3 w-32 ${line}"></div><div class="mt-2 h-2.5 w-24 ${block}"></div></div><div class="h-6 w-16 ${block}"></div></div>`;
+    const title = (wide = false) => `<div class="min-w-0"><div class="h-6 w-40 ${line}"></div><div class="mt-2 h-3 ${wide ? "w-72" : "w-64"} max-w-full ${block}"></div></div>`;
+    const bodies: Record<Exclude<DashView, "account">, string> = {
+      overview: `
+        <div class="flex flex-wrap items-end justify-between gap-4">${title(true)}<div class="h-9 w-28 ${block}"></div></div>
+        <div class="h-28 rounded-xl border border-line bg-surface-container-lowest"></div>
+        ${stats("sm:grid-cols-4", 4)}
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div class="flex flex-col gap-2">${Array.from({ length: 8 }, () => `<div class="h-16 rounded-xl border border-line bg-surface-container-lowest"></div>`).join("")}</div>
+          <div class="h-96 rounded-xl border border-line bg-surface-container-lowest"></div>
+        </div>`,
+      appointments: `
+        ${title()}
+        ${stats("sm:grid-cols-4", 4)}
+        <div class="flex flex-wrap gap-2">${Array.from({ length: 4 }, () => `<div class="h-8 w-24 rounded-lg ${block}"></div>`).join("")}</div>
+        <div class="overflow-hidden rounded-xl border border-line bg-surface-container-lowest">${Array.from({ length: 6 }, row).join("")}</div>
+        <div class="flex items-center justify-between gap-3"><div class="h-3 w-24 ${block}"></div><div class="h-8 w-40 rounded-lg ${block}"></div></div>`,
+      schedule: `
+        ${title()}
+        <div class="flex flex-wrap gap-2">${Array.from({ length: 7 }, () => `<div class="h-8 w-20 rounded-lg ${block}"></div>`).join("")}</div>
+        <div class="flex flex-col gap-2 rounded-xl border border-line bg-surface-container-lowest p-4">
+          <div class="h-9 w-full rounded-lg ${block}"></div>
+          <div class="h-9 w-full rounded-lg ${block}"></div>
+        </div>
+        <div class="rounded-xl border border-line bg-surface-container-lowest p-4">
+          <div class="h-4 w-28 ${line}"></div>
+          <div class="mt-3 grid grid-cols-7 gap-1.5">${Array.from({ length: 28 }, () => `<div class="h-12 rounded-lg ${block}"></div>`).join("")}</div>
+        </div>`,
+      reviews: `
+        ${title()}
+        ${stats("sm:grid-cols-3", 3)}
+        <div class="flex flex-col gap-2">${Array.from({ length: 3 }, () => `<div class="rounded-xl border border-line bg-surface-container-lowest p-4">
+          <div class="flex items-center gap-2.5"><div class="h-9 w-9 rounded-full ${block}"></div><div class="min-w-0 flex-1"><div class="h-3 w-28 ${line}"></div><div class="mt-2 h-2.5 w-36 ${block}"></div></div><div class="h-3 w-20 ${block}"></div></div>
+          <div class="mt-3 h-3 w-full ${block}"></div><div class="mt-2 h-3 w-2/3 ${block}"></div>
+        </div>`).join("")}</div>`,
+    };
+    const labels: Record<Exclude<DashView, "account">, string> = {
+      overview: "جارٍ تحميل لوحة العيادة…",
+      appointments: "جارٍ تحميل المواعيد…",
+      schedule: "جارٍ تحميل جدول العمل…",
+      reviews: "جارٍ تحميل التقييمات…",
+    };
+    return `<div class="animate-pulse" aria-busy="true"><div class="flex flex-col gap-4" aria-hidden="true">${bodies[view]}</div><span class="sr-only">${labels[view]}</span></div>`;
+  }
+
   const failureHtml = (e: unknown) => `<div class="flex flex-col items-center gap-2 rounded-xl border border-line bg-surface-container-lowest p-6 text-center text-[14px] text-on-surface-variant"><span class="material-symbols-outlined text-[36px]">cloud_off</span><span>تعذر تحميل هذا القسم — ${escapeHtml(translateAuthError(e))}</span></div>`;
 
   const paintNav = () => {
@@ -313,16 +367,15 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
     }
     const target = appEl.querySelector<HTMLElement>(VIEW_HOSTS[view]);
     if (!target) return;
-    const pendingLabel: Record<DashView, string> = {
-      overview: "جاري تحميل اللوحة…",
-      appointments: "جاري تحميل المواعيد…",
-      schedule: "جاري تحميل جدول العمل…",
-      reviews: "جاري تحميل التقييمات…",
-      account: "جاري تحميل حسابك…",
-    };
     try {
-      if (view === "overview") { await reload(); return; }
-      target.innerHTML = pendingHtml(pendingLabel[view]);
+      if (view === "overview") {
+        // Re-entering the overview starts from its own layout; realtime refreshes
+        // call reload() directly, so live data never flashes back to a skeleton.
+        target.innerHTML = skeletonHtml("overview");
+        await reload();
+        return;
+      }
+      target.innerHTML = skeletonHtml(view);
       if (view === "appointments") {
         if (hooks.renderAppointments) await hooks.renderAppointments(target);
         else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");

@@ -1,5 +1,5 @@
 // AUTO-GENERATED from Stitch desktop design: dashboard-desktop.html
-export const DASHBOARD_MAIN = `<div class="flex flex-col gap-6" aria-busy="true">
+export const DASHBOARD_MAIN = `<div class="flex animate-pulse flex-col gap-6" aria-busy="true">
 <div class="flex flex-wrap items-end justify-between gap-4">
   <div>
     <h1 class="text-[24px] font-bold leading-tight text-on-surface">لوحة العيادة</h1>
