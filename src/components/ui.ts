@@ -2,10 +2,11 @@ import { escapeHtml } from "../lib/format";
 import { icon } from "./icons";
 
 export function initials(name: string): string {
-  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  const cleaned = String(name || "").replace(/^(?:د\.?|دكتور|الدكتور|أ\.?|م\.?)\s+/u, "").trim();
+  const parts = cleaned.split(/\s+/).filter(Boolean);
   if (!parts.length) return "؟";
   if (parts.length === 1) return parts[0].slice(0, 1);
-  return parts[0].slice(0, 1) + parts[1].slice(0, 1);
+  return parts[0].slice(0, 1) + " " + parts[1].slice(0, 1);
 }
 
 export function avatar(name: string, size: "xs" | "sm" | "md" | "lg" = "md"): string {

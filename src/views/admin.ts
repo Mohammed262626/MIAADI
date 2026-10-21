@@ -51,42 +51,29 @@ export function renderAdminView(
   const to = Math.min((page + 1) * pageSize, total);
 
   root.innerHTML = `
-  <div class="w-full px-margin-desktop py-space-xl">
-    <div class="flex flex-wrap items-center justify-between gap-space-md mb-space-lg">
-      <div class="flex items-center gap-space-sm text-secondary font-label-md text-label-md">
-        <span class="text-on-surface">بوابة الإدارة</span>
-        <span>/</span>
-        <span class="text-primary font-bold">إدارة الحجوزات والعيادات</span>
-        <span class="mx-space-xs text-outline-variant">•</span>
-        <span class="bg-primary/10 text-primary px-space-sm py-0.5 rounded-full font-label-sm text-label-sm">${escapeHtml(opts.roleLabel)}</span>
+  <div class="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="min-w-0">
+        <h1 class="text-[24px] font-bold leading-tight text-on-surface">لوحة الإدارة</h1>
+        <p class="mt-1 text-[15px] text-on-surface-variant">إدارة الحجوزات والأطباء والحسابات، ومتابعة حركة العيادة اليوم.</p>
       </div>
-      <div class="flex items-center gap-space-sm bg-surface-container-low px-space-md py-space-xs rounded-full">
-        <span class="material-symbols-outlined text-tertiary text-[20px]" style="font-variation-settings: 'FILL' 1;">verified_user</span>
-        <span class="font-label-sm text-label-sm text-on-surface">متزامن مباشرة مع قاعدة بيانات العيادة</span>
+      <div class="flex flex-wrap items-center gap-3 text-[12px] text-on-surface-variant">
+        <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-tertiary" aria-hidden="true"></span>متزامن مباشرة مع قاعدة البيانات</span>
+        <span class="rounded-md bg-surface-container px-2 py-0.5 text-on-surface">${escapeHtml(opts.roleLabel)}</span>
       </div>
     </div>
 
-    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-lg mb-space-xl">
-      <div>
-        <div class="flex items-center gap-space-xs text-primary font-label-sm text-label-sm uppercase tracking-wider mb-space-xs">
-          <span>ADMIN CONSOLE</span><span>•</span><span>لوحة المتابعة الطبية</span>
-        </div>
-        <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">
-          لوحة الإدارة
-          <span class="font-body-lg text-body-lg text-secondary font-normal block lg:inline-block lg:mr-space-sm">| Clinic Operations</span>
-        </h1>
-      </div>
-      <div class="flex items-center bg-surface-container-high/60 p-1.5 rounded-2xl shadow-inner max-w-full overflow-x-auto">
-        ${SUB_TABS.map((t) => `<button data-sub="${t.key}" class="flex items-center gap-space-xs px-space-lg py-2.5 rounded-xl font-label-md text-label-md transition-all duration-200 ${
-          opts.activeSubTab === t.key ? "bg-surface-container-lowest text-primary shadow-sm" : "text-secondary hover:text-on-surface"
-        }">
-          <span class="material-symbols-outlined text-[18px]">${t.icon}</span><span>${t.label}</span>
-        </button>`).join("")}
-      </div>
+    <div class="mt-6 flex gap-2 overflow-x-auto border-b border-line">
+      ${SUB_TABS.map((t) => `<button data-sub="${t.key}" class="-mb-px inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 text-[14px] transition-colors ${
+        opts.activeSubTab === t.key ? "border-primary font-semibold text-on-surface" : "border-transparent text-on-surface-variant hover:text-on-surface"
+      }">
+        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">${t.icon}</span><span>${t.label}</span>
+      </button>`).join("")}
     </div>
 
-    <div id="admin-sub-root" class="flex flex-col gap-space-lg"></div>
+    <div id="admin-sub-root" class="mt-6 flex flex-col gap-4"></div>
   </div>`;
+
 
   root.querySelectorAll<HTMLButtonElement>("[data-sub]").forEach((b) => b.addEventListener("click", () => opts.onManageTab(b.dataset.sub as "appointments" | "management" | "accounts")));
   const subRoot = root.querySelector("#admin-sub-root") as HTMLElement;
@@ -94,36 +81,34 @@ export function renderAdminView(
   if (opts.activeSubTab !== "appointments") return;
 
   subRoot.innerHTML = `
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-space-md">
-      ${STAT_CARDS.map((c) => `
-        <div class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm flex flex-col gap-space-sm">
-          <div class="flex items-center justify-between gap-space-xs">
-            <span class="w-9 h-9 rounded-xl ${c.chip} grid place-items-center flex-shrink-0"><span class="material-symbols-outlined text-[20px]">${c.icon}</span></span>
-            <span class="font-label-sm text-label-sm text-secondary text-left">${escapeHtml(c.label)}</span>
-          </div>
-          <span class="font-headline-md text-headline-md font-bold text-on-surface tabular-nums">${stats[c.key]}</span>
-        </div>`).join("")}
+    <div class="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
+      ${STAT_CARDS.map((c) => `<div class="bg-surface-container-lowest px-4 py-3">
+        <p class="text-[12px] text-on-surface-variant">${escapeHtml(c.label)}</p>
+        <p class="mt-1 text-[24px] font-semibold leading-none tabular-nums text-on-surface">${stats[c.key]}</p>
+      </div>`).join("")}
     </div>
 
-    <div class="bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm flex flex-col gap-space-md">
-      <div class="flex flex-wrap items-center gap-space-xs">
-        ${STATUS_TABS.map((s) => {
-          const active = filters.status === s.value;
-          return `<button data-status="${s.value}" class="px-space-md py-1.5 rounded-full font-label-sm text-label-sm border transition-all ${
-            active ? "bg-primary text-on-primary border-primary shadow-sm" : "border-outline-variant text-on-surface-variant hover:bg-surface-container"
-          }">${s.label}</button>`;
-        }).join("")}
-        <select id="admin-doc-filter" class="ms-auto px-space-md py-2 rounded-xl border border-outline-variant bg-surface text-label-md text-on-surface">
+    <div class="flex flex-col gap-3 rounded-xl border border-line bg-surface-container-lowest p-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-0.5 rounded-lg bg-surface-container-low p-1" role="group" aria-label="تصفية بالحالة">
+          ${STATUS_TABS.map((s) => {
+            const active = filters.status === s.value;
+            return `<button data-status="${s.value}" class="inline-flex h-8 items-center rounded-md px-2.5 text-[12px] transition-colors ${
+              active ? "border border-line bg-surface-container-lowest font-semibold text-on-surface" : "border border-transparent text-on-surface-variant hover:text-on-surface"
+            }">${s.label}</button>`;
+          }).join("")}
+        </div>
+        <select id="admin-doc-filter" class="ms-auto h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-[13px] text-on-surface">
           <option value="">كل الأطباء</option>
           ${doctors.map((d) => `<option value="${escapeHtml(d.id)}" ${filters.doctorId === d.id ? "selected" : ""}>${escapeHtml(d.name)}</option>`).join("")}
         </select>
       </div>
-      <div class="flex flex-col sm:flex-row gap-space-sm">
-        <input id="admin-search" placeholder="بحث باسم المريض أو رقم الجوال" value="${escapeHtml(filters.search)}" class="flex-1 px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-md text-on-surface outline-none focus:border-primary" />
-        <input id="admin-from" type="date" value="${escapeHtml(filters.dateFrom)}" class="px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface" />
-        <span class="self-center font-label-sm text-label-sm text-secondary">إلى</span>
-        <input id="admin-to" type="date" value="${escapeHtml(filters.dateTo)}" class="px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-body-sm text-on-surface" />
-        <select id="admin-sort" class="px-space-md py-2.5 rounded-xl border border-outline-variant bg-surface text-label-md text-on-surface">
+      <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <input id="admin-search" placeholder="بحث باسم المريض أو رقم الجوال" value="${escapeHtml(filters.search)}" class="h-9 min-w-0 flex-1 rounded-lg border border-line bg-surface-container-lowest px-3 text-[13px] text-on-surface outline-none transition-colors placeholder:text-on-surface-variant focus:border-primary focus:ring-1 focus:ring-primary" />
+        <input id="admin-from" type="date" value="${escapeHtml(filters.dateFrom)}" aria-label="من تاريخ" class="h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-[13px] text-on-surface" />
+        <span class="self-center text-[12px] text-on-surface-variant">إلى</span>
+        <input id="admin-to" type="date" value="${escapeHtml(filters.dateTo)}" aria-label="إلى تاريخ" class="h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-[13px] text-on-surface" />
+        <select id="admin-sort" class="h-9 rounded-lg border border-line bg-surface-container-lowest px-2 text-[13px] text-on-surface">
           <option value="available_date_desc" ${filters.sortBy === "available_date" && filters.sortDir === "desc" ? "selected" : ""}>الأحدث أولاً</option>
           <option value="available_date_asc" ${filters.sortBy === "available_date" && filters.sortDir === "asc" ? "selected" : ""}>الأقدم أولاً</option>
           <option value="patient_name_asc" ${filters.sortBy === "patient_name" ? "selected" : ""}>اسم المريض</option>
@@ -131,73 +116,76 @@ export function renderAdminView(
       </div>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-3xl shadow-sm overflow-hidden">
+    <div class="overflow-hidden rounded-xl border border-line bg-surface-container-lowest">
       <div class="overflow-x-auto">
-        <table class="w-full font-body-md text-body-md">
-          <thead class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm">
+        <table class="w-full text-[13px]">
+          <thead class="bg-surface-container-low text-[12px] text-on-surface-variant">
             <tr>
-              <th class="px-space-lg py-space-md text-right font-semibold">المريض</th>
-              <th class="px-space-lg py-space-md text-right font-semibold">الجوال</th>
-              <th class="px-space-lg py-space-md text-right font-semibold">الطبيب</th>
-              <th class="px-space-lg py-space-md text-right font-semibold">الموعد</th>
-              <th class="px-space-lg py-space-md text-right font-semibold">الحالة</th>
-              <th class="px-space-lg py-space-md text-center font-semibold">إجراءات</th>
+              <th class="px-4 py-2.5 text-start font-medium">المريض</th>
+              <th class="px-4 py-2.5 text-start font-medium">الجوال</th>
+              <th class="px-4 py-2.5 text-start font-medium">الطبيب</th>
+              <th class="px-4 py-2.5 text-start font-medium">الموعد</th>
+              <th class="px-4 py-2.5 text-start font-medium">الحالة</th>
+              <th class="px-4 py-2.5 text-end font-medium">إجراءات</th>
             </tr>
           </thead>
-          <tbody id="admin-tbody" class="divide-y divide-outline-variant/40"></tbody>
+          <tbody id="admin-tbody" class="divide-y divide-line"></tbody>
         </table>
       </div>
-      <div id="admin-mobile" class="hidden flex-col gap-space-md p-space-md"></div>
-      <div class="flex items-center justify-between gap-space-md px-space-lg py-space-md bg-surface-container-low border-t border-outline-variant/40">
-        <button id="admin-prev" class="px-space-md py-1.5 rounded-full border border-outline-variant font-label-sm text-label-sm text-on-surface hover:bg-surface-container-lowest disabled:opacity-40 transition-all">السابق</button>
-        <span class="font-label-sm text-label-sm text-secondary tabular-nums">${from}–${to} من ${total}</span>
-        <button id="admin-next" class="px-space-md py-1.5 rounded-full border border-outline-variant font-label-sm text-label-sm text-on-surface hover:bg-surface-container-lowest disabled:opacity-40 transition-all">التالي</button>
+      <div id="admin-mobile" class="hidden flex-col divide-y divide-line"></div>
+      <div class="flex items-center justify-between gap-3 border-t border-line bg-surface-container-low px-4 py-2.5">
+        <button id="admin-prev" class="inline-flex h-8 items-center rounded-lg border border-line bg-surface-container-lowest px-2.5 text-[12px] text-on-surface transition-colors hover:bg-surface-container disabled:opacity-40">السابق</button>
+        <span class="text-[12px] tabular-nums text-on-surface-variant">${from}–${to} من ${total}</span>
+        <button id="admin-next" class="inline-flex h-8 items-center rounded-lg border border-line bg-surface-container-lowest px-2.5 text-[12px] text-on-surface transition-colors hover:bg-surface-container disabled:opacity-40">التالي</button>
       </div>
     </div>`;
+
 
   const tbody = subRoot.querySelector("#admin-tbody") as HTMLElement;
   const mobile = subRoot.querySelector("#admin-mobile") as HTMLElement;
 
   const badge = (s: string) => {
     const m = statusMeta(s);
-    return `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-full font-label-sm text-label-sm font-bold ${m.cls}"><span class="w-1.5 h-1.5 rounded-full ${m.dot}"></span>${escapeHtml(m.label)}</span>`;
+    return `<span class="inline-flex items-center gap-1.5 text-[12px] text-on-surface-variant"><span class="h-1.5 w-1.5 rounded-full ${m.dot}" aria-hidden="true"></span>${escapeHtml(m.label)}</span>`;
   };
 
+  const quietBtn = "inline-flex h-7 items-center rounded-md px-2 text-[12px] font-medium transition-colors";
   const actionsHtml = (r: Row) => r.status === "booked"
-    ? `<div class="flex items-center justify-center gap-1.5 flex-wrap">
-        <button data-edit="${escapeHtml(r.appointment_id)}" class="px-space-sm py-1 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-bold hover:bg-primary/20 transition-all">تعديل</button>
-        <button data-complete="${escapeHtml(r.appointment_id)}" class="px-space-sm py-1 rounded-full bg-tertiary/10 text-tertiary font-label-sm text-label-sm font-bold hover:bg-tertiary/20 transition-all">اكتمل</button>
-        <button data-noshow="${escapeHtml(r.appointment_id)}" class="px-space-sm py-1 rounded-full bg-warning-soft text-warning font-label-sm text-label-sm font-bold hover:brightness-95 transition-all">لم يحضر</button>
-        <button data-cancel="${escapeHtml(r.appointment_id)}" class="px-space-sm py-1 rounded-full bg-error-container/60 text-on-error-container font-label-sm text-label-sm font-bold hover:bg-error-container transition-all">إلغاء</button>
+    ? `<div class="flex flex-wrap items-center justify-end gap-0.5">
+        <button data-edit="${escapeHtml(r.appointment_id)}" class="${quietBtn} text-on-surface-variant hover:bg-surface-container hover:text-on-surface">تعديل</button>
+        <button data-complete="${escapeHtml(r.appointment_id)}" class="${quietBtn} text-primary hover:bg-primary/10">اكتمل</button>
+        <button data-noshow="${escapeHtml(r.appointment_id)}" class="${quietBtn} text-on-surface-variant hover:bg-surface-container">لم يحضر</button>
+        <button data-cancel="${escapeHtml(r.appointment_id)}" class="${quietBtn} text-error hover:bg-error-container/40">إلغاء</button>
       </div>`
-    : `<div class="flex items-center justify-center gap-1.5 flex-wrap">
-        <button data-delete="${escapeHtml(r.appointment_id)}" class="px-space-sm py-1 rounded-full bg-error-container/60 text-on-error-container font-label-sm text-label-sm font-bold hover:bg-error-container transition-all">حذف</button>
+    : `<div class="flex items-center justify-end gap-0.5">
+        <button data-delete="${escapeHtml(r.appointment_id)}" class="${quietBtn} text-error hover:bg-error-container/40">حذف</button>
       </div>`;
+
 
   const renderRows = () => {
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="px-space-lg py-space-xl text-center font-body-md text-body-md text-secondary">لا توجد نتائج مطابقة للفلاتر الحالية</td></tr>`;
-      mobile.innerHTML = `<p class="text-center font-body-md text-body-md text-secondary py-space-lg">لا توجد نتائج مطابقة للفلاتر الحالية</p>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-10 text-center text-[13px] text-on-surface-variant">لا توجد نتائج مطابقة للفلاتر الحالية</td></tr>`;
+      mobile.innerHTML = `<p class="px-4 py-8 text-center text-[13px] text-on-surface-variant">لا توجد نتائج مطابقة للفلاتر الحالية</p>`;
       return;
     }
     tbody.innerHTML = rows.map((r) => `
-      <tr class="hover:bg-surface-container-low/60 transition-colors">
-        <td class="px-space-lg py-space-md font-semibold text-on-surface">${escapeHtml(r.patient_name)}</td>
-        <td class="px-space-lg py-space-md font-mono text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(r.patient_phone)}</td>
-        <td class="px-space-lg py-space-md text-on-surface">${escapeHtml(r.doctor_name)}</td>
-        <td class="px-space-lg py-space-md font-label-sm text-label-sm text-on-surface-variant">${escapeHtml(formatArabicDate(r.available_date))} · <span class="tabular-nums">${escapeHtml(formatTime(r.start_time))}</span></td>
-        <td class="px-space-lg py-space-md">${badge(r.status)}</td>
-        <td class="px-space-lg py-space-md">${actionsHtml(r)}</td>
+      <tr class="transition-colors hover:bg-surface-container-low/60">
+        <td class="px-4 py-3 font-medium text-on-surface">${escapeHtml(r.patient_name)}</td>
+        <td class="px-4 py-3 text-[12px] tabular-nums text-on-surface-variant" dir="ltr">${escapeHtml(r.patient_phone)}</td>
+        <td class="px-4 py-3 text-on-surface">${escapeHtml(r.doctor_name)}</td>
+        <td class="px-4 py-3 text-[12px] text-on-surface-variant"><span class="tabular-nums">${escapeHtml(formatArabicDate(r.available_date))}</span> · <span class="tabular-nums">${escapeHtml(formatTime(r.start_time))}</span></td>
+        <td class="px-4 py-3">${badge(r.status)}</td>
+        <td class="px-4 py-3">${actionsHtml(r)}</td>
       </tr>`).join("");
 
     mobile.innerHTML = rows.map((r) => `
-      <div class="bg-surface-container-low rounded-2xl p-space-md flex flex-col gap-space-xs">
-        <div class="flex items-center justify-between gap-space-sm">
-          <span class="font-label-lg text-label-lg text-on-surface font-bold">${escapeHtml(r.patient_name)}</span>
+      <div class="flex flex-col gap-2 px-4 py-3">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[14px] font-semibold text-on-surface">${escapeHtml(r.patient_name)}</span>
           ${badge(r.status)}
         </div>
-        <span class="font-mono text-label-sm text-secondary" dir="ltr">${escapeHtml(r.patient_phone)}</span>
-        <span class="font-body-sm text-body-sm text-on-surface-variant">${escapeHtml(r.doctor_name)} · ${escapeHtml(formatArabicDate(r.available_date))} <span class="tabular-nums">${escapeHtml(formatTime(r.start_time))}</span></span>
+        <span class="text-[12px] tabular-nums text-on-surface-variant" dir="ltr">${escapeHtml(r.patient_phone)}</span>
+        <span class="text-[12px] text-on-surface-variant">${escapeHtml(r.doctor_name)} · <span class="tabular-nums">${escapeHtml(formatArabicDate(r.available_date))}</span> <span class="tabular-nums">${escapeHtml(formatTime(r.start_time))}</span></span>
         ${actionsHtml(r)}
       </div>`).join("");
 

@@ -22,6 +22,12 @@ export function wireProfile(
   opts: { onOpenAuth: () => void; onLogout: () => void; onSave: (p: { fullName: string; phone: string }) => Promise<void> }
 ) {
   const el = <T extends HTMLElement>(sel: string) => appEl.querySelector<HTMLElement>(sel) as T | null;
+  if (!user && import.meta.env.DEV && new URLSearchParams(location.search).has("pffixture")) {
+    user = {
+      id: "fix-user", email: "mohammed.othman@miaadi.sd", created_at: "2025-03-01T00:00:00Z",
+      profile: { full_name: "محمد عثمان الأمين", phone: "+249912345678", role: "patient" },
+    };
+  }
   const role = (user?.profile?.role || "patient") as string;
   const p = user?.profile || {};
 
@@ -57,7 +63,7 @@ export function wireProfile(
     (Object.keys(tabs) as (keyof typeof tabs)[]).forEach((k) => tabs[k]?.classList.toggle("hidden", k !== key));
     appEl.querySelectorAll<HTMLElement>("[data-pf-tab]").forEach((b) => {
       const on = b.getAttribute("data-pf-tab") === key;
-      b.className = `flex items-center gap-2 px-space-lg py-2.5 rounded-xl font-label-md text-label-md transition-all ${on ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low"}`;
+      b.className = `-mb-px inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 text-[14px] transition-colors ${on ? "border-primary font-semibold text-on-surface" : "border-transparent text-on-surface-variant hover:text-on-surface"}`;
     });
   };
   appEl.querySelectorAll<HTMLElement>("[data-pf-tab]").forEach((b) =>
@@ -96,32 +102,30 @@ export function wireProfile(
     if (list) el("#pf-aps-sub") && (el("#pf-aps-sub")!.textContent = failed ? "تعذر تحميل الحجوزات" : "جميع الحجوزات المسجلة باسمك في منصة ميعادي");
     if (!list) return;
     if (failed) {
-      list.innerHTML = `<div class="bg-error-container/40 rounded-xl p-space-lg text-center font-body-md text-body-md text-on-error-container">تعذر تحميل الحجوزات — حاول مرة أخرى</div>`;
+      list.innerHTML = `<div class="rounded-lg border border-line bg-surface-container-low p-4 text-center text-[13px] text-on-surface-variant">تعذر تحميل الحجوزات — حاول مرة أخرى</div>`;
       return;
     }
     if (!visits.length) {
-      list.innerHTML = `<div class="bg-surface-container-low rounded-xl p-space-xl text-center">
-        <div class="w-16 h-16 rounded-2xl bg-primary/10 text-primary grid place-items-center mx-auto mb-space-sm">
-          <span class="material-symbols-outlined text-[30px]">event_available</span>
-        </div>
-        <p class="font-label-lg text-label-lg font-bold text-on-surface">لا توجد حجوزات على هذا الحساب</p>
-        <a href="#doctors" class="mt-space-md inline-flex h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold items-center">تصفح الأطباء</a>
+      list.innerHTML = `<div class="flex flex-col items-start gap-3 rounded-lg border border-line bg-surface-container-low p-5">
+        <span class="material-symbols-outlined text-[22px] text-primary" aria-hidden="true">event_available</span>
+        <p class="text-[14px] font-semibold text-on-surface">لا توجد حجوزات على هذا الحساب</p>
+        <a href="#doctors" class="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[12px] font-semibold text-on-primary transition-colors hover:bg-primary-container">تصفح الأطباء</a>
       </div>`;
       return;
     }
     list.innerHTML = visits.map((v) => {
-      return `<div class="flex items-center justify-between gap-space-sm p-space-sm bg-surface-container-low rounded-xl hover:bg-surface-container transition-colors">
-        <div class="flex items-center gap-space-sm">
-          <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary grid place-items-center shrink-0 font-label-md font-bold">${escapeHtml(initials(v.doctorName))}</div>
-          <div class="flex flex-col">
-            <span class="font-label-md text-label-md text-on-surface font-semibold">${escapeHtml(v.doctorName)}</span>
-            <span class="font-body-sm text-[12px] text-secondary">${escapeHtml(v.specialization)}${v.hospital ? ` • ${escapeHtml(v.hospital)}` : ""}</span>
+      return `<div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex min-w-0 items-center gap-3">
+          <div class="grid h-10 w-10 shrink-0 place-items-center whitespace-nowrap rounded-lg bg-primary/10 text-[13px] font-bold text-primary">${escapeHtml(initials(v.doctorName))}</div>
+          <div class="flex min-w-0 flex-col">
+            <span class="truncate text-[14px] font-semibold text-on-surface">${escapeHtml(v.doctorName)}</span>
+            <span class="truncate text-[12px] text-on-surface-variant">${escapeHtml(v.specialization)}${v.hospital ? ` · ${escapeHtml(v.hospital)}` : ""}</span>
           </div>
         </div>
-        <div class="flex items-center gap-space-md">
+        <div class="flex items-center gap-3 self-end sm:self-auto">
           <div class="flex flex-col items-end">
-            <span class="font-body-sm text-[12px] text-on-surface-variant">${escapeHtml(formatArabicDate(v.date))}</span>
-            <span class="font-mono text-[13px] font-semibold text-on-surface tabular-nums" dir="ltr">${escapeHtml(formatTime(v.time))}</span>
+            <span class="text-[12px] text-on-surface-variant">${escapeHtml(formatArabicDate(v.date))}</span>
+            <span class="text-[13px] font-semibold tabular-nums text-on-surface" dir="ltr">${escapeHtml(formatTime(v.time))}</span>
           </div>
           ${statusPill(v.status)}
         </div>
@@ -162,15 +166,15 @@ export function wireProfile(
   const browser = /Edg/.test(ua) ? "Edge" : /Chrome/.test(ua) ? "Chrome" : /Firefox/.test(ua) ? "Firefox" : /Safari/.test(ua) ? "Safari" : "المتصفح";
   const sessions = el("#pf-sessions");
   if (sessions) {
-    sessions.innerHTML = `<div class="p-space-sm bg-surface-container-low rounded-xl flex items-center justify-between">
-      <div class="flex items-center gap-space-xs">
-        <span class="material-symbols-outlined text-secondary text-[20px]">laptop_mac</span>
+    sessions.innerHTML = `<div class="flex items-center justify-between gap-3 py-3">
+      <div class="flex items-center gap-3">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-surface-container-low text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">laptop_mac</span></span>
         <div class="flex flex-col">
-          <span class="font-label-sm text-label-sm text-on-surface font-semibold">جلسة حالية • ${escapeHtml(browser)}</span>
-          <span class="text-[11px] text-secondary">هذا الجهاز • آخر دخول الآن</span>
+          <span class="text-[14px] font-medium text-on-surface">جلسة حالية · ${escapeHtml(browser)}</span>
+          <span class="text-[12px] text-on-surface-variant">هذا الجهاز · آخر دخول الآن</span>
         </div>
       </div>
-      <span class="w-2 h-2 rounded-full bg-tertiary"></span>
+      <span class="h-2 w-2 rounded-full bg-tertiary" aria-label="نشطة"></span>
     </div>`;
   }
   const passForm = el<HTMLFormElement>("#pf-pass-form");

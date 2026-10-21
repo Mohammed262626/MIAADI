@@ -42,13 +42,14 @@ function mapsUrl(q: string): string {
 }
 
 function emptyCard(o: { icon: string; title: string; body: string; actionHtml?: string }): string {
-  return `<div class="bg-surface-container-lowest rounded-3xl p-space-xl shadow-sm flex flex-col items-center text-center gap-space-sm">
-    <span class="w-16 h-16 rounded-3xl bg-primary/10 text-primary grid place-items-center"><span class="material-symbols-outlined text-[32px]">${escapeHtml(o.icon)}</span></span>
-    <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(o.title)}</h3>
-    <p class="font-body-md text-body-md text-on-surface-variant max-w-[46ch] leading-relaxed">${escapeHtml(o.body)}</p>
+  return `<div class="flex flex-col items-start gap-3 rounded-xl border border-line bg-surface-container-lowest p-6">
+    <span class="material-symbols-outlined text-[24px] text-primary" aria-hidden="true">${escapeHtml(o.icon)}</span>
+    <h3 class="text-[16px] font-semibold text-on-surface">${escapeHtml(o.title)}</h3>
+    <p class="max-w-[46ch] text-[13px] leading-relaxed text-on-surface-variant">${escapeHtml(o.body)}</p>
     ${o.actionHtml || ""}
   </div>`;
 }
+
 
 function visitDateLine(v: Visit): string {
   const rel = formatRelativeDay(v.date);
@@ -56,39 +57,13 @@ function visitDateLine(v: Visit): string {
 }
 
 function loadingSkeletonHtml(): string {
-  const bar = "rounded-full bg-surface-container-high";
-  return `<div class="w-full flex flex-col xl:flex-row gap-space-xl animate-pulse" aria-hidden="true">
-    <div class="xl:w-2/3 w-full">
-      <div class="bg-surface-container-lowest rounded-3xl shadow-sm overflow-hidden">
-        <div class="h-16 bg-surface-container-high"></div>
-        <div class="p-space-xl flex flex-col gap-space-lg">
-          <div class="flex items-center gap-space-md">
-            <div class="w-20 h-20 rounded-2xl bg-surface-container-high shrink-0"></div>
-            <div class="flex flex-col gap-2 flex-1">
-              <div class="h-4 w-2/5 ${bar}"></div>
-              <div class="h-3 w-3/5 rounded-full bg-surface-container"></div>
-              <div class="h-3 w-2/5 rounded-full bg-surface-container"></div>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
-            <div class="h-20 rounded-2xl bg-surface-container-low"></div>
-            <div class="h-20 rounded-2xl bg-surface-container-low"></div>
-          </div>
-          <div class="h-14 rounded-2xl bg-surface-container"></div>
-        </div>
-      </div>
-      <div class="mt-space-xl bg-surface-container-lowest rounded-3xl p-space-lg shadow-sm">
-        <div class="h-4 w-1/3 ${bar} mb-space-md"></div>
-        <div class="h-20 rounded-2xl bg-surface-container-low"></div>
-      </div>
-    </div>
-    <div class="xl:w-1/3 w-full flex flex-col gap-space-lg">
-      <div class="h-56 rounded-3xl bg-surface-container-high"></div>
-      <div class="h-40 rounded-3xl bg-surface-container-low"></div>
-    </div>
+  return `<div class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_288px]" aria-hidden="true">
+    <div class="h-80 rounded-xl border border-line bg-surface-container-low"></div>
+    <div class="h-80 rounded-xl border border-line bg-surface-container-low"></div>
   </div>
   <span class="sr-only">جارٍ تحميل مواعيدك…</span>`;
 }
+
 
 export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Promise<void> {
   const el = <T extends HTMLElement = HTMLElement>(id: string): T | null => appEl.querySelector<T>(`#${id}`);
@@ -106,11 +81,11 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
       const view = el(`view-${k}`);
       const active = k === key;
       if (btn) {
-        btn.classList.toggle("bg-surface-container-lowest", active);
-        btn.classList.toggle("text-primary", active);
-        btn.classList.toggle("shadow-sm", active);
-        btn.classList.toggle("text-secondary", !active);
-        btn.classList.toggle("active", active);
+        btn.classList.toggle("border-primary", active);
+        btn.classList.toggle("border-transparent", !active);
+        btn.classList.toggle("text-on-surface", active);
+        btn.classList.toggle("font-semibold", active);
+        btn.classList.toggle("text-on-surface-variant", !active);
         btn.setAttribute("aria-selected", String(active));
       }
       if (view) {
@@ -124,6 +99,20 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
   });
 
   async function fetchVisits(): Promise<void> {
+    if (import.meta.env.DEV && new URLSearchParams(location.search).has("bkfixture")) {
+      const mk = (n: number, date: string, time: string, status: string, name: string, spec: string, hospital: string, fee: number): Visit => ({
+        id: `fixbk-${n}-0000-0000-00000000000${n}`, status, date, time, endTime: `${time.slice(0, 2)}:30`,
+        doctorId: `fixdoc-${n}`, doctorName: name, specialization: spec, hospital, fee,
+      });
+      upcoming = [
+        mk(1, localDateISO(2), "10:30", "booked", "د. طارق المنصور", "قلب وأوعية دموية", "مستشفى النيل التخصصي — الخرطوم", 6000),
+        mk(2, localDateISO(9), "16:00", "booked", "د. هدى إبراهيم", "باطنية", "عيادة المريخ — أم درمان", 5000),
+      ];
+      past = [mk(3, localDateISO(-24), "09:00", "completed", "د. سارة عثمان", "طب الأسرة", "مركز صحي — بحري", 4000)];
+      cancelled = [mk(4, localDateISO(-6), "12:00", "cancelled_by_patient", "د. كمال الأمين", "عيون", "مستشفى النور — الخرطوم", 7000)];
+      primary = upcoming[0];
+      return;
+    }
     let rows: unknown[] = [];
     try {
       rows = (await getPatientAppointments()) as unknown[];
@@ -180,7 +169,7 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
 
   function renderPrimary(): void {
     const pass = el("bk-pass");
-    const navCard = el("bk-nav")?.closest<HTMLElement>(".rounded-2xl") || null;
+    const navCard = el("bk-nav")?.closest<HTMLElement>(".bk-address") || null;
     const empty = el("bk-empty");
     const mainCol = el("bk-col-main");
 
@@ -193,13 +182,13 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
               icon: "event_available",
               title: "لا توجد مواعيد قادمة",
               body: "ليس لديك أي موعد مؤكد حالياً. تصفّح الأطباء المتاحين واختر الوقت الأنسب لك.",
-              actionHtml: `<a href="#doctors" class="mt-space-xs h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold grid place-items-center">تصفح الأطباء</a>`,
+              actionHtml: `<a href="#doctors" class="mt-1 inline-flex h-9 items-center rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container">تصفح الأطباء</a>`,
             })
           : emptyCard({
               icon: "lock",
               title: "سجّل الدخول لعرض مواعيدك",
               body: "تحتاج إلى تسجيل الدخول لعرض تذاكر مواعيدك وزياراتك السابقة ووصفاتك الطبية.",
-              actionHtml: `<button type="button" data-bk-auth class="mt-space-xs h-11 px-space-lg rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold">تسجيل الدخول</button>`,
+              actionHtml: `<button type="button" data-bk-auth class="mt-1 inline-flex h-9 items-center rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-container">تسجيل الدخول</button>`,
             });
         empty.querySelector("[data-bk-auth]")?.addEventListener("click", () => appEl.querySelector<HTMLElement>('[data-action="open-auth"]')?.click());
       }
@@ -250,37 +239,29 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
     note?.closest<HTMLElement>("div")?.classList.remove("hidden");
     card.classList.remove("hidden");
     if (note) note.textContent = `${rest.length} موعد قادم`;
-    card.className = "flex flex-col gap-space-md";
+    card.className = "mt-2 flex flex-col divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface-container-lowest";
     card.innerHTML = rest
-      .map((v) => `<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm hover:shadow-md transition-all">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md">
-          <div class="flex items-start gap-space-md">
-            <span class="w-16 h-16 rounded-xl shrink-0 grid place-items-center bg-primary text-on-primary font-extrabold text-xl">${escapeHtml(initials(v.doctorName))}</span>
-            <div class="flex flex-col">
-              <div class="flex items-center gap-space-xs flex-wrap">
-                <span class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(v.doctorName)}</span>
-                <span class="bg-secondary-container/40 text-on-secondary-container text-[11px] px-2 py-0.5 rounded-md font-semibold">${escapeHtml(specialtyLabel(v.specialization))}</span>
-              </div>
-              <div class="flex items-center gap-space-xs text-secondary font-body-sm text-body-sm mt-1">
-                <span class="material-symbols-outlined text-[16px]">location_on</span>
-                <span>${escapeHtml(v.hospital || "زيارة عيادة")}</span>
-              </div>
-              <div class="flex items-center gap-space-md text-on-surface font-label-md text-label-md mt-2 flex-wrap">
-                <span class="flex items-center gap-1 text-primary"><span class="material-symbols-outlined text-[16px]">calendar_month</span>${escapeHtml(formatArabicDate(v.date))}</span>
-                <span class="flex items-center gap-1 text-secondary"><span class="material-symbols-outlined text-[16px]">schedule</span>${escapeHtml(formatTime(v.time))}</span>
-                <span class="font-mono text-outline text-[12px]">${escapeHtml(bookingRef(v.id))}</span>
-              </div>
-            </div>
+      .map((v) => `<div class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex min-w-0 items-start gap-3">
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-surface-container-high text-[13px] font-semibold text-on-surface">${escapeHtml(initials(v.doctorName))}</span>
+          <div class="min-w-0">
+            <p class="truncate text-[14px] font-semibold text-on-surface">${escapeHtml(v.doctorName)}</p>
+            <p class="mt-0.5 truncate text-[12px] text-on-surface-variant">${escapeHtml(specialtyLabel(v.specialization))} · ${escapeHtml(v.hospital || "زيارة عيادة")}</p>
+            <p class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-on-surface-variant">
+              <span class="tabular-nums">${escapeHtml(formatArabicDate(v.date))}</span>
+              <span class="tabular-nums">${escapeHtml(formatTime(v.time))}</span>
+              <span class="tabular-nums" dir="ltr">${escapeHtml(bookingRef(v.id))}</span>
+            </p>
           </div>
-          <div class="flex items-center gap-space-sm self-end md:self-center flex-shrink-0">
-            <button type="button" data-pass-id="${escapeHtml(v.id)}" class="px-space-md py-space-xs bg-primary-container text-on-primary-container hover:bg-primary font-label-md text-label-md rounded-full transition-all shadow-sm flex items-center gap-1">
-              <span class="material-symbols-outlined text-[16px]">confirmation_number</span>
-              <span>عرض التذكرة</span>
-            </button>
-            <button type="button" data-resched-id="${escapeHtml(v.id)}" data-resched-doc="${escapeHtml(v.doctorId)}" class="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface transition-colors" title="إعادة جدولة هذا الموعد">
-              <span class="material-symbols-outlined text-[18px]">edit_calendar</span>
-            </button>
-          </div>
+        </div>
+        <div class="flex items-center gap-1.5 self-end sm:self-auto">
+          <button type="button" data-pass-id="${escapeHtml(v.id)}" class="inline-flex h-8 items-center gap-1 rounded-lg border border-line bg-surface-container-lowest px-2.5 text-[12px] font-medium text-on-surface transition-colors hover:bg-surface-container">
+            <span class="material-symbols-outlined text-[16px]" aria-hidden="true">confirmation_number</span>
+            <span>عرض التذكرة</span>
+          </button>
+          <button type="button" data-resched-id="${escapeHtml(v.id)}" data-resched-doc="${escapeHtml(v.doctorId)}" class="grid h-8 w-8 place-items-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container-low" title="إعادة جدولة هذا الموعد" aria-label="إعادة جدولة هذا الموعد">
+            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">edit_calendar</span>
+          </button>
         </div>
       </div>`)
       .join("");
@@ -300,64 +281,57 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
     });
   }
 
+
   function renderPast(): void {
     const list = el("bk-past-list");
     if (!list) return;
     if (!past.length) {
-      list.className = "block";
-      list.innerHTML = `<p class="font-body-md text-body-md text-on-surface-variant text-center py-space-lg">لا توجد زيارات مكتملة في سجلك حتى الآن.</p>`;
+      list.className = "block px-4 py-6";
+      list.innerHTML = `<p class="text-center text-[13px] text-on-surface-variant">لا توجد زيارات مكتملة في سجلك حتى الآن.</p>`;
       return;
     }
-    list.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-md";
+    list.className = "flex flex-col divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface-container-lowest";
     list.innerHTML = past
-      .map((v) => `<div class="bg-surface-container-low p-space-lg rounded-2xl flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between text-secondary font-label-sm text-label-sm mb-space-xs">
-            <span>${escapeHtml(formatArabicDate(v.date))}</span>
-            <span class="text-tertiary font-bold">مكتمل</span>
-          </div>
-          <h4 class="font-headline-sm text-headline-sm text-on-surface font-bold">${escapeHtml(v.doctorName)}</h4>
-          <p class="font-body-sm text-body-sm text-secondary mt-1">${escapeHtml(specialtyLabel(v.specialization))}</p>
-          <p class="font-body-sm text-body-sm text-outline mt-space-sm">${escapeHtml(v.hospital || "زيارة عيادة")}</p>
-          <p class="font-body-sm text-body-sm text-outline">${escapeHtml(formatTime(v.time))}</p>
+      .map((v) => `<div class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <p class="truncate text-[14px] font-semibold text-on-surface">${escapeHtml(v.doctorName)}</p>
+          <p class="mt-0.5 truncate text-[12px] text-on-surface-variant">${escapeHtml(specialtyLabel(v.specialization))} · ${escapeHtml(v.hospital || "زيارة عيادة")}</p>
         </div>
-        <div class="mt-space-md pt-space-sm border-t border-surface-container flex items-center justify-between">
-          <span class="text-primary font-label-sm text-label-sm font-bold">${escapeHtml(bookingRef(v.id))}</span>
-          <a href="#doctor/${escapeHtml(v.doctorId)}" class="text-secondary font-label-sm text-label-sm hover:underline">حجز مراجعة</a>
+        <div class="flex flex-wrap items-center gap-3 text-[12px] text-on-surface-variant">
+          <span class="tabular-nums">${escapeHtml(formatArabicDate(v.date))}</span>
+          <span class="tabular-nums">${escapeHtml(formatTime(v.time))}</span>
+          <span class="font-medium text-tertiary">مكتمل</span>
+          <a href="#doctor/${escapeHtml(v.doctorId)}" class="font-medium text-primary hover:underline">حجز مراجعة</a>
         </div>
       </div>`)
       .join("");
   }
 
+
   function renderCancelled(): void {
     const list = el("bk-cancelled-list");
     if (!list) return;
     if (!cancelled.length) {
-      list.className = "block";
-      list.innerHTML = `<p class="font-body-md text-body-md text-on-surface-variant text-center py-space-md">لا توجد مواعيد ملغاة.</p>`;
+      list.className = "block px-4 py-6";
+      list.innerHTML = `<p class="text-center text-[13px] text-on-surface-variant">لا توجد مواعيد ملغاة.</p>`;
       return;
     }
-    list.className = "flex flex-col gap-space-md";
+    list.className = "flex flex-col divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface-container-lowest";
     list.innerHTML = cancelled
       .map((v) => {
         const reason = v.status === "cancelled_by_clinic" ? "ألغي من العيادة" : v.status === "no_show" ? "لم يتم الحضور" : "ألغي بناءً على طلب المريض";
-        return `<div class="bg-surface-container-low p-space-lg rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-space-md">
-          <div class="flex items-center gap-space-md">
-            <div class="w-12 h-12 rounded-xl bg-error/10 text-error flex items-center justify-center flex-shrink-0">
-              <span class="material-symbols-outlined text-[24px]">${v.status === "no_show" ? "person_off" : "event_busy"}</span>
-            </div>
-            <div>
-              <span class="font-label-sm text-label-sm text-error font-bold">${escapeHtml(reason)} • ${escapeHtml(statusMeta(v.status).label)}</span>
-              <h4 class="font-headline-sm text-headline-sm text-on-surface font-bold mt-1">${escapeHtml(v.doctorName)} • ${escapeHtml(specialtyLabel(v.specialization))}</h4>
-              <p class="font-body-sm text-body-sm text-secondary">${escapeHtml(v.hospital || "زيارة عيادة")}</p>
-              <p class="font-body-sm text-body-sm text-secondary">كان الموعد: ${escapeHtml(formatArabicDate(v.date))} • ${escapeHtml(formatTime(v.time))}</p>
-            </div>
+        return `<div class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0">
+            <p class="text-[12px] text-error">${escapeHtml(reason)}</p>
+            <p class="mt-0.5 truncate text-[14px] font-semibold text-on-surface">${escapeHtml(v.doctorName)} · ${escapeHtml(specialtyLabel(v.specialization))}</p>
+            <p class="mt-0.5 text-[12px] text-on-surface-variant">${escapeHtml(v.hospital || "زيارة عيادة")} · <span class="tabular-nums">${escapeHtml(formatArabicDate(v.date))} ${escapeHtml(formatTime(v.time))}</span></p>
           </div>
-          <a href="#doctor/${escapeHtml(v.doctorId)}" class="px-space-md py-space-xs bg-primary text-on-primary font-label-md text-label-md rounded-full shadow-sm self-start md:self-auto">إعادة الحجز الآن</a>
+          <a href="#doctor/${escapeHtml(v.doctorId)}" class="inline-flex h-8 shrink-0 items-center self-start rounded-lg border border-line bg-surface-container-lowest px-2.5 text-[12px] font-medium text-on-surface transition-colors hover:bg-surface-container sm:self-auto">إعادة الحجز</a>
         </div>`;
       })
       .join("");
   }
+
 
   async function load(): Promise<void> {
     const empty = el("bk-empty");
