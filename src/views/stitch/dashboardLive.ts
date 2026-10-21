@@ -128,9 +128,9 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
     });
   };
 
-  /* Account panel: the doctor's own profile — editable name/phone, password,
-     and a logout chip. Professional data is read-only here because the database
-     only lets admins write to the doctors row. */
+  /* Account panel: the doctor's own profile — editable name/phone and password.
+     Professional data is read-only here because the database only lets admins
+     write to the doctors row. */
   const paintAccountPanel = (target: HTMLElement) => {
     const name = me.profile?.full_name || "";
     const phone = me.profile?.phone || "";
@@ -160,7 +160,6 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
               </div>
             </div>
           </div>
-          <button id="ac-logout" type="button" class="inline-flex h-8 items-center gap-1 rounded-md border border-error/30 px-2.5 text-[12px] font-semibold text-error transition-colors hover:bg-error-container/40"><span class="material-symbols-outlined text-[16px]" aria-hidden="true">logout</span>تسجيل الخروج</button>
         </div>
 
         <section class="rounded-xl border border-line bg-surface-container-lowest p-4">
@@ -210,7 +209,6 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
       </div>`;
 
     const val = (sel: string) => target.querySelector<HTMLInputElement>(sel)?.value || "";
-    target.querySelector<HTMLButtonElement>("#ac-logout")?.addEventListener("click", () => { if (hooks.onLogout) void hooks.onLogout(); });
     target.querySelector<HTMLButtonElement>("#ac-save")?.addEventListener("click", async () => {
       const fullName = val("#ac-name").trim();
       const phone = val("#ac-phone").trim();
@@ -340,7 +338,10 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
     closeDbDrawer();
     void showView((el.dataset.view || "overview") as DashView);
   }));
-  appEl.querySelector<HTMLElement>("#db-logout")?.addEventListener("click", () => { if (hooks.onLogout) void hooks.onLogout(); });
+  appEl.querySelector<HTMLElement>("#db-nav-logout")?.addEventListener("click", () => {
+    closeDbDrawer();
+    if (hooks.onLogout) void hooks.onLogout();
+  });
   paintNav();
 
   const load = async () => {
