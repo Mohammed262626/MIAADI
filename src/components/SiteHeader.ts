@@ -37,15 +37,19 @@ function activeKey(route?: { name: string } | null): string | null {
 
 function navItemsFor(user: unknown): NavItem[] {
   const role = (user as { profile?: { role?: string | null } | null } | null)?.profile?.role;
-  const items = [...BASE_NAV];
   if (role === "admin" || role === "doctor") {
-    items.push({
-      key: "admin",
-      label: role === "admin" ? "لوحة الإدارة" : "لوحتي",
-      path: "dashboard-overview",
-    });
+    // Staff live in the dashboard: no consumer landing entry (it redirects to the
+    // dashboard anyway) and no patient bookings portal.
+    return [
+      ...BASE_NAV.filter((i) => i.key !== "home" && i.key !== "bookings"),
+      {
+        key: "admin",
+        label: role === "admin" ? "لوحة الإدارة" : "لوحتي",
+        path: "dashboard-overview",
+      },
+    ];
   }
-  return items;
+  return [...BASE_NAV];
 }
 
 function desktopLink(item: NavItem, active: boolean): string {
@@ -66,6 +70,19 @@ export function renderSiteHeader(user: unknown, route?: { name: string } | null)
     .replace("__DRAWER_NAV__", items.map((i) => drawerLink(i, i.key === key)).join(""))
     .replaceAll("__LOCATION_LABEL__", escapeHtml(locationLabel()));
   inner = inner.replace(AVATAR_RE, user ? AVATAR_LOGGED_IN : AVATAR_LOGGED_OUT);
+  // Staff (doctor/admin) never book or search like a customer, so the primary
+  // booking CTA and the city locator stay out of their header entirely.
+  const role = (user as { profile?: { role?: string | null } | null } | null)?.profile?.role;
+  if (role === "admin" || role === "doctor") {
+    inner = inner
+      .replace(/<a class="press hidden sm:flex items-center gap-space-xs[^>]*data-path="book-now"[\s\S]*?<\/a>/, "")
+      .replace(/<button type="button" data-locate-btn[\s\S]*?<\/button>/g, "")
+      // Staff accounts live in the dashboard, so the header avatar opens it too.
+      .replace(
+        'data-path="profile" href="#profile" title="حسابي" aria-label="حسابي"',
+        'data-path="dashboard-overview" href="#admin" title="لوحتي" aria-label="لوحتي"',
+      );
+  }
   return `<header class="fixed top-0 w-full z-50 pt-[env(safe-area-inset-top)] bg-surface-container-lowest">${inner}</header>`;
 }
 
