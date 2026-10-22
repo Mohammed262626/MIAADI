@@ -345,7 +345,7 @@ export const HOME_MAIN = `<div class="w-full">
 <!-- ============ CLOSING CTA ============ -->
 <section class="pb-20" data-reveal>
   <div class="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
-    <img src="/assets/confluence-of-nile-khartoum-001-cropped.jpg" width="1600" height="701"
+    <img src="${import.meta.env.BASE_URL}assets/confluence-of-nile-khartoum-001-cropped.jpg" width="1600" height="701"
       alt="ملتقى النيل الأزرق والنيل الأبيض في الخرطوم" loading="lazy" decoding="async"
       class="h-48 w-full rounded-xl object-cover" />
     <div class="brand-surface mt-3 rounded-xl bg-primary px-6 py-10 sm:px-8">
