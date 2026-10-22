@@ -17,7 +17,7 @@ export const ADMIN_MAIN = `<div class="flex animate-pulse flex-col gap-6" aria-b
 </div>
 </div>`;
 
-export const ADMIN_BODY = `<aside class="max-lg:hidden fixed top-0 start-0 h-full w-[228px] bg-surface-container-low z-50 flex flex-col justify-between">
+export const ADMIN_BODY = `<a href="#main-content" data-skip-main class="sr-only focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-[80] focus:rounded-lg focus:bg-surface-container-lowest focus:px-4 focus:py-2 focus:text-[14px] focus:font-semibold focus:text-on-surface focus:shadow-lg">????? ??? ???????</a><aside class="max-lg:hidden fixed top-0 start-0 h-full w-[228px] bg-surface-container-low z-50 flex flex-col justify-between">
   <div class="flex flex-col">
     <div class="h-20 px-space-lg flex items-center justify-between">
       <div class="flex items-center gap-space-sm">
@@ -107,7 +107,7 @@ export const ADMIN_BODY = `<aside class="max-lg:hidden fixed top-0 start-0 h-ful
       </div>
     </div>
   </header>
-  <main class="mx-auto w-full max-w-[1440px] flex-1 bg-surface-container-low px-2 pb-2 pt-[calc(4rem+env(safe-area-inset-top))]">
+  <main id="main-content" tabindex="-1" class="mx-auto w-full max-w-[1440px] flex-1 bg-surface-container-low px-2 pb-2 pt-[calc(4rem+env(safe-area-inset-top))]">
     <div id="db-content" class="flex min-h-[calc(100svh-5rem)] w-full flex-col rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6">${ADMIN_MAIN}</div>
     <div id="db-view-appointments" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>
     <div id="db-view-doctors" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>

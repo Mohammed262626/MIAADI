@@ -5,6 +5,22 @@ export function localDateISO(offsetDays = 0): string {
   return local.toISOString().split("T")[0];
 }
 
+/* Search-friendly Arabic: unify the hamza/alef forms, ta marbuta and alef
+   maqsura, and drop diacritics and tatweel. People type "احمد" for "أحمد"
+   and "صيدليه" for "صيدلية"; matching both ways is what makes search feel
+   right without touching the stored data. */
+export function normalizeArabic(value: string): string {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f\u0610-\u061a\u064b-\u065f\u0670\u06d6-\u06ed\u0640]/g, "")
+    .replace(/[\u0622\u0623\u0625\u0671]/g, "\u0627")
+    .replace(/\u0629/g, "\u0647")
+    .replace(/\u0649/g, "\u064a")
+    .replace(/\u0624/g, "\u0648")
+    .replace(/\u0626/g, "\u064a");
+}
+
 export function formatTime(timeStr: string): string {
   if (!timeStr) return "";
   const [h, m = "00"] = timeStr.split(":");

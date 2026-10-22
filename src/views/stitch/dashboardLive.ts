@@ -1,4 +1,4 @@
-import { escapeHtml, formatTime, formatArabicDate, localDateISO, translateAuthError } from "../../lib/format";
+import { escapeHtml, formatTime, formatArabicDate, localDateISO, translateAuthError, normalizeArabic } from "../../lib/format";
 import { getAdminAppointments, getDoctorProfile, getDoctorReviews, findDoctorByUser, getDoctorAvailability, updateAppointmentState, cancelAppointmentClinic, updatePatientProfile, updatePassword, type DoctorReview } from "../../lib/supabase";
 import { confirmSheet } from "../../components/ConfirmDialog";
 import { showToast } from "../../components/Toast";
@@ -39,12 +39,12 @@ const FILTERS: { key: Filter; label: string; icon: string }[] = [
 ];
 
 function matches(rows: Row[], f: Filter, q: string) {
-  const needle = q.trim().toLowerCase();
+  const needle = normalizeArabic(q);
   return rows.filter((r) => {
     const okFilter = f === "all" ? true : f === "waiting" ? r.status === "booked" : f === "cancelled" ? isCancelled(r.status) : r.status === f;
     if (!okFilter) return false;
     if (!needle) return true;
-    return `${r.patient_name} ${r.patient_phone} ${r.doctor_name}`.toLowerCase().includes(needle);
+    return normalizeArabic(`${r.patient_name} ${r.patient_phone} ${r.doctor_name}`).includes(needle);
   });
 }
 

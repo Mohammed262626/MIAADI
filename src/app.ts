@@ -1,6 +1,7 @@
 import "./styles/tailwind.css";
-import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, listHospitals, findDoctorByUser, listDoctorSchedules, createDoctorSchedules, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile } from "./lib/supabase";
+import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, listHospitals, findDoctorByUser, listDoctorSchedules, createDoctorSchedules, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile, invalidateDoctorsDirectory } from "./lib/supabase";
 import { localDateISO, escapeHtml, translateAuthError, formatTime, formatArabicDate } from "./lib/format";
+import { getSupabaseConfig } from "./lib/config";
 import { SPECIALTIES } from "./lib/specialties";
 import { detectNearestCity, locationLabel, rememberCity } from "./lib/geodata";
 import { showToast } from "./components/Toast";
@@ -99,6 +100,41 @@ const STATIC_VIEWS: Record<string, string> = {
   notfound: NOTFOUND_MAIN,
 };
 
+/* Page titles and descriptions, applied as the route changes. They state only
+   what the page actually contains — no marketing claims. */
+const ROUTE_META: Record<RouteName, { title: string; description: string }> = {
+  home: { title: "ميعادي — حجز المواعيد الطبية", description: "احجز موعدك من جدول العيادة نفسه: أطباء وتخصصات ومستشفيات في السودان، ومواعيد متاحة فعلاً." },
+  doctors: { title: "الأطباء والتخصصات | ميعادي", description: "ابحث بين أطباء ميعادي حسب التخصص والمدينة والتأمين، واعرض أقرب موعد متاح." },
+  doctor: { title: "ملف الطبيب | ميعادي", description: "تخصص الطبيب ومكان الكشف ورسومه ومواعيده المتاحة وتقييمات المرضى." },
+  confirm: { title: "تأكيد الحجز | ميعادي", description: "مراجعة تفاصيل الموعد قبل تأكيد الحجز." },
+  hospitals: { title: "المستشفيات والمراكز | ميعادي", description: "مستشفيات ومراكز طبية على ميعادي، مع أطبائها وأقرب موعد متاح في كل منها." },
+  appointments: { title: "مواعيدي | ميعادي", description: "مواعيدك القادمة وتفاصيلها وبطاقة الدخول." },
+  profile: { title: "حسابي | ميعادي", description: "بيانات حسابك على ميعادي." },
+  admin: { title: "لوحة العيادة | ميعادي", description: "متابعة مواعيد العيادة وجدول العمل." },
+  notfound: { title: "الصفحة غير موجودة | ميعادي", description: "الصفحة المطلوبة غير موجودة على ميعادي." },
+};
+
+function metaTag(key: string, content: string, property = false) {
+  const attr = property ? "property" : "name";
+  let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
+  if (!el) {
+    el = document.createElement("meta");
+    el.setAttribute(attr, key);
+    document.head.appendChild(el);
+  }
+  el.setAttribute("content", content);
+}
+
+function setRouteMeta(route: Route) {
+  const meta = ROUTE_META[route.name] || ROUTE_META.home;
+  document.title = meta.title;
+  metaTag("description", meta.description);
+  metaTag("og:title", meta.title, true);
+  metaTag("og:description", meta.description, true);
+  metaTag("og:type", "website", true);
+  metaTag("og:image", new URL("logo-192.png", document.baseURI).href, true);
+}
+
 /* data-path values found in the Stitch desktop designs -> app routes */
 const PATH_ROUTES: Record<string, string> = {
   home: "#home",
@@ -149,13 +185,15 @@ function render() {
     return;
   }
 
+  setRouteMeta(route);
+
   if (route.name === "admin") {
-    appEl.innerHTML = `<main class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"><div id="admin-boot" class="p-space-xl text-center text-secondary font-body-md text-body-md flex items-center justify-center gap-space-sm"><span class="material-symbols-outlined animate-spin">progress_activity</span> جاري تحميل لوحة العيادة…</div></main><div id="auth-mount"></div>`;
+    appEl.innerHTML = `<main id="main-content" tabindex="-1" class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"><div id="admin-boot" class="p-space-xl text-center text-secondary font-body-md text-body-md flex items-center justify-center gap-space-sm"><span class="material-symbols-outlined animate-spin">progress_activity</span> جاري تحميل لوحة العيادة…</div></main><div id="auth-mount"></div>`;
   } else {
     const staticHtml = STATIC_VIEWS[route.name];
     const mainOpen = staticHtml
-      ? `<main class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh">${staticHtml}</main>`
-      : `<main id="main-root" class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"></main>`;
+      ? `<main id="main-content" tabindex="-1" class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh">${staticHtml}</main>`
+      : `<main id="main-root" tabindex="-1" class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"></main>`;
     appEl.innerHTML = `${renderSiteHeader(state.currentUser, route)}${mainOpen}${renderSiteFooter()}<div id="auth-mount"></div>`;
   }
 
@@ -263,6 +301,14 @@ let teardownMobileMenu: (() => void) | null = null;
 function wireShell() {
   teardownMobileMenu?.();
   teardownMobileMenu = null;
+
+  // Hash routing: a skip link must move focus, not the route.
+  appEl.querySelectorAll<HTMLAnchorElement>("[data-skip-main]").forEach((link) => link.addEventListener("click", (e) => {
+    e.preventDefault();
+    const main = document.getElementById("main-content") || document.getElementById("main-root");
+    main?.focus({ preventScroll: true });
+    main?.scrollIntoView({ block: "start" });
+  }));
 
   appEl.querySelectorAll<HTMLElement>('[data-action="open-auth"]').forEach((b) => b.addEventListener("click", () => authModal?.open()));
 
@@ -1557,6 +1603,18 @@ async function runHousekeeping() {
 }
 
 async function init() {
+  try {
+    getSupabaseConfig();
+  } catch {
+    appEl.innerHTML = `<main id="main-content" tabindex="-1" class="grid min-h-dvh place-items-center bg-surface p-6">
+      <div class="max-w-[440px] rounded-2xl border border-line bg-surface-container-lowest p-6 text-center">
+        <span class="material-symbols-outlined text-[36px] text-error" aria-hidden="true">cloud_off</span>
+        <h1 class="mt-3 text-[18px] font-bold text-on-surface">تعذّر تحميل إعدادات المنصة</h1>
+        <p class="mt-2 text-[14px] leading-relaxed text-on-surface-variant">متغيّرات الاتصال بالخادم غير مضبوطة، لذا لا يمكن جلب الأطباء أو المواعيد. اضبط الإعدادات ثم أعد تحميل الصفحة.</p>
+      </div>
+    </main>`;
+    return;
+  }
   registerStitchGlobals();
   // Cap the auth lookup so a stalled request can never hold the first paint.
   state.currentUser = await Promise.race([
@@ -1590,9 +1648,22 @@ async function init() {
   // re-render would drop the schedule editor's unsaved input; on #admin the
   // panels still refresh when visited, so update data silently there.
   const onRealtime = (refresh: () => Promise<unknown>) => {
+    invalidateDoctorsDirectory();
     if (state.route.name === "admin") { void refresh(); return; }
     void refresh().then(render);
   };
   try { subscribeToRealtimeUpdates(() => onRealtime(refreshDoctors), () => onRealtime(refreshAll)); } catch { /* ignore */ }
 }
+/* Never fail silently: unexpected runtime errors become one short toast
+   instead of a frozen screen. Throttled so a loop cannot flood the UI. */
+let lastUnexpectedAt = 0;
+function reportUnexpected() {
+  const now = Date.now();
+  if (now - lastUnexpectedAt < 4000) return;
+  lastUnexpectedAt = now;
+  showToast("حدث خطأ غير متوقع — أعد المحاولة.", "error");
+}
+window.addEventListener("unhandledrejection", () => reportUnexpected());
+window.addEventListener("error", () => reportUnexpected());
+
 void init();

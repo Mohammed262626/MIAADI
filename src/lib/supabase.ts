@@ -101,16 +101,26 @@ export type DoctorDirectoryRow = {
 };
 
 
+// Short-lived memo for the public directory (see getDoctorsDirectory).
+const directoryCache = new Map<string, { at: number; rows: DoctorDirectoryRow[] }>();
+const DIRECTORY_TTL_MS = 30_000;
+
 // Doctors joined with hospital, insurers and only their earliest free slots
 // (server-capped via the top-slots RPC) inside a window. Doctors with no free
 // slot in the window are intentionally omitted from the public catalog.
-export async function getDoctorsDirectory(daysWindow = 7, slotsPerDoctor = 9): Promise<DoctorDirectoryRow[]> {
+export async function getDoctorsDirectory(daysWindow = 7, slotsPerDoctor = 9, opts: { fresh?: boolean } = {}): Promise<DoctorDirectoryRow[]> {
+  // Navigating between #home / #doctors / #hospitals re-renders the page and
+  // would re-fetch the whole directory each time. Keep it for a short window;
+  // realtime appointment events invalidate it so slots never go stale.
+  const cacheKey = `${daysWindow}:${slotsPerDoctor}`;
+  const hit = directoryCache.get(cacheKey);
+  if (!opts.fresh && hit && Date.now() - hit.at < DIRECTORY_TTL_MS) return hit.rows;
   const { data, error } = await getClient().rpc("get_doctors_directory_top_slots", {
     p_days_window: daysWindow,
     p_slots_per_doctor: slotsPerDoctor,
   });
   if (error) throw error;
-  return (((data as unknown) as Record<string, any>[]) || []).map((r) => {
+  const rows = (((data as unknown) as Record<string, any>[]) || []).map((r) => {
     const slots = (r.available_schedules || []) as { id: string; available_date: string; start_time: string; end_time: string }[];
     return {
       id: String(r.id), name: String(r.name), specialization: String(r.specialization),
@@ -123,6 +133,13 @@ export async function getDoctorsDirectory(daysWindow = 7, slotsPerDoctor = 9): P
       available_schedules: slots.map((s) => ({ id: s.id, available_date: s.available_date, start_time: s.start_time, end_time: s.end_time })),
     };
   });
+  directoryCache.set(cacheKey, { at: Date.now(), rows });
+  return rows;
+}
+
+/* Called when realtime appointment events land, so the next render refetches. */
+export function invalidateDoctorsDirectory(): void {
+  directoryCache.clear();
 }
 
 // Lightweight specialization list used to fill the home page specialty tiles.

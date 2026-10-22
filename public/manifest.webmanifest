@@ -1,0 +1,16 @@
+{
+  "name": "ميعادي — حجز المواعيد الطبية",
+  "short_name": "ميعادي",
+  "description": "احجز موعدك من جدول العيادة نفسه: أطباء وتخصصات ومستشفيات في السودان، ومواعيد متاحة فعلاً.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#00685F",
+  "icons": [
+    { "src": "logo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

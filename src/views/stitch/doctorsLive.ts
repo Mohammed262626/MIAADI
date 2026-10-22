@@ -1,4 +1,4 @@
-import { escapeHtml, formatRelativeDay, formatTime, localDateISO } from "../../lib/format";
+import { escapeHtml, formatRelativeDay, formatTime, localDateISO, normalizeArabic } from "../../lib/format";
 import { storedCity } from "../../lib/geodata";
 import { getDoctorsDirectory, getPatientAppointments, type DoctorDirectoryRow, type DirectorySlot } from "../../lib/supabase";
 import { SPECIALTIES, countSpecialties, specialtyKeyOf, type SpecialtyKey } from "../../lib/specialties";
@@ -101,7 +101,7 @@ function earliestDate(doc: DoctorDirectoryRow): string | null {
 /* ------------------------------- filter / sort ------------------------------- */
 
 function apply(rows: DoctorDirectoryRow[], f: Filters): DoctorDirectoryRow[] {
-  const q = f.q.trim().toLowerCase();
+  const q = normalizeArabic(f.q.trim());
   let out = rows.filter((d) => {
     if (f.city && (d.hospital_city || d.city) !== f.city) return false;
     if (f.hospital && d.hospital_name !== f.hospital) return false;
@@ -120,7 +120,7 @@ function apply(rows: DoctorDirectoryRow[], f: Filters): DoctorDirectoryRow[] {
       if (!first || daysFromToday(first) > AVAIL_WINDOW[f.avail]) return false;
     }
     if (q) {
-      const hay = `${d.name} ${d.specialization} ${d.hospital_name || ""} ${d.city || ""} ${d.insurances.join(" ")}`.toLowerCase();
+      const hay = normalizeArabic(`${d.name} ${d.specialization} ${d.hospital_name || ""} ${d.city || ""} ${d.insurances.join(" ")}`);
       if (!hay.includes(q)) return false;
     }
     return true;
