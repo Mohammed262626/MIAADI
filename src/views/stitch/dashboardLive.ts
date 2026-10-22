@@ -132,7 +132,7 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
         <div class="flex flex-wrap items-end justify-between gap-4">${title(true)}<div class="h-9 w-28 ${block}"></div></div>
         <div class="h-28 rounded-xl border border-line bg-surface-container-lowest"></div>
         ${stats("sm:grid-cols-4", 4)}
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div class="flex flex-col gap-2">${Array.from({ length: 8 }, () => `<div class="h-16 rounded-xl border border-line bg-surface-container-lowest"></div>`).join("")}</div>
           <div class="h-96 rounded-xl border border-line bg-surface-container-lowest"></div>
         </div>`,
@@ -536,7 +536,7 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
         </div>
       </section>
 
-      <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div class="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <section aria-labelledby="db-stream-title">
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-1">
             <h2 id="db-stream-title" class="text-[15px] font-semibold text-on-surface">سير المواعيد</h2>
@@ -733,6 +733,7 @@ export async function wireDoctorDashboard(appEl: HTMLElement, user: User, hooks:
     renderBody(null, d, []);
     paintStream();
     paintClinicPanel(null);
+    if (currentView !== "overview") void showView(currentView);
     return;
   }
 

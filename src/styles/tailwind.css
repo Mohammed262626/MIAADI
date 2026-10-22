@@ -245,9 +245,9 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-outline-variant) tran
 .hero-shape-2 {
   width: 30rem; height: 30rem; max-width: 80vw; max-height: 80vw;
   border-radius: 58% 42% 40% 60% / 51% 57% 43% 49%;
-  background: linear-gradient(135deg, rgb(0 131 120 / 0.55), rgb(255 255 255 / 0.06));
+  background: rgb(0 104 95 / 0.45);
 }
-html[data-theme="dark"] .hero-shape-2 { background: linear-gradient(135deg, rgb(0 80 73 / 0.7), rgb(255 255 255 / 0.05)); }
+html[data-theme="dark"] .hero-shape-2 { background: rgb(0 80 73 / 0.55); }
 
 .shadow-glow-card { box-shadow: 0 24px 50px -14px rgb(6 51 46 / 0.28), 0 6px 16px -8px rgb(0 0 0 / 0.12); }
 .shadow-soft-card { box-shadow: 0 10px 30px -8px rgb(0 104 95 / 0.10); }
@@ -291,10 +291,10 @@ html[data-theme="dark"] .site-footer .text-on-primary\/70 { color: rgb(244 255 2
 html[data-theme="dark"] .site-footer .text-on-primary\/60 { color: rgb(244 255 252 / 0.6); }
 
 /* full-bleed brand surfaces (photo caption, closing CTA) also hold the deep
-   brand surface in dark mode instead of the bright mint --color-primary */
+   brand surface in dark mode instead of the bright mint --color-primary.
+   Text inside them is explicitly white — never blanket-override .text-on-primary,
+   which would repaint primary buttons sitting inside the surface. */
 html[data-theme="dark"] .brand-surface { background: #06332e; }
-html[data-theme="dark"] .brand-surface .text-on-primary { color: #f4fffc; }
-html[data-theme="dark"] .brand-surface .text-on-primary\/85 { color: rgb(244 255 252 / 0.85); }
 html[data-theme="dark"] .brand-surface .cta-invert { background: #f4fffc; color: #00201d; }
 html[data-theme="dark"] .brand-surface .cta-invert:hover { background: #dfece9; }
 

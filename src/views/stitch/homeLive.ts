@@ -48,7 +48,7 @@ function featuredCardHtml(doc: DoctorDirectoryRow, _index: number): string {
           <span class="font-semibold tabular-nums text-on-surface">${escapeHtml(rating)}</span>
           <span class="tabular-nums">(${escapeHtml(doc.reviews_count ?? 0)})</span>
         </span>`
-    : `<span class="flex shrink-0 items-center gap-1 text-[11px] text-on-surface-variant">
+    : `<span class="flex shrink-0 items-center gap-1 text-[12px] text-on-surface-variant">
           <span class="material-symbols-outlined text-[14px]" aria-hidden="true">rate_review</span>
           <span>لا تقييمات بعد</span>
         </span>`;
@@ -59,7 +59,7 @@ function featuredCardHtml(doc: DoctorDirectoryRow, _index: number): string {
       ${doctorPhoto(doc)}
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center justify-between gap-1.5">
-          <span class="max-w-full truncate rounded bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">${escapeHtml(shortSpecialty(doc.specialization))}</span>
+          <span class="max-w-full truncate rounded bg-primary/10 px-2 py-0.5 text-[12px] font-semibold text-primary">${escapeHtml(shortSpecialty(doc.specialization))}</span>
           ${ratingHtml}
         </div>
         <h3 class="mt-1.5 truncate text-[17px] font-bold leading-tight text-on-surface"><a class="after:absolute after:inset-0 after:content-['']" href="#doctor/${escapeHtml(doc.id)}">${escapeHtml(doc.name)}</a></h3>
@@ -160,7 +160,7 @@ function renderHomeStats(root: HTMLElement, docs: DoctorDirectoryRow[]) {
     { value: cities.size, label: "مدينة في السودان" },
   ];
   el.innerHTML = items.map((item) => `
-<div>
+<div class="p-2">
   <div class="text-[clamp(1.75rem,3vw,2.4rem)] font-extrabold tabular-nums text-white">${item.value}</div>
   <div class="mt-1 text-[13px] text-white/80">${escapeHtml(item.label)}</div>
 </div>`).join("");
@@ -180,7 +180,7 @@ function hospitalCardHtml(h: HospitalGroup, index: number): string {
   <div>
     <div class="mb-4 flex items-center justify-between gap-2">
       <span class="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary"><span aria-hidden="true" class="material-symbols-outlined text-[20px]">${icon}</span></span>
-      <span class="rounded-full bg-surface-container-low px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-on-surface">${h.doctors} طبيب</span>
+      <span class="rounded-full bg-surface-container-low px-2.5 py-0.5 text-[12px] font-semibold tabular-nums text-on-surface">${h.doctors} طبيب</span>
     </div>
     <h3 class="text-[17px] font-bold text-on-surface">${escapeHtml(h.name)}</h3>
     <p class="mt-1 flex items-center gap-1 text-[13px] text-outline">
