@@ -1,0 +1,125 @@
+// Admin dashboard shell — the same Stitch desktop layout as the doctor
+// dashboard (dashboard.ts), with clinic-wide navigation and wording. The live
+// wiring lives in adminDashboardLive.ts.
+export const ADMIN_MAIN = `<div class="flex animate-pulse flex-col gap-6" aria-busy="true">
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="text-[24px] font-bold leading-tight text-on-surface">لوحة الإدارة</h1>
+    <p class="mt-1 text-[15px] text-on-surface-variant">جارٍ تحميل حركة العيادات اليوم…</p>
+  </div>
+</div>
+<div class="h-28 rounded-xl border border-line bg-surface-container-lowest"></div>
+<div class="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
+  ${Array.from({ length: 6 }, () => `<div class="bg-surface-container-lowest p-4"><div class="h-3 w-20 rounded bg-surface-container"></div><div class="mt-3 h-6 w-12 rounded bg-surface-container-high"></div></div>`).join("")}
+</div>
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+  ${Array.from({ length: 3 }, () => `<div class="h-32 rounded-xl border border-line bg-surface-container-lowest"></div>`).join("")}
+</div>
+</div>`;
+
+export const ADMIN_BODY = `<aside class="max-lg:hidden fixed top-0 start-0 h-full w-[228px] bg-surface-container-low z-50 flex flex-col justify-between">
+  <div class="flex flex-col">
+    <div class="h-20 px-space-lg flex items-center justify-between">
+      <div class="flex items-center gap-space-sm">
+        <img src="${import.meta.env.BASE_URL}logo-192.png" alt="" width="36" height="36" class="h-9 w-9 shrink-0 rounded-lg"/>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-space-xs">
+            <span class="font-headline-sm text-headline-sm text-primary font-bold tracking-tight">ميعادي</span>
+            <span class="font-label-sm text-label-sm text-secondary font-medium">| Miaadi</span>
+          </div>
+          <span class="font-label-sm text-label-sm text-outline">إدارة المنصة الصحية</span>
+        </div>
+      </div>
+    </div>
+    <div class="px-space-md py-space-xs">
+      <div class="bg-surface-container-low rounded-xl p-space-sm flex items-center justify-between cursor-pointer hover:bg-surface-container transition-colors">
+        <div class="flex items-center gap-space-sm overflow-hidden">
+          <div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary flex-shrink-0">
+            <span class="material-symbols-outlined text-[18px]">local_hospital</span>
+          </div>
+          <div class="flex flex-col truncate">
+            <span id="db-facility-name" class="font-label-md text-label-md text-on-surface truncate">جميع العيادات</span>
+            <span id="db-facility-sub" class="font-body-sm text-body-sm text-on-surface-variant truncate">إدارة كل العيادات</span>
+          </div>
+        </div>
+        <span class="material-symbols-outlined text-outline text-[18px] flex-shrink-0">unfold_more</span>
+      </div>
+    </div>
+    <nav class="flex flex-col gap-space-xs px-space-md mt-space-md" data-active-classes="bg-surface-container-highest text-on-surface font-semibold rounded-lg">
+      <a aria-current="page" role="button" class="dash-nav flex items-center justify-between rounded-lg px-3 py-2 transition-colors group bg-surface-container-highest text-on-surface font-semibold" data-view="overview" href="#">
+        <div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">dashboard</span><span class="font-label-lg text-label-lg">نظرة عامة</span></div>
+      </a>
+      <a role="button" class="dash-nav flex items-center justify-between rounded-lg px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface group" data-view="appointments" href="#">
+        <div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">calendar_clock</span><span class="font-label-lg text-label-lg">كل المواعيد</span></div>
+      </a>
+      <a role="button" class="dash-nav flex items-center justify-between rounded-lg px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface group" data-view="doctors" href="#">
+        <div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">medical_services</span><span class="font-label-lg text-label-lg">إدارة الأطباء</span></div>
+      </a>
+      <a role="button" class="dash-nav flex items-center justify-between rounded-lg px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface group" data-view="schedules" href="#">
+        <div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">calendar_month</span><span class="font-label-lg text-label-lg">جدولة الأطباء</span></div>
+      </a>
+      <a role="button" class="dash-nav flex items-center justify-between rounded-lg px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface group" data-view="accounts" href="#">
+        <div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">manage_accounts</span><span class="font-label-lg text-label-lg">الحسابات والأدوار</span></div>
+      </a>
+      <a role="button" class="dash-nav flex items-center justify-between rounded-lg px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface group" data-view="account" href="#">
+        <div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">account_circle</span><span class="font-label-lg text-label-lg">حسابي وبياناتي</span></div>
+      </a>
+    </nav>
+  </div>
+  <div class="p-space-md flex flex-col gap-space-sm">
+    <button id="db-nav-logout" type="button" class="flex w-full items-center gap-space-sm rounded-lg px-3 py-2 text-error transition-colors hover:bg-error-container/40">
+      <span class="material-symbols-outlined text-[20px]" aria-hidden="true">logout</span>
+      <span class="font-label-lg text-label-lg">تسجيل الخروج</span>
+    </button>
+    <span id="db-sync" class="px-1 font-body-sm text-body-sm text-on-surface-variant">—</span>
+  </div>
+</aside>
+<div id="db-backdrop" class="hidden fixed inset-0 z-40 bg-black/40 lg:hidden"></div>
+<div class="flex min-h-screen flex-col bg-surface-container-low pe-0 ps-0 lg:ps-[228px]">
+  <header class="fixed top-0 start-0 end-0 z-40 flex h-16 items-center justify-between gap-3 bg-surface-container-low px-3 sm:px-4 lg:start-[228px]">
+    <button id="db-menu-btn" class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-on-surface transition-colors hover:bg-surface-container lg:hidden" type="button" aria-label="القائمة">
+      <span class="material-symbols-outlined text-[22px]">menu</span>
+    </button>
+    <div id="db-search-wrap" class="min-w-0 flex-1 max-w-xl">
+      <div class="relative flex items-center">
+        <span class="material-symbols-outlined absolute start-3 text-on-surface-variant pointer-events-none text-[18px]" aria-hidden="true">search</span>
+        <input class="h-10 w-full rounded-lg border border-line bg-surface-container-lowest pe-3 ps-10 text-[14px] text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary" id="db-search" placeholder="ابحث عن طبيب بالاسم أو التخصص" type="text"/>
+      </div>
+    </div>
+    <div id="db-actions" class="flex flex-shrink-0 items-center gap-2">
+      <a href="#" role="button" data-view="appointments" class="relative grid h-10 w-10 shrink-0 place-items-center rounded-lg text-on-surface transition-colors hover:bg-surface-container" aria-label="كل المواعيد">
+        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">notifications</span>
+        <span id="db-bell-dot" class="absolute end-2 top-2 h-2 w-2 rounded-full bg-error ring-2 ring-surface-container-low" aria-hidden="true"></span>
+      </a>
+      <div class="hidden sm:flex items-center gap-2 ps-1">
+        <div class="relative">
+          <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+            <span class="material-symbols-outlined text-on-primary text-[18px]">person</span>
+          </div>
+          <span class="absolute bottom-0 end-0 w-2.5 h-2.5 rounded-full bg-tertiary-container ring-2 ring-surface-container-lowest"></span>
+        </div>
+        <div class="hidden xl:flex flex-col items-start text-start">
+          <div class="flex items-center gap-space-xs">
+            <span id="db-user-name" class="font-label-md text-label-md text-on-surface font-semibold group-hover:text-primary transition-colors">مشرف النظام</span>
+          </div>
+          <span id="db-user-spec" class="font-body-sm text-body-sm text-on-surface-variant">إدارة المنصة</span>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main class="mx-auto w-full max-w-[1440px] flex-1 bg-surface-container-low px-2 pb-2 pt-[calc(4rem+env(safe-area-inset-top))]">
+    <div id="db-content" class="flex min-h-[calc(100svh-5rem)] w-full flex-col rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6">${ADMIN_MAIN}</div>
+    <div id="db-view-appointments" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>
+    <div id="db-view-doctors" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>
+    <div id="db-view-schedules" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>
+    <div id="db-view-accounts" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>
+    <div id="db-view-account" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>
+  </main>
+  <footer class="w-full px-4 py-3">
+    <div class="w-full flex flex-col md:flex-row items-center justify-between gap-space-sm text-on-surface-variant font-body-sm text-body-sm">
+      <div class="flex items-center gap-space-md">
+        <span>© 2025 منصة ميعادي للرعاية الصحية. جميع الحقوق محفوظة في جمهورية السودان.</span>
+      </div>
+    </div>
+  </footer>
+</div>`;

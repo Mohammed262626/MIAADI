@@ -139,7 +139,7 @@ function render() {
   const canAdmin = role === "admin" || role === "doctor";
   // The dashboard is staff-only: visitors never see it, not even behind the auth
   // dialog. Dev fixture previews stay available for local QA without a session.
-  const fixturePreview = import.meta.env.DEV && new URLSearchParams(location.search).has("fixture");
+  const fixturePreview = import.meta.env.DEV && (new URLSearchParams(location.search).has("fixture") || new URLSearchParams(location.search).has("adminfixture"));
   if (route.name === "admin" && !canAdmin && !fixturePreview) { location.replace("#home"); return; }
   // Staff stay inside the dashboard: the patient catalog, the public doctor
   // dossier, the booking flow and the patient account pages are not for them.
@@ -176,19 +176,50 @@ function render() {
   });
   if (route.name === "admin") {
     void (async () => {
-      const [{ DASHBOARD_BODY: body }, { wireDoctorDashboard: wireDb }, { mountAuthModal: mountModal }] = await Promise.all([
+      const params = new URLSearchParams(location.search);
+      // Admins get the clinic-wide shell; doctors keep the doctor dashboard.
+      // ?adminfixture previews the admin shell locally without a session.
+      const adminPreview = import.meta.env.DEV && params.has("adminfixture") && !state.currentUser;
+      const isAdminShell = state.currentUser?.profile?.role === "admin" || adminPreview;
+      if (state.route.name !== "admin") return;
+      const bootAuth = (mount: HTMLElement) => {
+        authModal = mountAuthModal(mount,
+          async ({ email, password }) => { const r = await loginUser({ email, password }); state.currentUser = await getCurrentUser(); await refreshAll(); render(); return r as unknown as void; },
+          async ({ email, password, fullName, phone }) => { const r = await registerPatient({ email, password, fullName, phone }); state.currentUser = await getCurrentUser(); await refreshAll(); render(); return r as unknown as void; }
+        );
+        if (!state.currentUser && !params.has("fixture") && !params.has("adminfixture")) authModal?.open();
+      };
+
+      if (isAdminShell) {
+        const [{ ADMIN_BODY: body }, { wireAdminDashboard: wireAdmin }] = await Promise.all([
+          import("./views/stitch/adminDashboard"),
+          import("./views/stitch/adminDashboardLive"),
+        ]);
+        if (state.route.name !== "admin") return;
+        appEl.innerHTML = `${body}<div id="auth-mount"></div>`;
+        wireShell();
+        bootAuth(appEl.querySelector<HTMLElement>("#auth-mount")!);
+        // The admin shell owns the navigation; each panel reuses the existing
+        // admin screens, so the business logic lives in exactly one place.
+        void wireAdmin(appEl, state.currentUser, {
+          renderAppointments: (host) => renderAdminTab(host, { embedded: true }),
+          renderDoctors: (host, onBack) => renderAdminManagement(host, "management", onBack),
+          renderAccounts: (host, onBack) => renderAdminManagement(host, "accounts", onBack),
+          renderSchedules: (host) => renderSchedulePanel(host, null, { title: "جدولة الأطباء", subtitle: "اختر الطبيب لعرض جدول عمله أو تعديله." }),
+          onLogout: () => logoutToSite(),
+          initialView: state.route.param === "manage" ? "appointments" : undefined,
+        });
+        return;
+      }
+
+      const [{ DASHBOARD_BODY: body }, { wireDoctorDashboard: wireDb }] = await Promise.all([
         import("./views/stitch/dashboard"),
         import("./views/stitch/dashboardLive"),
-        import("./components/AuthModal"),
       ]);
       if (state.route.name !== "admin") return;
       appEl.innerHTML = `${body}<div id="auth-mount"></div>`;
       wireShell();
-      authModal = mountModal(appEl.querySelector<HTMLElement>("#auth-mount")!,
-        async ({ email, password }) => { const r = await loginUser({ email, password }); state.currentUser = await getCurrentUser(); await refreshAll(); render(); return r as unknown as void; },
-        async ({ email, password, fullName, phone }) => { const r = await registerPatient({ email, password, fullName, phone }); state.currentUser = await getCurrentUser(); await refreshAll(); render(); return r as unknown as void; }
-      );
-      if (!state.currentUser && !new URLSearchParams(location.search).has("fixture")) authModal?.open();
+      bootAuth(appEl.querySelector<HTMLElement>("#auth-mount")!);
       // Everything the staff account needs happens inside this one page.
       void wireDb(appEl, state.currentUser, {
         renderAppointments: (host) => renderAdminTab(host),
@@ -449,7 +480,7 @@ async function logoutToSite() {
 
 /* «جدولي وساعات العمل» panel: a doctor edits their own calendar, a supervisor
    picks the doctor first. Reuses the real schedules editor. */
-async function renderSchedulePanel(host: HTMLElement, doctorId: string | null) {
+async function renderSchedulePanel(host: HTMLElement, doctorId: string | null, opts: { title?: string; subtitle?: string } = {}) {
   if (!state.adminDoctorsCache.length) {
     try { state.adminDoctorsCache = await listDoctors(); } catch { /* ignore */ }
   }
@@ -458,8 +489,8 @@ async function renderSchedulePanel(host: HTMLElement, doctorId: string | null) {
   host.innerHTML = `
     <div class="flex flex-col gap-space-md">
       <div>
-        <h2 class="font-headline-sm text-headline-sm font-bold text-on-surface">جدولي وساعات العمل</h2>
-        <p class="mt-1 font-body-md text-body-md text-on-surface-variant">اختر الطبيب لعرض جدول عمله أو تعديله.</p>
+        <h2 class="font-headline-sm text-headline-sm font-bold text-on-surface">${escapeHtml(opts.title || "جدولي وساعات العمل")}</h2>
+        <p class="mt-1 font-body-md text-body-md text-on-surface-variant">${escapeHtml(opts.subtitle || "اختر الطبيب لعرض جدول عمله أو تعديله.")}</p>
       </div>
       ${docs.length
         ? `<div class="grid grid-cols-1 gap-space-sm sm:grid-cols-2 xl:grid-cols-3">${docs.map((d) => `<button type="button" data-sched-doctor="${escapeHtml(d.id)}" class="flex items-center justify-between rounded-xl border border-line bg-surface-container-lowest px-space-md py-3 text-start transition-colors hover:bg-surface-container"><span class="font-label-md text-label-md font-semibold text-on-surface">${escapeHtml(d.name)}</span><span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">chevron_left</span></button>`).join("")}</div>`
@@ -472,8 +503,8 @@ async function renderSchedulePanel(host: HTMLElement, doctorId: string | null) {
   }));
 }
 
-async function renderAdminTab(main: HTMLElement) {
-  const fxTab = mgFixture();
+async function renderAdminTab(main: HTMLElement, opts: { embedded?: boolean } = {}) {
+  const fxTab = opts.embedded ? null : mgFixture();
   if (fxTab) {
     state.adminSubTab = state.adminSubTab === "appointments" ? fxTab : state.adminSubTab;
     await renderAdminManagement(main, state.adminSubTab);
@@ -481,6 +512,9 @@ async function renderAdminTab(main: HTMLElement) {
   }
   const role = state.currentUser?.profile?.role as string;
   const isDoctor = role === "doctor";
+  // Inside the admin shell each section owns a sidebar entry, so the in-page
+  // sub-tabs would be a second navigation for the same thing.
+  if (opts.embedded) state.adminSubTab = "appointments";
   // Doctor sessions never filter by another doctor — and the control is hidden.
   if (isDoctor) state.adminFilters.doctorId = "";
   // Doctor accounts have no business in the admin screens: keep them on bookings.
@@ -505,19 +539,23 @@ async function renderAdminTab(main: HTMLElement) {
     rows: state.adminRows, total: state.adminTotal, page: state.adminPage, pageSize: state.adminPageSize, stats,
     filters: state.adminFilters, doctors: isDoctor ? [] : state.adminDoctors.map((d) => ({ id: d.id, name: d.name })),
     roleLabel: isDoctor ? "حساب طبيب" : "حساب مشرف",
-    ...(isDoctor ? { title: "مواعيد عيادتي", subtitle: "متابعة حجوزاتك وأحوالها — كل ما يخص عيادتك في مكان واحد." } : {}),
-    showSubTabs: !isDoctor,
+    ...(isDoctor
+      ? { title: "مواعيد عيادتي", subtitle: "متابعة حجوزاتك وأحوالها — كل ما يخص عيادتك في مكان واحد." }
+      : opts.embedded
+        ? { title: "كل المواعيد", subtitle: "كل حجوزات المنصة — ابحث وفلتر وأدر الحالة من مكان واحد." }
+        : {}),
+    showSubTabs: !isDoctor && !opts.embedded,
     singleDoctor: isDoctor,
-    onFilter: (patch) => { Object.assign(state.adminFilters, patch); state.adminPage = 0; void renderAdminTab(main); },
-    onPage: (dir) => { state.adminPage = Math.max(0, state.adminPage + dir); void renderAdminTab(main); },
-    onState: async (id, s) => { try { await updateAppointmentState(id, s); showToast("تم التحديث", "success"); await refreshAdminRows(); void renderAdminTab(main); } catch (e) { showToast(translateAuthError(e), "error"); } },
+    onFilter: (patch) => { Object.assign(state.adminFilters, patch); state.adminPage = 0; void renderAdminTab(main, opts); },
+    onPage: (dir) => { state.adminPage = Math.max(0, state.adminPage + dir); void renderAdminTab(main, opts); },
+    onState: async (id, s) => { try { await updateAppointmentState(id, s); showToast("تم التحديث", "success"); await refreshAdminRows(); void renderAdminTab(main, opts); } catch (e) { showToast(translateAuthError(e), "error"); } },
     onClinicCancel: async (id) => { try { await cancelAppointmentClinic(id); showToast("تم الإلغاء وإتاحة الموعد", "success"); await refreshAdminRows(); await refreshDoctors(); } catch (e) { showToast(translateAuthError(e), "error"); } },
     onEdit: (row) => { void openApptEditDialog(row, main); },
     onDelete: async (row) => {
-      try { await adminDeleteAppointmentRPC(row.appointment_id); showToast("تم حذف الحجز بنجاح", "success"); await refreshAdminRows(); void renderAdminTab(main); }
+      try { await adminDeleteAppointmentRPC(row.appointment_id); showToast("تم حذف الحجز بنجاح", "success"); await refreshAdminRows(); void renderAdminTab(main, opts); }
       catch (e) { showToast(translateAuthError(e), "error"); }
     },
-    onManageTab: (tab) => { if (isDoctor && tab !== "appointments") return; state.adminSubTab = tab; if (tab === "appointments") void renderAdminTab(main); else void renderAdminManagement(main, tab); },
+    onManageTab: (tab) => { if (isDoctor && tab !== "appointments") return; state.adminSubTab = tab; if (tab === "appointments") void renderAdminTab(main, opts); else void renderAdminManagement(main, tab); },
     activeSubTab: state.adminSubTab,
   });
 }
@@ -597,9 +635,16 @@ async function openApptEditDialog(row: AdminRow, main: HTMLElement) {
   });
 }
 
-async function renderAdminManagement(main: HTMLElement, tab: "management" | "accounts") {
+async function renderAdminManagement(main: HTMLElement, tab: "management" | "accounts", onBack?: () => void) {
   // Doctors manage their own calendar from the schedule panel — this screen is admin-only.
   if (state.currentUser?.profile?.role === "doctor") return;
+  // The admin shell passes its own back handler so the sidebar view changes
+  // instead of re-rendering the whole dashboard.
+  const goBack = () => {
+    if (onBack) { onBack(); return; }
+    state.adminSubTab = "appointments";
+    render();
+  };
   if (tab === "accounts") {
     try { state.adminAccounts = mgFixture() ? (fixtureAccounts as unknown as typeof state.adminAccounts) : await adminListProfiles(); } catch (e) { showToast(translateAuthError(e), "error"); }
     const rows = state.adminAccounts as { user_id: string; full_name: string; email: string; phone: string; role: string }[];
@@ -664,7 +709,7 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
             </div>`).join("")}</div>
         </div>
       </div>`;
-    main.querySelector("[data-back]")?.addEventListener("click", () => { state.adminSubTab = "appointments"; render(); });
+    main.querySelector("[data-back]")?.addEventListener("click", goBack);
     main.querySelectorAll<HTMLSelectElement>("[data-role-for]").forEach((sel) => sel.addEventListener("change", async () => {
       const uid = sel.dataset.roleFor!; const prev = sel.value;
       try { await assignUserRole(uid, sel.value); showToast("تم تحديث الدور", "success"); } catch (e) { showToast(translateAuthError(e), "error"); sel.value = prev; }
@@ -789,7 +834,7 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
       </div>
     </dialog>
   `;
-  main.querySelector("[data-back]")?.addEventListener("click", () => { state.adminSubTab = "appointments"; render(); });
+  main.querySelector("[data-back]")?.addEventListener("click", goBack);
   const docDlg = main.querySelector("#doctor-dialog") as HTMLDialogElement;
   let editing: string | null = null;
   const field = (sel: string) => main.querySelector(sel) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
@@ -843,7 +888,7 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
     const doc = docs.find((x) => x.id === b.dataset.del);
     const ok = await confirmSheet({ title: "حذف الطبيب؟", body: `سيتم حذف ${doc?.name || "الطبيب"} نهائياً.`, confirmLabel: "حذف", tone: "danger" });
     if (!ok) return;
-    try { await deleteDoctor(b.dataset.del!); showToast("تم الحذف", "success"); state.adminDoctorsCache = await listDoctors(); void renderAdminManagement(main, "management"); }
+    try { await deleteDoctor(b.dataset.del!); showToast("تم الحذف", "success"); state.adminDoctorsCache = await listDoctors(); void renderAdminManagement(main, "management", onBack); }
     catch (e) { const m = String((e as { message?: string })?.message || ""); if (/23503|foreign key|appointments/i.test(m)) showToast("لا يمكن الحذف — توجد حجوزات", "error"); else showToast(translateAuthError(e), "error"); }
   }));
   main.querySelectorAll<HTMLButtonElement>("[data-manage]").forEach((b) => b.addEventListener("click", async () => { state.adminManagementDoctor = b.dataset.manage!; await renderSchedules(main.querySelector("#schedules-root") as HTMLElement, state.adminManagementDoctor); }));
@@ -872,7 +917,7 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
       docDlg.close();
       state.adminDoctorsCache = await listDoctors();
       state.adminDoctors = state.adminDoctorsCache;
-      void renderAdminManagement(main, "management");
+      void renderAdminManagement(main, "management", onBack);
     } catch (err) { showToast(translateAuthError(err), "error"); }
   });
   if (state.adminManagementDoctor) await renderSchedules(main.querySelector("#schedules-root") as HTMLElement, state.adminManagementDoctor);
