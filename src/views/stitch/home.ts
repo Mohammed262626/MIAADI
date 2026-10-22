@@ -334,7 +334,7 @@ export const HOME_MAIN = `<div class="w-full">
             <span aria-hidden="true" class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
           </span>
         </summary>
-        <p class="mt-4 border-t border-line/60 pt-4 text-[13px] leading-relaxed text-on-surface-variant">الخرطوم وأم درمان وبورتسودان وتُضاف مدن جديدة مع انضمام عيادات إليها.</p>
+        <p class="mt-4 border-t border-line/60 pt-4 text-[13px] leading-relaxed text-on-surface-variant">الخدمة متاحة في عدد من المدن السودانية — من بينها الخرطوم وأم درمان وبورتسودان — وتُضاف مدن جديدة مع انضمام عيادات إليها.</p>
       </details>
     </div>
   </div>

@@ -37,3 +37,8 @@ opencode.json
 skills-lock.json
 # taste-skill inspector artefacts
 .taste-skill/
+
+# Local scratch pads
+.claude/
+agent/
+__polish.html
