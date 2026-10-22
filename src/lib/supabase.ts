@@ -48,27 +48,9 @@ export async function updatePassword(password: string) {
 }
 
 // --- doctors & schedules
-// Loads doctors plus their free slots inside a rolling window (default 14 days).
-// Filtering happens server-side so the catalog stays light as data grows; any
-// date outside the window is fetched on demand via getAvailableSlots().
-export async function getDoctorsWithSchedules(daysWindow = 14) {
-  const c = getClient();
-  const todayStr = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().split("T")[0];
-  const untilStr = new Date(Date.now() - new Date().getTimezoneOffset()*60000 + daysWindow*86400000).toISOString().split("T")[0];
-  const { data, error } = await c.from("doctors")
-    .select(`id,name,specialization,consultation_fee,doctor_schedules(id,available_date,start_time,end_time,is_booked)`)
-    .gte("doctor_schedules.available_date", todayStr)
-    .lte("doctor_schedules.available_date", untilStr)
-    .eq("doctor_schedules.is_booked", false)
-    .order("name");
-  if (error) throw error;
-  return (data || []).map((d: Record<string, unknown>) => {
-    const schedules = ((d.doctor_schedules as unknown[]) || [])
-      .filter((s: unknown) => !(s as {is_booked:boolean}).is_booked)
-      .sort((a: unknown,b: unknown) => { const A=a as {available_date:string;start_time:string}, B=b as {available_date:string;start_time:string}; return A.available_date===B.available_date ? A.start_time.localeCompare(B.start_time) : A.available_date.localeCompare(B.available_date); });
-    return { ...d, available_schedules: schedules };
-  });
-}
+// The catalog is read through get_doctors_directory_top_slots() below. There is
+// deliberately no "every doctor with every free slot" query: it returned ~1.5 MB
+// and was only ever used to look up a single doctor on the booking summary.
 export type DoctorAdminRow = {
   id: string; name: string; name_en: string | null; title: string | null;
   specialization: string; consultation_fee: number; city: string | null;
@@ -101,9 +83,32 @@ export type DoctorDirectoryRow = {
 };
 
 
-// Short-lived memo for the public directory (see getDoctorsDirectory).
+// Short-lived memo for the public directory (see getDoctorsDirectory). Several
+// views can ask for the catalog in the same tick, so identical concurrent calls
+// share one request, and the result is reused for a few seconds afterwards.
 const directoryCache = new Map<string, { at: number; rows: DoctorDirectoryRow[] }>();
+const directoryInFlight = new Map<string, Promise<DoctorDirectoryRow[]>>();
 const DIRECTORY_TTL_MS = 30_000;
+const DIRECTORY_STORE_KEY = "miaadi.directory.top-slots.v1";
+// Bumped on invalidation so a response that was already in flight cannot put
+// rows fetched before the change back into the cache.
+let directoryGeneration = 0;
+
+function readStoredDirectory(cacheKey: string): { at: number; rows: DoctorDirectoryRow[] } | null {
+  try {
+    const raw = sessionStorage.getItem(DIRECTORY_STORE_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as { key?: string; at?: number; rows?: DoctorDirectoryRow[] };
+    if (saved.key !== cacheKey || !saved.at || !Array.isArray(saved.rows)) return null;
+    return { at: saved.at, rows: saved.rows };
+  } catch { return null; }
+}
+
+function storeDirectory(cacheKey: string, at: number, rows: DoctorDirectoryRow[]) {
+  try {
+    sessionStorage.setItem(DIRECTORY_STORE_KEY, JSON.stringify({ key: cacheKey, at, rows }));
+  } catch { /* storage full or blocked — the in-memory cache still covers the session */ }
+}
 
 // Doctors joined with hospital, insurers and only their earliest free slots
 // (server-capped via the top-slots RPC) inside a window. Doctors with no free
@@ -113,40 +118,90 @@ export async function getDoctorsDirectory(daysWindow = 7, slotsPerDoctor = 9, op
   // would re-fetch the whole directory each time. Keep it for a short window;
   // realtime appointment events invalidate it so slots never go stale.
   const cacheKey = `${daysWindow}:${slotsPerDoctor}`;
-  const hit = directoryCache.get(cacheKey);
-  if (!opts.fresh && hit && Date.now() - hit.at < DIRECTORY_TTL_MS) return hit.rows;
-  const { data, error } = await getClient().rpc("get_doctors_directory_top_slots", {
-    p_days_window: daysWindow,
-    p_slots_per_doctor: slotsPerDoctor,
-  });
-  if (error) throw error;
-  const rows = (((data as unknown) as Record<string, any>[]) || []).map((r) => {
-    const slots = (r.available_schedules || []) as { id: string; available_date: string; start_time: string; end_time: string }[];
-    return {
-      id: String(r.id), name: String(r.name), specialization: String(r.specialization),
-      consultation_fee: Number(r.consultation_fee), title: r.title ?? null, gender: r.gender ?? null,
-      city: r.city ?? null, rating: r.rating === null || r.rating === undefined ? null : Number(r.rating),
-      reviews_count: r.reviews_count ?? null, experience_years: r.experience_years ?? null,
-      telehealth: Boolean(r.telehealth), photo_url: r.photo_url ?? null,
-      hospital_name: r.hospital_name ?? null, hospital_city: r.hospital_city ?? null,
-      insurances: ((r.insurances || []) as string[]).filter(Boolean),
-      available_schedules: slots.map((s) => ({ id: s.id, available_date: s.available_date, start_time: s.start_time, end_time: s.end_time })),
-    };
-  });
-  directoryCache.set(cacheKey, { at: Date.now(), rows });
-  return rows;
+  if (!opts.fresh) {
+    const hit = directoryCache.get(cacheKey);
+    if (hit && Date.now() - hit.at < DIRECTORY_TTL_MS) return hit.rows;
+    if (!hit) {
+      const stored = readStoredDirectory(cacheKey);
+      if (stored && Date.now() - stored.at < DIRECTORY_TTL_MS) {
+        directoryCache.set(cacheKey, stored);
+        return stored.rows;
+      }
+    }
+  }
+
+  const running = directoryInFlight.get(cacheKey);
+  if (running) return running;
+
+  const generation = directoryGeneration;
+  const request = (async () => {
+    const { data, error } = await getClient().rpc("get_doctors_directory_top_slots", {
+      p_days_window: daysWindow,
+      p_slots_per_doctor: slotsPerDoctor,
+    });
+    if (error) throw error;
+    const rows = (((data as unknown) as Record<string, any>[]) || []).map((r) => {
+      const slots = (r.available_schedules || []) as { id: string; available_date: string; start_time: string; end_time: string }[];
+      return {
+        id: String(r.id), name: String(r.name), specialization: String(r.specialization),
+        consultation_fee: Number(r.consultation_fee), title: r.title ?? null, gender: r.gender ?? null,
+        city: r.city ?? null, rating: r.rating === null || r.rating === undefined ? null : Number(r.rating),
+        reviews_count: r.reviews_count ?? null, experience_years: r.experience_years ?? null,
+        telehealth: Boolean(r.telehealth), photo_url: r.photo_url ?? null,
+        hospital_name: r.hospital_name ?? null, hospital_city: r.hospital_city ?? null,
+        insurances: ((r.insurances || []) as string[]).filter(Boolean),
+        available_schedules: slots.map((s) => ({ id: s.id, available_date: s.available_date, start_time: s.start_time, end_time: s.end_time })),
+      };
+    });
+    if (generation === directoryGeneration) {
+      const at = Date.now();
+      directoryCache.set(cacheKey, { at, rows });
+      storeDirectory(cacheKey, at, rows);
+    }
+    return rows;
+  })();
+
+  directoryInFlight.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    directoryInFlight.delete(cacheKey);
+  }
+}
+
+/* A single catalog row if the directory is already warm — used by the booking
+   summary instead of shipping every doctor with a 14-day schedule. */
+export function findCachedDirectoryDoctor(doctorId: string): DoctorDirectoryRow | undefined {
+  for (const entry of directoryCache.values()) {
+    const found = entry.rows.find((r) => r.id === doctorId);
+    if (found) return found;
+  }
+  return undefined;
 }
 
 /* Called when realtime appointment events land, so the next render refetches. */
 export function invalidateDoctorsDirectory(): void {
+  directoryGeneration++;
   directoryCache.clear();
+  directoryInFlight.clear();
+  try { sessionStorage.removeItem(DIRECTORY_STORE_KEY); } catch { /* ignore */ }
 }
 
 // Lightweight specialization list used to fill the home page specialty tiles.
-export async function getDoctorSpecializations(): Promise<string[]> {
-  const { data, error } = await getClient().from("doctors").select("specialization");
-  if (error) throw error;
-  return ((data || []) as { specialization?: string }[]).map((d) => String(d.specialization || ""));
+// The list only changes when a doctor is added, so one request per session.
+let specializationsRequest: Promise<string[]> | null = null;
+export function getDoctorSpecializations(): Promise<string[]> {
+  if (!specializationsRequest) {
+    specializationsRequest = (async () => {
+      const { data, error } = await getClient().from("doctors").select("specialization");
+      if (error) throw error;
+      return ((data || []) as { specialization?: string }[]).map((d) => String(d.specialization || ""));
+    })().catch((err) => {
+      specializationsRequest = null;
+      throw err;
+    });
+  }
+  return specializationsRequest;
 }
 
 // --- doctor profile page (#doctor/:id)

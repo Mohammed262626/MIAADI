@@ -1,5 +1,5 @@
 import "./styles/tailwind.css";
-import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, getDoctorsWithSchedules, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, listHospitals, findDoctorByUser, listDoctorSchedules, createDoctorSchedules, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile, invalidateDoctorsDirectory } from "./lib/supabase";
+import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, listHospitals, findDoctorByUser, listDoctorSchedules, createDoctorSchedules, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile, invalidateDoctorsDirectory, findCachedDirectoryDoctor, getDoctorProfile } from "./lib/supabase";
 import { localDateISO, escapeHtml, translateAuthError, formatTime, formatArabicDate } from "./lib/format";
 import { getSupabaseConfig } from "./lib/config";
 import { SPECIALTIES } from "./lib/specialties";
@@ -40,7 +40,6 @@ type Pending = { scheduleId: string; doctorId: string; slot: Slot; appointmentId
 
 const state = {
   currentUser: null as Awaited<ReturnType<typeof getCurrentUser>>,
-  doctors: [] as Awaited<ReturnType<typeof getDoctorsWithSchedules>>,
   patientAppointments: [] as Awaited<ReturnType<typeof getPatientAppointments>>,
   route: { name: "home" } as Route,
   pending: null as Pending | null,
@@ -83,9 +82,24 @@ function parseRoute(): Route {
   }
 }
 
-function findDoctor(id: string | undefined): Doctor | undefined {
+/* The booking summary needs one doctor, not the whole catalog. Read the catalog
+   if it is already warm, otherwise fetch that single profile row. */
+async function findDoctor(id: string | undefined): Promise<Doctor | undefined> {
   if (!id) return undefined;
-  return (state.doctors as unknown as Doctor[]).find((d) => d.id === id);
+  const cached = findCachedDirectoryDoctor(id);
+  if (cached) {
+    return {
+      id: cached.id, name: cached.name, specialization: cached.specialization,
+      consultation_fee: cached.consultation_fee, available_schedules: cached.available_schedules,
+    };
+  }
+  try {
+    const p = await getDoctorProfile(id);
+    if (!p) return undefined;
+    return { id: p.id, name: p.name, specialization: p.specialization, consultation_fee: p.consultation_fee, available_schedules: [] };
+  } catch {
+    return undefined;
+  }
 }
 
 /* ---------------------------------- render ---------------------------------- */
@@ -288,7 +302,7 @@ function render() {
 
   const main = document.getElementById("main-root") as HTMLElement | null;
   switch (route.name) {
-    case "confirm": if (main) renderConfirmTab(main, route.param!); break;
+    case "confirm": if (main) void renderConfirmTab(main, route.param!); break;
   }
 }
 
@@ -468,7 +482,7 @@ function handleClick(e: MouseEvent) {
 
 /* ----------------------------------- views ---------------------------------- */
 
-function renderConfirmTab(main: HTMLElement, scheduleId: string) {
+async function renderConfirmTab(main: HTMLElement, scheduleId: string) {
   const pending = state.pending;
   if (!pending || pending.scheduleId !== scheduleId) {
     main.innerHTML = `<div class="px-4 pt-3">${emptyState({
@@ -479,7 +493,9 @@ function renderConfirmTab(main: HTMLElement, scheduleId: string) {
     })}</div>`;
     return;
   }
-  const doctor = findDoctor(pending.doctorId);
+  const doctor = await findDoctor(pending.doctorId);
+  // The visitor may have moved on while the lookup was running.
+  if (state.pending !== pending || state.route.name !== "confirm" || state.route.param !== scheduleId) return;
   if (!doctor) {
     main.innerHTML = `<div class="px-4 pt-3">${emptyState({ icon: "error", title: "تعذّر تحميل بيانات الطبيب", body: "ارجع وأعد المحاولة." })}</div>`;
     return;
@@ -499,7 +515,7 @@ function renderConfirmTab(main: HTMLElement, scheduleId: string) {
         } else {
           res = await bookAppointmentRPC({ scheduleId: pending.scheduleId, patientName: p.patientName, patientPhone: p.patientPhone }) as { id?: string };
         }
-        await Promise.all([refreshDoctors(), refreshAppointments()]);
+        await Promise.all([invalidateDirectory(), refreshAppointments()]);
         state.pending = null;
         return res;
       } catch (e) {
@@ -595,7 +611,7 @@ async function renderAdminTab(main: HTMLElement, opts: { embedded?: boolean } = 
     onFilter: (patch) => { Object.assign(state.adminFilters, patch); state.adminPage = 0; void renderAdminTab(main, opts); },
     onPage: (dir) => { state.adminPage = Math.max(0, state.adminPage + dir); void renderAdminTab(main, opts); },
     onState: async (id, s) => { try { await updateAppointmentState(id, s); showToast("تم التحديث", "success"); await refreshAdminRows(); void renderAdminTab(main, opts); } catch (e) { showToast(translateAuthError(e), "error"); } },
-    onClinicCancel: async (id) => { try { await cancelAppointmentClinic(id); showToast("تم الإلغاء وإتاحة الموعد", "success"); await refreshAdminRows(); await refreshDoctors(); } catch (e) { showToast(translateAuthError(e), "error"); } },
+    onClinicCancel: async (id) => { try { await cancelAppointmentClinic(id); showToast("تم الإلغاء وإتاحة الموعد", "success"); await refreshAdminRows(); await invalidateDirectory(); } catch (e) { showToast(translateAuthError(e), "error"); } },
     onEdit: (row) => { void openApptEditDialog(row, main); },
     onDelete: async (row) => {
       try { await adminDeleteAppointmentRPC(row.appointment_id); showToast("تم حذف الحجز بنجاح", "success"); await refreshAdminRows(); void renderAdminTab(main, opts); }
@@ -1423,7 +1439,7 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
         const { created } = await generateDoctorSchedule(doctorId, 90, replace);
         showToast(created ? `أُضيف ${created} موعداً` : "لا مواعيد جديدة — احفظ الأوقات أولاً", created ? "success" : "info");
         await renderSchedules(root, doctorId);
-        await refreshDoctors();
+        await invalidateDirectory();
       } catch (err) { showToast(translateAuthError(err), "error"); btn.disabled = false; }
     });
 
@@ -1439,7 +1455,7 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
         const { deleted } = await blockDoctorDates(doctorId, start, end, reason);
         showToast(deleted ? `أُغلق النطاق وحُذف ${deleted} موعداً فارغاً` : "أُغلق النطاق", "success");
         await renderSchedules(root, doctorId);
-        await refreshDoctors();
+        await invalidateDirectory();
       } catch (err) { showToast(translateAuthError(err), "error"); }
     });
 
@@ -1471,7 +1487,7 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
         const skipped = cells.length - rows.length;
         showToast(`أُضيف ${rows.length} موعداً${skipped ? ` · ${skipped} موجود مسبقاً` : ""}`, "success");
         await renderSchedules(root, doctorId);
-        await refreshDoctors();
+        await invalidateDirectory();
       } catch (err) { showToast(translateAuthError(err), "error"); }
     });
 
@@ -1570,7 +1586,7 @@ async function renderSchedules(root: HTMLElement, doctorId: string) {
       if (!btn) return;
       const ok = await confirmSheet({ title: "حذف هذا الموعد؟", body: "سيُحذف الموعد الفارغ ويختفي من صفحة الحجز.", confirmLabel: "حذف", tone: "danger" });
       if (!ok) return;
-      try { await deleteDoctorSchedule(btn.dataset.delSch!); showToast("تم الحذف", "success"); await renderSchedules(root, doctorId); await refreshDoctors(); }
+      try { await deleteDoctorSchedule(btn.dataset.delSch!); showToast("تم الحذف", "success"); await renderSchedules(root, doctorId); await invalidateDirectory(); }
       catch (err) { showToast(translateAuthError(err), "error"); }
     });
     paintSlots();
@@ -1586,7 +1602,10 @@ function go(hash: string) {
   else location.hash = hash;
 }
 
-async function refreshDoctors() { try { state.doctors = await getDoctorsWithSchedules(); } catch { /* ignore */ } }
+/* No bulk doctor/schedule fetch exists any more (it weighed ~1.5 MB and served a
+   single lookup). Realtime changes only need to drop the catalog cache so the
+   next render reads fresh slots. */
+async function invalidateDirectory() { invalidateDoctorsDirectory(); }
 async function refreshAppointments() { try { state.patientAppointments = await getPatientAppointments(); } catch { /* ignore */ } }
 async function refreshAdminRows() {
   try {
@@ -1594,7 +1613,7 @@ async function refreshAdminRows() {
     state.adminRows = res.rows as typeof state.adminRows; state.adminTotal = res.total;
   } catch { /* ignore */ }
 }
-async function refreshAll() { await Promise.all([refreshDoctors(), refreshAppointments()]); }
+async function refreshAll() { await refreshAppointments(); }
 
 async function runHousekeeping() {
   const role = (state.currentUser as { profile?: { role?: string } } | null)?.profile?.role;
@@ -1652,7 +1671,7 @@ async function init() {
     if (state.route.name === "admin") { void refresh(); return; }
     void refresh().then(render);
   };
-  try { subscribeToRealtimeUpdates(() => onRealtime(refreshDoctors), () => onRealtime(refreshAll)); } catch { /* ignore */ }
+  try { subscribeToRealtimeUpdates(() => onRealtime(invalidateDirectory), () => onRealtime(refreshAll)); } catch { /* ignore */ }
 }
 /* Never fail silently: unexpected runtime errors become one short toast
    instead of a frozen screen. Throttled so a loop cannot flood the UI. */
