@@ -87,14 +87,14 @@ export const HOME_MAIN = `<div class="w-full">
 <section class="brand-surface relative overflow-hidden bg-primary pt-12 pb-28 lg:pb-36" data-reveal>
   <div class="hero-shape hero-shape-1 pointer-events-none absolute -bottom-24 -left-24" aria-hidden="true"></div>
   <div class="hero-shape hero-shape-2 pointer-events-none absolute top-10 left-1/3" aria-hidden="true"></div>
-  <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-primary-container/70 via-transparent to-transparent" aria-hidden="true"></div>
+  <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/60 via-primary/40 to-transparent" aria-hidden="true"></div>
 
   <div class="relative z-10 mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
     <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-12">
       <!-- Editorial column -->
       <div class="flex flex-col items-start gap-6 text-start text-white lg:col-span-7">
         <div class="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-[12px] font-medium">
-          <span class="h-2 w-2 rounded-full bg-white animate-pulse" aria-hidden="true"></span>
+          <span class="h-2 w-2 rounded-full bg-white" aria-hidden="true"></span>
           <span>حجز مباشر من جدول العيادة — بلا تعارض في المواعيد</span>
         </div>
         <h1 class="text-[clamp(2.25rem,5vw,3.5rem)] font-extrabold leading-[1.2] tracking-tight">
@@ -176,8 +176,7 @@ export const HOME_MAIN = `<div class="w-full">
 <section class="py-20 lg:py-24" aria-labelledby="how-title">
   <div class="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
     <div class="mx-auto mb-14 max-w-2xl text-center" data-reveal>
-      <p class="text-[11px] font-bold uppercase tracking-widest text-primary">كيف يعمل ميعادي</p>
-      <h2 id="how-title" class="mt-2 text-[clamp(1.75rem,3vw,2.5rem)] font-extrabold tracking-tight text-on-surface">كيف يعمل ميعادي!</h2>
+      <h2 id="how-title" class="text-[clamp(1.75rem,3vw,2.5rem)] font-extrabold tracking-tight text-on-surface">كيف يعمل ميعادي</h2>
       <p class="mt-4 text-[15px] leading-relaxed text-on-surface-variant">
         اكتشف الأطباء المتاحين، اختر الموعد المناسب من جدول العيادة الفعلي، وأكّد حجزك — كل شيء من مكان واحد.
       </p>
