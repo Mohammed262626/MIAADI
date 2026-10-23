@@ -24,12 +24,54 @@ export async function loginUser(p: { email: string; password: string }) {
 export function onAuthChange(cb: (event: string, session: unknown) => void) {
   return getClient().auth.onAuthStateChange((event, session) => cb(event, session));
 }
-export async function logoutUser() { const { error } = await getClient().auth.signOut(); if (error) throw error; }
+export async function logoutUser() { const { error } = await getClient().auth.signOut(); if (error) throw error; rememberUserRole(null); }
+
+/* Last known role, kept only so index.html can paint the right boot shell
+   before the auth round-trip finishes. Never used for authorization. */
+export function rememberUserRole(role: string | null) {
+  try {
+    if (role) localStorage.setItem("myappo.role", role);
+    else localStorage.removeItem("myappo.role");
+  } catch { /* private mode */ }
+}
+
+/* supabase-js keeps the session in `sb-<ref>-auth-token`; the access token's
+   `sub` claim is the user id. Reading it locally lets the profile query start
+   alongside getUser() instead of after it — half the signed-in boot gate. */
+function storedUserId(): string | null {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !/^sb-.*-auth-token$/.test(key)) continue;
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const part = (JSON.parse(raw) as { access_token?: string })?.access_token?.split(".")[1];
+      if (!part) continue;
+      const claims = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/"))) as { sub?: string };
+      if (claims?.sub) return claims.sub;
+    }
+  } catch { /* malformed token, private mode, chunked storage */ }
+  return null;
+}
+
 export async function getCurrentUser() {
   const c = getClient();
-  const { data: { user } } = await c.auth.getUser();
-  if (!user) return null;
-  const { data: profile } = await c.from("profiles").select("id, full_name, phone, role").eq("id", user.id).maybeSingle();
+  const uid = storedUserId();
+  const [authRes, profileRes] = await Promise.all([
+    c.auth.getUser(),
+    uid
+      ? c.from("profiles").select("id, full_name, phone, role").eq("id", uid).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  const user = authRes.data.user;
+  if (!user) { rememberUserRole(null); return null; }
+  let profile = profileRes.data;
+  // The cached id can lag after a token refresh or a second tab login.
+  if (!profile || profile.id !== user.id) {
+    const { data } = await c.from("profiles").select("id, full_name, phone, role").eq("id", user.id).maybeSingle();
+    profile = data;
+  }
+  rememberUserRole(profile?.role || null);
   return { ...user, profile: profile || { full_name: (user.user_metadata as Record<string,string>)?.full_name || "مستخدم", phone: (user.user_metadata as Record<string,string>)?.phone || "", role: (user.user_metadata as Record<string,string>)?.role || "patient" } };
 }
 export async function updatePatientProfile(p: { fullName: string; phone: string }) {
@@ -420,6 +462,42 @@ export async function assignUserRole(userId: string, role: string) {
 }
 export async function adminListProfiles() {
   const { data, error } = await getClient().rpc("admin_list_profiles"); if (error) throw error; return data || [];
+}
+
+/* Auth-level account operations (create / delete / password) live in the
+   `admin-users` Edge Function: they need the service-role key. The function
+   returns a stable error code, which the UI translates to Arabic. */
+type AdminUserAction = "create" | "update" | "password" | "delete";
+
+async function invokeAdminUsers<T = unknown>(action: AdminUserAction, payload: Record<string, unknown>): Promise<T> {
+  const { data, error } = await getClient().functions.invoke("admin-users", { body: { action, ...payload } });
+  if (error) {
+    let code = "";
+    try {
+      const ctx = (error as unknown as { context?: Response }).context;
+      if (ctx) {
+        const parsed = await ctx.clone().json() as { error?: string };
+        code = parsed?.error || "";
+      }
+    } catch { /* the body wasn't JSON or was already consumed */ }
+    throw new Error(code || error.message || "admin_users_failed");
+  }
+  const maybe = data as { error?: string } | null;
+  if (maybe?.error) throw new Error(maybe.error);
+  return data as T;
+}
+
+export async function adminCreateAccount(p: { email: string; password: string; fullName: string; phone: string; role: string }) {
+  return invokeAdminUsers<{ user_id: string }>("create", p);
+}
+export async function adminUpdateAccountProfile(userId: string, p: { fullName: string; phone: string }) {
+  return invokeAdminUsers("update", { userId, ...p });
+}
+export async function adminSetAccountPassword(userId: string, password: string) {
+  return invokeAdminUsers("password", { userId, password });
+}
+export async function adminDeleteAccount(userId: string) {
+  return invokeAdminUsers("delete", { userId });
 }
 function toSearchPattern(v: string) { const clean = String(v).replace(/[%_*.,\\]/g," ").replace(/\s+/g," ").trim(); return clean ? `*${clean}*` : null; }
 // supabase-js builder generics are untyped here (no generated DB types) — flatten to any

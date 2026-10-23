@@ -55,9 +55,6 @@ export const ADMIN_BODY = `<a href="#main-content" data-skip-main class="sr-only
       <a role="button" class="dash-nav flex items-center justify-between rounded-lg px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface group" data-view="doctors" href="#">
         <div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">medical_services</span><span class="font-label-lg text-label-lg">إدارة الأطباء</span></div>
       </a>
-      <a role="button" class="dash-nav flex items-center justify-between rounded-lg px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface group" data-view="schedules" href="#">
-        <div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">calendar_month</span><span class="font-label-lg text-label-lg">جدولة الأطباء</span></div>
-      </a>
       <a role="button" class="dash-nav flex items-center justify-between rounded-lg px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface group" data-view="accounts" href="#">
         <div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px] transition-colors">manage_accounts</span><span class="font-label-lg text-label-lg">الحسابات والأدوار</span></div>
       </a>
@@ -111,7 +108,6 @@ export const ADMIN_BODY = `<a href="#main-content" data-skip-main class="sr-only
     <div id="db-content" class="flex min-h-[calc(100svh-5rem)] w-full flex-col rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6">${ADMIN_MAIN}</div>
     <div id="db-view-appointments" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>
     <div id="db-view-doctors" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>
-    <div id="db-view-schedules" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>
     <div id="db-view-accounts" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>
     <div id="db-view-account" class="hidden min-h-[calc(100svh-5rem)] w-full rounded-xl border border-line bg-surface-container-lowest p-5 sm:p-6"></div>
   </main>

@@ -21,10 +21,276 @@
       document.documentElement.dataset.theme = t;
     } catch (e) {}
   </script>
+  <!--
+    First-paint shell: painted before any JavaScript runs, so the largest
+    content (the hero headline) is visible immediately instead of waiting for
+    the whole module graph. The app replaces #app on its first render, so this
+    markup never survives boot. Kept deliberately in sync with the real home
+    hero (same text, same teal, same type scale) to avoid a visible jump.
+  -->
+  <style>
+    #boot-skeleton, #boot-admin, #boot-splash {
+      --sk-bg: #f7f9fb;
+      --sk-surface: #ffffff;
+      --sk-block: #eceef0;
+      --sk-line: #dfe3e6;
+      --sk-teal: #00685f;
+      --sk-text: #191c1e;
+      --sk-muted: rgba(255, 255, 255, 0.75);
+    }
+    #boot-skeleton, #boot-admin, #boot-splash {
+      min-height: 100svh;
+      background: var(--sk-bg);
+      color: var(--sk-text);
+      font-family: "Cairo", system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    #boot-skeleton { overflow: hidden; }
+    #boot-skeleton[hidden], #boot-admin[hidden], #boot-splash[hidden] { display: none !important; }
+    html[data-theme="dark"] #boot-skeleton,
+    html[data-theme="dark"] #boot-admin,
+    html[data-theme="dark"] #boot-splash {
+      --sk-bg: #101416;
+      --sk-surface: #171d20;
+      --sk-block: #222a2e;
+      --sk-line: #2b3539;
+      --sk-teal: #00514a;
+      --sk-text: #e3e6e8;
+    }
+    #boot-skeleton .sk-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      height: 64px; padding: 0 20px; background: var(--sk-surface);
+      border-bottom: 1px solid var(--sk-line);
+    }
+    #boot-skeleton .sk-logo, #boot-admin .sk-logo { display: flex; align-items: center; gap: 10px; }
+    #boot-skeleton .sk-logo-mark, #boot-admin .sk-logo-mark, #boot-splash .sk-logo-mark { width: 34px; height: 34px; border-radius: 10px; background: var(--sk-teal); }
+    #boot-skeleton .sk-logo-text, #boot-admin .sk-logo-text { width: 86px; height: 12px; border-radius: 6px; background: var(--sk-block); }
+    #boot-skeleton .sk-nav { display: flex; gap: 14px; }
+    #boot-skeleton .sk-nav span { width: 62px; height: 10px; border-radius: 5px; background: var(--sk-block); }
+    #boot-skeleton .sk-actions { display: flex; gap: 10px; }
+    #boot-skeleton .sk-actions span { width: 36px; height: 36px; border-radius: 10px; background: var(--sk-block); }
+    #boot-skeleton .sk-hero {
+      background: var(--sk-teal);
+      padding: 48px 20px 96px;
+      display: flex; flex-direction: column; align-items: flex-start; gap: 18px;
+      max-width: 1440px; margin: 0 auto;
+    }
+    #boot-skeleton .sk-pill { width: min(340px, 82vw); height: 26px; border-radius: 999px; background: rgba(255, 255, 255, 0.22); }
+    #boot-skeleton .sk-hero h1 {
+      margin: 0; max-width: 620px; color: #fff;
+      font-size: clamp(2.25rem, 5vw, 3.5rem); line-height: 1.2; font-weight: 800; letter-spacing: -0.01em;
+    }
+    #boot-skeleton .sk-hero p {
+      margin: 0; max-width: 520px; font-size: 15px; line-height: 1.7; color: var(--sk-muted);
+    }
+    #boot-skeleton .sk-cta { width: 140px; height: 48px; border-radius: 12px; background: var(--sk-surface); }
+    #boot-skeleton .sk-body { max-width: 1440px; margin: -56px auto 0; padding: 0 20px 48px; }
+    #boot-skeleton .sk-card {
+      background: var(--sk-surface); border: 1px solid var(--sk-line); border-radius: 16px;
+      padding: 16px; display: flex; align-items: center; gap: 12px;
+    }
+    #boot-skeleton .sk-card .sk-field { flex: 1; height: 44px; border-radius: 10px; background: var(--sk-block); }
+    #boot-skeleton .sk-card .sk-go { width: 108px; height: 44px; border-radius: 10px; background: var(--sk-teal); opacity: 0.85; }
+    #boot-skeleton .sk-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+    #boot-skeleton .sk-doc { background: var(--sk-surface); border: 1px solid var(--sk-line); border-radius: 16px; padding: 18px; }
+    #boot-skeleton .sk-doc .sk-avatar { width: 52px; height: 52px; border-radius: 12px; background: var(--sk-block); }
+    #boot-skeleton .sk-doc .sk-row { height: 12px; border-radius: 6px; background: var(--sk-block); margin-top: 12px; }
+    #boot-skeleton .sk-doc .sk-row.short { width: 55%; }
+    /* Staff boot straight into a dashboard-shaped shell instead of the consumer
+       hero — the app replaced this markup before it shipped, so it is static. */
+    #boot-admin .sk-admin-shell { display: flex; min-height: 100svh; }
+    #boot-admin .sk-admin-side {
+      width: 244px; flex-shrink: 0; padding: 18px 14px;
+      display: flex; flex-direction: column; gap: 6px;
+      background: var(--sk-surface); border-inline-end: 1px solid var(--sk-line);
+    }
+    #boot-admin .sk-admin-side .sk-logo { padding: 4px 6px 14px; }
+    #boot-admin .sk-nav-row {
+      height: 38px; border-radius: 10px; padding: 0 10px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    #boot-admin .sk-nav-row .sk-ico { width: 18px; height: 18px; border-radius: 5px; background: var(--sk-block); }
+    #boot-admin .sk-nav-row .sk-lbl { height: 9px; width: 62%; border-radius: 5px; background: var(--sk-block); }
+    #boot-admin .sk-nav-row.on { background: var(--sk-block); }
+    #boot-admin .sk-admin-main { flex: 1; min-width: 0; padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+    #boot-admin .sk-admin-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    #boot-admin .sk-title { width: 200px; height: 18px; border-radius: 6px; background: var(--sk-block); }
+    #boot-admin .sk-admin-actions { display: flex; gap: 8px; }
+    #boot-admin .sk-admin-actions span { width: 34px; height: 34px; border-radius: 10px; background: var(--sk-block); }
+    #boot-admin .sk-admin-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    #boot-admin .sk-stat { height: 76px; border-radius: 12px; border: 1px solid var(--sk-line); background: var(--sk-surface); }
+    #boot-admin .sk-admin-panel {
+      flex: 1; min-height: 260px; border-radius: 14px; padding: 14px;
+      border: 1px solid var(--sk-line); background: var(--sk-surface);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    #boot-admin .sk-admin-search { height: 38px; width: min(360px, 100%); border-radius: 10px; background: var(--sk-block); }
+    #boot-admin .sk-admin-row { height: 46px; border-radius: 10px; background: var(--sk-block); opacity: .72; }
+    #boot-admin .sk-admin-row:nth-child(even) { opacity: .5; }
+    /* #admin/manage opens on «كل المواعيد»: six stats and the filter card,
+       so the boot shell carries that shape instead of the overview one. */
+    #boot-admin .sk-admin-heading { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    #boot-admin .sk-admin-sub { display: none; width: 280px; max-width: 60%; height: 10px; border-radius: 5px; background: var(--sk-block); }
+    #boot-admin .sk-stat-extra { display: none; }
+    #boot-admin .sk-admin-head { display: none; height: 26px; border-radius: 6px; background: var(--sk-block); opacity: .85; }
+    #boot-admin .sk-admin-filter { display: none; }
+    #boot-admin[data-skin="manage"] .sk-admin-sub,
+    #boot-admin[data-skin="manage"] .sk-stat-extra,
+    #boot-admin[data-skin="manage"] .sk-admin-head { display: block; }
+    #boot-admin[data-skin="manage"] .sk-admin-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    #boot-admin[data-skin="manage"] .sk-admin-panel .sk-admin-search { display: none; }
+    #boot-admin[data-skin="manage"] .sk-admin-filter {
+      display: flex; flex-direction: column; gap: 10px; padding: 14px;
+      border-radius: 12px; border: 1px solid var(--sk-line); background: var(--sk-surface);
+    }
+    #boot-admin .sk-filter-row { display: flex; align-items: center; gap: 8px; }
+    #boot-admin .sk-filter-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 8px; background: var(--sk-block); opacity: .5; }
+    #boot-admin .sk-filter-tabs span { width: 34px; height: 22px; border-radius: 6px; background: var(--sk-surface); }
+    #boot-admin .sk-filter-row .sk-admin-search { flex: 1; width: auto; height: 34px; }
+    #boot-admin .sk-filter-row .sk-admin-select { width: 96px; height: 34px; border-radius: 8px; background: var(--sk-block); }
+    #boot-admin .sk-filter-row:first-child > .sk-admin-select { margin-inline-start: auto; }
+    /* Any other signed-in route: a small branded hold, never the marketing hero. */
+    #boot-splash { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+    #boot-splash .sk-logo-mark { width: 48px; height: 48px; border-radius: 14px; }
+    #boot-splash .sk-splash-line { width: 112px; height: 10px; border-radius: 5px; background: var(--sk-block); }
+    @media (max-width: 860px) {
+      #boot-admin .sk-admin-side { display: none; }
+      #boot-admin .sk-admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (min-width: 861px) and (max-width: 1100px) {
+      #boot-admin[data-skin="manage"] .sk-admin-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 900px) {
+      #boot-skeleton .sk-nav { display: none; }
+      #boot-skeleton .sk-grid { grid-template-columns: 1fr; }
+      #boot-skeleton .sk-card .sk-go { display: none; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      #boot-skeleton .sk-block-pulse,
+      #boot-admin .sk-block-pulse,
+      #boot-splash .sk-block-pulse { animation: sk-pulse 1.8s ease-in-out infinite; }
+      @keyframes sk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    }
+  </style>
 </head>
 <body class="bg-surface font-body-md text-on-surface antialiased">
-  <div id="app"></div>
+  <div id="app">
+    <div id="boot-skeleton" aria-hidden="true">
+      <div class="sk-head">
+        <div class="sk-logo">
+          <span class="sk-logo-mark"></span>
+          <span class="sk-logo-text sk-block-pulse"></span>
+        </div>
+        <div class="sk-nav"><span></span><span></span><span></span><span></span></div>
+        <div class="sk-actions"><span></span><span></span></div>
+      </div>
+      <div class="sk-hero">
+        <span class="sk-pill"></span>
+        <h1>احجز موعد طبيبك<br />أونلاين وبجدول العيادة نفسه.</h1>
+        <p>المواعيد المعروضة متاحة فعلاً في جدول العيادة: تختار، تؤكد، وتدير موعدك بنفسك — دون انتظار في صالة الاستقبال.</p>
+        <span class="sk-cta sk-block-pulse"></span>
+      </div>
+      <div class="sk-body">
+        <div class="sk-card">
+          <span class="sk-field sk-block-pulse"></span>
+          <span class="sk-field sk-block-pulse"></span>
+          <span class="sk-go sk-block-pulse"></span>
+        </div>
+        <div class="sk-grid">
+          <div class="sk-doc"><div class="sk-avatar sk-block-pulse"></div><div class="sk-row sk-block-pulse"></div><div class="sk-row short sk-block-pulse"></div></div>
+          <div class="sk-doc"><div class="sk-avatar sk-block-pulse"></div><div class="sk-row sk-block-pulse"></div><div class="sk-row short sk-block-pulse"></div></div>
+          <div class="sk-doc"><div class="sk-avatar sk-block-pulse"></div><div class="sk-row sk-block-pulse"></div><div class="sk-row short sk-block-pulse"></div></div>
+        </div>
+      </div>
+    </div>
+    <div id="boot-splash" hidden aria-hidden="true">
+      <span class="sk-logo-mark sk-block-pulse"></span>
+      <span class="sk-splash-line sk-block-pulse"></span>
+    </div>
+    <div id="boot-admin" data-skin="overview" hidden aria-hidden="true">
+      <div class="sk-admin-shell">
+        <aside class="sk-admin-side">
+          <div class="sk-logo"><span class="sk-logo-mark"></span><span class="sk-logo-text sk-block-pulse"></span></div>
+          <div class="sk-nav-row on"><span class="sk-ico"></span><span class="sk-lbl sk-block-pulse"></span></div>
+          <div class="sk-nav-row"><span class="sk-ico"></span><span class="sk-lbl sk-block-pulse"></span></div>
+          <div class="sk-nav-row"><span class="sk-ico"></span><span class="sk-lbl sk-block-pulse"></span></div>
+          <div class="sk-nav-row"><span class="sk-ico"></span><span class="sk-lbl sk-block-pulse"></span></div>
+          <div class="sk-nav-row"><span class="sk-ico"></span><span class="sk-lbl sk-block-pulse"></span></div>
+        </aside>
+        <div class="sk-admin-main">
+          <div class="sk-admin-top">
+            <div class="sk-admin-heading">
+              <span class="sk-title sk-block-pulse"></span>
+              <span class="sk-admin-sub sk-block-pulse"></span>
+            </div>
+            <span class="sk-admin-actions"><span></span><span></span></span>
+          </div>
+          <div class="sk-admin-stats">
+            <span class="sk-stat sk-block-pulse"></span>
+            <span class="sk-stat sk-block-pulse"></span>
+            <span class="sk-stat sk-block-pulse"></span>
+            <span class="sk-stat sk-block-pulse"></span>
+            <span class="sk-stat sk-stat-extra sk-block-pulse"></span>
+            <span class="sk-stat sk-stat-extra sk-block-pulse"></span>
+          </div>
+          <div class="sk-admin-filter">
+            <div class="sk-filter-row">
+              <span class="sk-filter-tabs"><span></span><span></span><span></span><span></span><span></span></span>
+              <span class="sk-admin-select sk-block-pulse"></span>
+            </div>
+            <div class="sk-filter-row">
+              <span class="sk-admin-search sk-block-pulse"></span>
+              <span class="sk-admin-select sk-block-pulse"></span>
+              <span class="sk-admin-select sk-block-pulse"></span>
+            </div>
+          </div>
+          <div class="sk-admin-panel">
+            <span class="sk-admin-head sk-block-pulse"></span>
+            <span class="sk-admin-search sk-block-pulse"></span>
+            <div class="sk-admin-row sk-block-pulse"></div>
+            <div class="sk-admin-row sk-block-pulse"></div>
+            <div class="sk-admin-row sk-block-pulse"></div>
+            <div class="sk-admin-row sk-block-pulse"></div>
+            <div class="sk-admin-row sk-block-pulse"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div id="toast-container" class="fixed bottom-[max(2rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-[60] flex flex-col items-center gap-2 pointer-events-none px-4 w-full max-w-lg"></div>
+  <noscript>
+    <p style="position: fixed; inset: auto 0 0 0; margin: 0; padding: 14px; background: #191c1e; color: #fff; font-family: system-ui, sans-serif; text-align: center;">
+      يحتاج ميعادي إلى تفعيل JavaScript لعرض الأطباء والمواعيد.
+    </p>
+  </noscript>
+  <!-- Pick the boot shell before the module graph loads. Signed-in staff must
+       never see the consumer hero while the session is being validated. -->
+  <script>
+    (function () {
+      try {
+        var hasSession = false;
+        for (var i = 0; i < localStorage.length; i++) {
+          var key = localStorage.key(i);
+          if (key && /^sb-.*-auth-token$/.test(key)) { hasSession = true; break; }
+        }
+        var preview = /(?:^|[?&])adminfixture(?:[=&]|$)/.test(location.search);
+        if (!hasSession && !preview) return; // anonymous first visit keeps the hero (LCP)
+        var role = localStorage.getItem("myappo.role");
+        var staff = role === "admin" || role === "doctor";
+        var parts = (location.hash || "").replace(/^#/, "").split("/");
+        var seg = parts[0];
+        var sub = parts[1] || "";
+        var showAdmin = preview || (staff && seg === "admin");
+        var hero = document.getElementById("boot-skeleton");
+        var target = document.getElementById(showAdmin ? "boot-admin" : "boot-splash");
+        if (hero) hero.hidden = true;
+        if (target) {
+          // #admin/manage boots straight into the appointments panel shape.
+          if (showAdmin) target.setAttribute("data-skin", sub === "manage" ? "manage" : "overview");
+          target.hidden = false;
+        }
+      } catch (e) {}
+    })();
+  </script>
   <script type="module" src="/src/app.ts"></script>
 </body>
 </html>

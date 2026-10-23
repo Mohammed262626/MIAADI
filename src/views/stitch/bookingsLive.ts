@@ -8,7 +8,6 @@
 import { escapeHtml, formatArabicDate, formatRelativeDay, formatTime, localDateISO, translateAuthError } from "../../lib/format";
 import { cancelAppointmentRPC, getPatientAppointments, getReviewedAppointmentIds } from "../../lib/supabase";
 import { initials, money, statusMeta } from "../../components/ui";
-import { qrSvg } from "../../components/qr";
 import { setRescheduleIntent } from "../../lib/reschedule";
 import { confirmSheet } from "../../components/ConfirmDialog";
 import { showToast } from "../../components/Toast";
@@ -317,7 +316,13 @@ export async function wireBookings(appEl: HTMLElement, user: BookingsUser): Prom
     const hex = primary.id.replace(/-/g, "").toUpperCase();
     setText("bk-pass-token", `TOKEN: ${hex.slice(0, 4)}-${hex.slice(4, 8)}-MIAADI`);
     const qr = el("bk-pass-qr");
-    if (qr) qr.innerHTML = qrSvg(bookingRef(primary.id));
+    // QR generation is only needed once a booking exists — load it on demand.
+    if (qr) {
+      const qrPayload = bookingRef(primary.id);
+      void import("../../components/qr")
+        .then(({ qrSvg }) => { if (qr.isConnected) qr.innerHTML = qrSvg(qrPayload); })
+        .catch(() => { /* leave the frame empty */ });
+    }
     setText("bk-pass-paid", `رسوم الاستشارة: ${money(primary.fee)} — الدفع عند الحضور`);
 
     setText("bk-pass-address", primary.hospital || "—");

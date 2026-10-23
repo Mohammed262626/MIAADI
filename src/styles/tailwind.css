@@ -229,7 +229,9 @@ html { scrollbar-width: thin; scrollbar-color: var(--color-outline-variant) tran
   transition:
     transform 160ms var(--ease-out-quint),
     background-color 150ms ease,
+    border-color 150ms ease,
     color 150ms ease,
+    opacity 150ms ease,
     box-shadow 200ms var(--ease-out-quint);
 }
 .press:active { transform: scale(0.97); }
@@ -272,6 +274,7 @@ html[data-theme="dark"] .clinical-shadow-glow { box-shadow: 0 24px 50px -14px rg
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
   /* Keep the entrance readable without movement. */
   .rise-in { animation: fade-in 150ms ease both !important; animation-delay: 0ms !important; }
+  .press:active { transform: none; }
 }
 
 @media (max-width: 480px) {

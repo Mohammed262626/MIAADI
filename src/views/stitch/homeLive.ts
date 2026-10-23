@@ -2,12 +2,17 @@ import { escapeHtml, formatArabicDate, formatRelativeDay, formatTime, localDateI
 import { getDoctorSpecializations, getDoctorsDirectory, getPatientAppointments, type DoctorDirectoryRow } from "../../lib/supabase";
 import { countSpecialties, specialtyKeyOf } from "../../lib/specialties";
 import { initials, money, shortRef } from "../../components/ui";
-import { qrSvg } from "../../components/qr";
 import { NEXT_APPOINTMENT_SKELETON } from "./home";
-import { seedDoctorsFilters } from "./doctorsLive";
 import { storedCity } from "../../lib/geodata";
 
 type HomeUser = { id?: string; profile?: { full_name?: string | null; role?: string | null } | null } | null;
+
+/* The doctors catalog is a separate chunk; the home page only hands it the
+   visitor's chosen filters, so it must not be a static dependency here. */
+type DoctorsSeedPatch = Parameters<typeof import("./doctorsLive").seedDoctorsFilters>[0];
+function seedDoctorsLater(patch: DoctorsSeedPatch) {
+  void import("./doctorsLive").then((m) => m.seedDoctorsFilters(patch));
+}
 
 /* ------------------------------ featured doctors ------------------------------ */
 
@@ -208,7 +213,7 @@ function renderHomeHospitals(root: HTMLElement, docs: DoctorDirectoryRow[]) {
   el.innerHTML = groups.map((h, i) => hospitalCardHtml(h, i)).join("");
   el.querySelectorAll<HTMLElement>("[data-hosp-explore]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      seedDoctorsFilters({ hospital: btn.dataset.hospital || "", city: btn.dataset.city || "" });
+      seedDoctorsLater({ hospital: btn.dataset.hospital || "", city: btn.dataset.city || "" });
       location.hash = "#doctors";
     });
   });
@@ -258,7 +263,7 @@ function wireHeroControls(root: HTMLElement) {
   root.querySelector<HTMLFormElement>("#hero-search")?.addEventListener("submit", (e) => {
     e.preventDefault();
     const val = (sel: string) => (root.querySelector(sel) as HTMLInputElement | HTMLSelectElement | null)?.value.trim() || "";
-    seedDoctorsFilters({
+    seedDoctorsLater({
       q: val("#hero-q"),
       city: val("#hero-city"),
       insurance: val("#hero-insurance"),
@@ -269,8 +274,8 @@ function wireHeroControls(root: HTMLElement) {
   root.querySelectorAll<HTMLElement>("[data-quick]").forEach((btn) => {
     btn.addEventListener("click", () => {
       switch (btn.dataset.quick) {
-        case "today": seedDoctorsFilters({ avail: "today" }); break;
-        case "price": seedDoctorsFilters({ sort: "price" }); break;
+        case "today": seedDoctorsLater({ avail: "today" }); break;
+        case "price": seedDoctorsLater({ sort: "price" }); break;
         default: return;
       }
       location.hash = "#doctors";
@@ -281,7 +286,7 @@ function wireHeroControls(root: HTMLElement) {
     btn.addEventListener("click", () => {
       const specialty = btn.dataset.specialtyLink;
       if (!specialty) return;
-      seedDoctorsFilters({ specialty });
+      seedDoctorsLater({ specialty });
       location.hash = "#doctors";
     });
   });
@@ -391,7 +396,7 @@ function bookingHeroHtml(appt: AppointmentRow): string {
     </div>
   </div>
   <div class="mt-3 flex items-center gap-3 rounded-xl bg-surface-container-lowest p-2.5">
-    <div class="h-14 w-14 shrink-0 rounded-md bg-white p-1" role="img" aria-label="رمز الاستجابة السريعة لرقم مرجع الموعد">${qrSvg(pass)}</div>
+    <div class="h-14 w-14 shrink-0 rounded-md bg-white p-1" role="img" aria-label="رمز الاستجابة السريعة لرقم مرجع الموعد" data-qr-pass="${escapeHtml(pass)}"></div>
     <p class="text-[13px] leading-snug text-on-surface-variant">أظهر هذا الرمز في الاستقبال للتحقق من حجزك.</p>
   </div>
   <div class="mt-3 flex gap-2">
@@ -407,6 +412,16 @@ function bookingHeroHtml(appt: AppointmentRow): string {
 
 /* ---------------------------------- wiring ---------------------------------- */
 
+async function paintHeroQr(heroEl: HTMLElement) {
+  const box = heroEl.querySelector<HTMLElement>("[data-qr-pass]");
+  if (!box) return;
+  const pass = box.dataset.qrPass || "";
+  try {
+    const { qrSvg } = await import("../../components/qr");
+    if (box.isConnected) box.innerHTML = qrSvg(pass);
+  } catch { /* keep the empty frame */ }
+}
+
 async function renderNextAppointment(root: HTMLElement, user: HomeUser, rows: AppointmentRow[] | null) {
   const heroEl = root.querySelector<HTMLElement>("#home-next-appointment");
   if (!heroEl) return;
@@ -414,6 +429,9 @@ async function renderNextAppointment(root: HTMLElement, user: HomeUser, rows: Ap
   if (rows) {
     const next = pickNextAppointment(rows);
     heroEl.innerHTML = next ? bookingHeroHtml(next) : emptyHeroHtml(true);
+    // The QR generator is a booking-flow dependency; keep it out of the entry
+    // chunk and paint the card first, then fill the code in.
+    if (next) void paintHeroQr(heroEl);
     return;
   }
   heroEl.innerHTML = heroFailureHtml();

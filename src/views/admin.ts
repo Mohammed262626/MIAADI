@@ -176,7 +176,7 @@ export function renderAdminView(
     tbody.innerHTML = rows.map((r) => `
       <tr class="transition-colors hover:bg-surface-container-low/60">
         <td class="px-4 py-3 font-medium text-on-surface">${escapeHtml(r.patient_name)}</td>
-        <td class="px-4 py-3 text-[12px] tabular-nums text-on-surface-variant" dir="ltr">${escapeHtml(r.patient_phone)}</td>
+        <td class="px-4 py-3 text-[12px] text-on-surface-variant"><span dir="ltr" class="tabular-nums">${escapeHtml(r.patient_phone)}</span></td>
         ${opts.singleDoctor ? "" : `<td class="px-4 py-3 text-on-surface">${escapeHtml(r.doctor_name)}</td>`}
         <td class="px-4 py-3 text-[12px] text-on-surface-variant"><span class="tabular-nums">${escapeHtml(formatArabicDate(r.available_date))}</span> · <span class="tabular-nums">${escapeHtml(formatTime(r.start_time))}</span></td>
         <td class="px-4 py-3">${badge(r.status)}</td>

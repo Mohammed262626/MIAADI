@@ -1,5 +1,5 @@
 import "./styles/tailwind.css";
-import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, saveDoctor, deleteDoctor, listHospitals, findDoctorByUser, listDoctorSchedules, createDoctorSchedules, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile, invalidateDoctorsDirectory, findCachedDirectoryDoctor, getDoctorProfile } from "./lib/supabase";
+import { getCurrentUser, onAuthChange, logoutUser, loginUser, registerPatient, bookAppointmentRPC, getPatientAppointments, cancelAppointmentRPC, rescheduleAppointmentRPC, getAdminAppointments, getAdminStats, updateAppointmentState, cancelAppointmentClinic, adminRescheduleAppointmentRPC, adminDeleteAppointmentRPC, listDoctors, adminListProfiles, assignUserRole, adminCreateAccount, adminUpdateAccountProfile, adminSetAccountPassword, adminDeleteAccount, saveDoctor, deleteDoctor, listHospitals, findDoctorByUser, listDoctorSchedules, createDoctorSchedules, deleteDoctorSchedule, subscribeToRealtimeUpdates, getAvailableSlots, getDoctorAvailability, saveDoctorAvailability, blockDoctorDates, generateDoctorSchedule, listBlockedDates, unblockDoctorDates, purgeExpiredSlots, updatePatientProfile, invalidateDoctorsDirectory, findCachedDirectoryDoctor, getDoctorProfile, rememberUserRole, type DoctorAdminRow } from "./lib/supabase";
 import { localDateISO, escapeHtml, translateAuthError, formatTime, formatArabicDate } from "./lib/format";
 import { getSupabaseConfig } from "./lib/config";
 import { SPECIALTIES } from "./lib/specialties";
@@ -9,24 +9,15 @@ import { mountAuthModal } from "./components/AuthModal";
 import { confirmSheet } from "./components/ConfirmDialog";
 import { emptyState } from "./components/ui";
 import type { Doctor, Slot } from "./components/DoctorCard";
-import { renderConfirmView } from "./views/confirm";
 import { fixtureAccounts, fixtureAvailability, fixtureBlocked, fixtureDoctors, fixtureSchedules, mgFixture, mgOpenDoctor } from "./views/adminFixture";
-import { renderAdminView } from "./views/admin";
+import type { AdminAccount } from "./views/stitch/adminAccounts";
 import { renderSiteHeader, renderSiteFooter } from "./components/SiteHeader";
+/* The landing page is the first paint, so its shell ships in the entry chunk.
+   Every other consumer view is imported on demand — the home route must never
+   download the booking flow, the doctor dossier or the QR generator. */
 import { HOME_MAIN } from "./views/stitch/home";
-import { DOCTORS_MAIN } from "./views/stitch/doctors";
-import { HOSPITALS_MAIN } from "./views/stitch/hospitals";
-import { DOCTORPROFILE_MAIN } from "./views/stitch/doctorProfile";
-import { BOOKINGS_MAIN } from "./views/stitch/bookings";
-import { PROFILE_MAIN } from "./views/stitch/profile";
-import { NOTFOUND_MAIN } from "./views/stitch/notFound";
-import { registerStitchGlobals } from "./views/stitch/interactions";
 import { wireHome } from "./views/stitch/homeLive";
-import { wireDoctorsLive } from "./views/stitch/doctorsLive";
-import { wireHospitalsLive } from "./views/stitch/hospitalsLive";
-import { wireDoctorProfile } from "./views/stitch/doctorProfileLive";
-import { wireBookings } from "./views/stitch/bookingsLive";
-import { wireProfile } from "./views/stitch/profileLive";
+import { registerStitchGlobals } from "./views/stitch/interactions";
 
 // dev-only: force a theme for screenshots (?theme=light|dark)
 if (import.meta.env.DEV) {
@@ -104,15 +95,8 @@ async function findDoctor(id: string | undefined): Promise<Doctor | undefined> {
 
 /* ---------------------------------- render ---------------------------------- */
 
-const STATIC_VIEWS: Record<string, string> = {
-  home: HOME_MAIN,
-  doctors: DOCTORS_MAIN,
-  hospitals: HOSPITALS_MAIN,
-  doctor: DOCTORPROFILE_MAIN,
-  appointments: BOOKINGS_MAIN,
-  profile: PROFILE_MAIN,
-  notfound: NOTFOUND_MAIN,
-};
+/* Consumer routes other than home are code-split: shell + wiring live in their
+   own chunk so the landing page payload stays small. */
 
 /* Page titles and descriptions, applied as the route changes. They state only
    what the page actually contains — no marketing claims. */
@@ -183,7 +167,10 @@ function wireReveal() {
   nodes.forEach((n) => revealObserver!.observe(n));
 }
 
+let renderSeq = 0;
+
 function render() {
+  const seq = ++renderSeq;
   const route = state.route;
   const role = state.currentUser?.profile?.role as string | undefined;
   const canAdmin = role === "admin" || role === "doctor";
@@ -203,30 +190,8 @@ function render() {
 
   if (route.name === "admin") {
     appEl.innerHTML = `<main id="main-content" tabindex="-1" class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"><div id="admin-boot" class="p-space-xl text-center text-secondary font-body-md text-body-md flex items-center justify-center gap-space-sm"><span class="material-symbols-outlined animate-spin">progress_activity</span> جاري تحميل لوحة العيادة…</div></main><div id="auth-mount"></div>`;
-  } else {
-    const staticHtml = STATIC_VIEWS[route.name];
-    const mainOpen = staticHtml
-      ? `<main id="main-content" tabindex="-1" class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh">${staticHtml}</main>`
-      : `<main id="main-root" tabindex="-1" class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"></main>`;
-    appEl.innerHTML = `${renderSiteHeader(state.currentUser, route)}${mainOpen}${renderSiteFooter()}<div id="auth-mount"></div>`;
-  }
-
-  wireShell();
-  wireReveal();
-  if (route.name === "home") void wireHome(appEl, state.currentUser);
-  if (route.name === "doctors") void wireDoctorsLive(appEl);
-  if (route.name === "hospitals") void wireHospitalsLive(appEl);
-  if (route.name === "doctor" && route.param) void wireDoctorProfile(appEl, route.param, state.currentUser);
-  if (route.name === "appointments") void wireBookings(appEl, state.currentUser);
-  if (route.name === "profile") void wireProfile(appEl, state.currentUser, {
-    onOpenAuth: () => authModal?.open(),
-    onLogout: () => logoutToSite(),
-    onSave: async ({ fullName, phone }) => {
-      try { await updatePatientProfile({ fullName, phone }); state.currentUser = await getCurrentUser(); render(); }
-      catch (e) { showToast(translateAuthError(e), "error"); throw e; }
-    },
-  });
-  if (route.name === "admin") {
+    wireShell();
+    // The dashboard is its own async chunk; the boot panel above covers the wait.
     void (async () => {
       const params = new URLSearchParams(location.search);
       // Admins get the clinic-wide shell; doctors keep the doctor dashboard.
@@ -255,12 +220,11 @@ function render() {
         // admin screens, so the business logic lives in exactly one place.
         void wireAdmin(appEl, state.currentUser, {
           renderAppointments: (host) => renderAdminTab(host, { embedded: true }),
-          renderDoctors: (host, onBack) => renderAdminManagement(host, "management", onBack),
-          renderAccounts: (host, onBack) => renderAdminManagement(host, "accounts", onBack),
-          renderSchedules: (host) => renderSchedulePanel(host, null, { title: "جدولة الأطباء", subtitle: "اختر الطبيب لعرض جدول عمله أو تعديله." }),
+          renderDoctors: (host) => renderAdminManagement(host, "management"),
+          renderAccounts: (host) => renderAdminManagement(host, "accounts"),
           onLogout: () => logoutToSite(),
           initialView: state.route.param === "manage" ? "appointments" : undefined,
-        });
+        }).then(warmAdminPanels, () => {});
         return;
       }
 
@@ -280,29 +244,138 @@ function render() {
         initialView: state.route.param === "manage" ? "appointments" : undefined,
       });
     })();
+    return;
   }
 
-  const authMount = document.getElementById("auth-mount") as HTMLElement;
-  authModal = mountAuthModal(authMount,
-    async ({ email, password }) => {
+  // Home paints immediately; every other consumer route fills #main-root once
+  // its chunk lands, then re-checks that the route is still current.
+  paintConsumerShell(route, route.name === "home" ? HOME_MAIN : null);
+  if (route.name === "home") { void wireHome(appEl, state.currentUser); return; }
+  void mountConsumerView(route, seq);
+}
+
+function authHandlers() {
+  return {
+    async login({ email, password }: { email: string; password: string }) {
       const r = await loginUser({ email, password });
       state.currentUser = await getCurrentUser();
       await refreshAll();
       render();
       return r as unknown as void;
     },
-    async ({ email, password, fullName, phone }) => {
+    async register({ email, password, fullName, phone }: { email: string; password: string; fullName: string; phone: string }) {
       const r = await registerPatient({ email, password, fullName, phone });
       state.currentUser = await getCurrentUser();
       await refreshAll();
       render();
       return r as unknown as void;
-    }
-  );
+    },
+  };
+}
 
-  const main = document.getElementById("main-root") as HTMLElement | null;
-  switch (route.name) {
-    case "confirm": if (main) void renderConfirmTab(main, route.param!); break;
+/* Header + footer + auth dialog around an empty (or pre-filled) main area.
+   Header and footer paint before any view chunk resolves. */
+function paintConsumerShell(route: Route, html: string | null) {
+  const mainOpen = html
+    ? `<main id="main-content" tabindex="-1" class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh">${html}</main>`
+    : `<main id="main-root" tabindex="-1" class="w-full pt-[calc(5rem+env(safe-area-inset-top))] bg-surface min-h-dvh"><div class="flex min-h-[60vh] items-center justify-center gap-2 font-body-md text-body-md text-secondary"><span class="material-symbols-outlined animate-spin" aria-hidden="true">progress_activity</span> جاري التحميل…</div></main>`;
+  appEl.innerHTML = `${renderSiteHeader(state.currentUser, route)}${mainOpen}${renderSiteFooter()}<div id="auth-mount"></div>`;
+  wireShell();
+  wireReveal();
+  const authMount = document.getElementById("auth-mount") as HTMLElement | null;
+  if (authMount) {
+    const handlers = authHandlers();
+    authModal = mountAuthModal(authMount, handlers.login, handlers.register);
+  }
+}
+
+/* Lazily loaded consumer views. Each branch awaits its own chunk and bails if
+   another render happened while it was in flight. */
+async function mountConsumerView(route: Route, seq: number) {
+  const main = document.getElementById("main-root");
+  if (!main) return;
+  try {
+    switch (route.name) {
+      case "doctors": {
+        const [{ DOCTORS_MAIN }, { wireDoctorsLive }] = await Promise.all([
+          import("./views/stitch/doctors"),
+          import("./views/stitch/doctorsLive"),
+        ]);
+        if (seq !== renderSeq) return;
+        main.innerHTML = DOCTORS_MAIN;
+        void wireDoctorsLive(appEl);
+        break;
+      }
+      case "hospitals": {
+        const [{ HOSPITALS_MAIN }, { wireHospitalsLive }] = await Promise.all([
+          import("./views/stitch/hospitals"),
+          import("./views/stitch/hospitalsLive"),
+        ]);
+        if (seq !== renderSeq) return;
+        main.innerHTML = HOSPITALS_MAIN;
+        void wireHospitalsLive(appEl);
+        break;
+      }
+      case "doctor": {
+        const [{ DOCTORPROFILE_MAIN }, { wireDoctorProfile }] = await Promise.all([
+          import("./views/stitch/doctorProfile"),
+          import("./views/stitch/doctorProfileLive"),
+        ]);
+        if (seq !== renderSeq) return;
+        main.innerHTML = DOCTORPROFILE_MAIN;
+        if (route.param) void wireDoctorProfile(appEl, route.param, state.currentUser);
+        break;
+      }
+      case "appointments": {
+        const [{ BOOKINGS_MAIN }, { wireBookings }] = await Promise.all([
+          import("./views/stitch/bookings"),
+          import("./views/stitch/bookingsLive"),
+        ]);
+        if (seq !== renderSeq) return;
+        main.innerHTML = BOOKINGS_MAIN;
+        void wireBookings(appEl, state.currentUser);
+        break;
+      }
+      case "profile": {
+        const [{ PROFILE_MAIN }, { wireProfile }] = await Promise.all([
+          import("./views/stitch/profile"),
+          import("./views/stitch/profileLive"),
+        ]);
+        if (seq !== renderSeq) return;
+        main.innerHTML = PROFILE_MAIN;
+        void wireProfile(appEl, state.currentUser, {
+          onOpenAuth: () => authModal?.open(),
+          onLogout: () => logoutToSite(),
+          onSave: async ({ fullName, phone }) => {
+            try { await updatePatientProfile({ fullName, phone }); state.currentUser = await getCurrentUser(); render(); }
+            catch (e) { showToast(translateAuthError(e), "error"); throw e; }
+          },
+        });
+        break;
+      }
+      case "notfound": {
+        const { NOTFOUND_MAIN } = await import("./views/stitch/notFound");
+        if (seq !== renderSeq) return;
+        main.innerHTML = NOTFOUND_MAIN;
+        break;
+      }
+      case "confirm": {
+        if (seq !== renderSeq) return;
+        void renderConfirmTab(main, route.param!);
+        break;
+      }
+      default:
+        break;
+    }
+    if (seq === renderSeq) wireReveal();
+  } catch {
+    if (seq !== renderSeq) return;
+    main.innerHTML = `<div class="mx-auto flex max-w-[520px] flex-col items-center gap-3 px-4 py-16 text-center">
+      <span class="material-symbols-outlined text-[36px] text-error" aria-hidden="true">cloud_off</span>
+      <p class="text-[15px] font-semibold text-on-surface">تعذّر تحميل الصفحة</p>
+      <p class="text-[13px] text-on-surface-variant">تحقّق من اتصالك ثم أعد المحاولة.</p>
+      <button type="button" onclick="location.reload()" class="mt-1 h-10 rounded-lg bg-primary px-4 text-[13px] font-semibold text-on-primary">إعادة المحاولة</button>
+    </div>`;
   }
 }
 
@@ -500,6 +573,8 @@ async function renderConfirmTab(main: HTMLElement, scheduleId: string) {
     main.innerHTML = `<div class="px-4 pt-3">${emptyState({ icon: "error", title: "تعذّر تحميل بيانات الطبيب", body: "ارجع وأعد المحاولة." })}</div>`;
     return;
   }
+  // The confirm screen is a booking-flow chunk: fetch it only when reached.
+  const { renderConfirmView } = await import("./views/confirm");
   renderConfirmView(main, {
     doctor,
     slot: pending.slot,
@@ -565,6 +640,23 @@ async function renderSchedulePanel(host: HTMLElement, doctorId: string | null, o
   }));
 }
 
+/* The admin sidebar can reach three more panels after the first one paints.
+   Warming their chunks in idle time means a tab switch never waits on a
+   download — otherwise they are imported on first use. */
+let adminPanelsWarmed = false;
+function warmAdminPanels() {
+  if (adminPanelsWarmed) return;
+  adminPanelsWarmed = true;
+  const warm = () => {
+    void import("./views/admin");
+    void import("./views/stitch/adminDoctors");
+    void import("./views/stitch/adminAccounts");
+  };
+  const idle = (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+  if (idle) idle(warm, { timeout: 2000 });
+  else window.setTimeout(warm, 600);
+}
+
 async function renderAdminTab(main: HTMLElement, opts: { embedded?: boolean } = {}) {
   const fxTab = opts.embedded ? null : mgFixture();
   if (fxTab) {
@@ -582,21 +674,40 @@ async function renderAdminTab(main: HTMLElement, opts: { embedded?: boolean } = 
   // Doctor accounts have no business in the admin screens: keep them on bookings.
   if (isDoctor && state.adminSubTab !== "appointments") state.adminSubTab = "appointments";
   if (state.adminSubTab !== "appointments") { await renderAdminManagement(main, state.adminSubTab); return; }
-  try {
-    if (isDoctor) {
-      const my = await findDoctorByUser(state.currentUser!.id);
-      state.adminManagementDoctor = my?.id || null;
-    }
-    if (!isDoctor && !state.adminDoctors.length) state.adminDoctors = await listDoctors();
-    if (!isDoctor) state.adminDoctorsCache = state.adminDoctors;
-  } catch { /* ignore */ }
-  let stats = { total: 0, booked: 0, completed: 0, cancelled: 0, noShow: 0, today: 0 };
-  try { stats = await getAdminStats(); } catch { /* ignore */ }
-  try {
-    const res = await getAdminAppointments({ statuses: state.adminFilters.status === "all" ? undefined : state.adminFilters.status === "cancelled" ? ["cancelled_by_patient", "cancelled_by_clinic"] : [state.adminFilters.status], doctorId: state.adminFilters.doctorId || undefined, dateFrom: state.adminFilters.dateFrom || undefined, dateTo: state.adminFilters.dateTo || undefined, search: state.adminFilters.search || undefined, page: state.adminPage, pageSize: state.adminPageSize, sortBy: state.adminFilters.sortBy, sortDir: state.adminFilters.sortDir });
-    state.adminRows = (res.rows as typeof state.adminRows) || []; state.adminTotal = res.total || 0;
-  } catch (e) { showToast(translateAuthError(e), "error"); }
+  // Everything this panel needs goes out at once: the roster, the stats, the
+  // page of rows and the view chunk. These used to be four serial awaits and
+  // that chain, not the paint itself, decided when the tab's LCP landed.
+  const staffTask = (async () => {
+    try {
+      if (isDoctor) {
+        const my = await findDoctorByUser(state.currentUser!.id);
+        state.adminManagementDoctor = my?.id || null;
+      } else if (!state.adminDoctors.length) {
+        state.adminDoctors = await listDoctors();
+        state.adminDoctorsCache = state.adminDoctors;
+      } else {
+        state.adminDoctorsCache = state.adminDoctors;
+      }
+    } catch { /* ignore */ }
+  })();
 
+  const statsTask = (async () => {
+    try { return await getAdminStats(); }
+    catch { return { total: 0, booked: 0, completed: 0, cancelled: 0, noShow: 0, today: 0 }; }
+  })();
+
+  const rowsTask = (async () => {
+    try {
+      const res = await getAdminAppointments({ statuses: state.adminFilters.status === "all" ? undefined : state.adminFilters.status === "cancelled" ? ["cancelled_by_patient", "cancelled_by_clinic"] : [state.adminFilters.status], doctorId: state.adminFilters.doctorId || undefined, dateFrom: state.adminFilters.dateFrom || undefined, dateTo: state.adminFilters.dateTo || undefined, search: state.adminFilters.search || undefined, page: state.adminPage, pageSize: state.adminPageSize, sortBy: state.adminFilters.sortBy, sortDir: state.adminFilters.sortDir });
+      state.adminRows = (res.rows as typeof state.adminRows) || []; state.adminTotal = res.total || 0;
+    } catch (e) { showToast(translateAuthError(e), "error"); }
+  })();
+
+  // The admin tables are only needed once a staff member opens the dashboard.
+  const viewTask = import("./views/admin");
+
+  const [stats, { renderAdminView }] = await Promise.all([statsTask, viewTask]);
+  await Promise.all([staffTask, rowsTask]);
   renderAdminView(main, {
     rows: state.adminRows, total: state.adminTotal, page: state.adminPage, pageSize: state.adminPageSize, stats,
     filters: state.adminFilters, doctors: isDoctor ? [] : state.adminDoctors.map((d) => ({ id: d.id, name: d.name })),
@@ -697,140 +808,27 @@ async function openApptEditDialog(row: AdminRow, main: HTMLElement) {
   });
 }
 
-async function renderAdminManagement(main: HTMLElement, tab: "management" | "accounts", onBack?: () => void) {
-  // Doctors manage their own calendar from the schedule panel — this screen is admin-only.
-  if (state.currentUser?.profile?.role === "doctor") return;
-  // The admin shell passes its own back handler so the sidebar view changes
-  // instead of re-rendering the whole dashboard.
-  const goBack = () => {
-    if (onBack) { onBack(); return; }
-    state.adminSubTab = "appointments";
-    render();
-  };
-  if (tab === "accounts") {
-    try { state.adminAccounts = mgFixture() ? (fixtureAccounts as unknown as typeof state.adminAccounts) : await adminListProfiles(); } catch (e) { showToast(translateAuthError(e), "error"); }
-    const rows = state.adminAccounts as { user_id: string; full_name: string; email: string; phone: string; role: string }[];
-    const rolePill = (role: string) => role === "admin"
-      ? `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-lg font-label-sm text-label-sm font-bold bg-inverse-surface text-inverse-on-surface"><span class="material-symbols-outlined text-[14px]">shield_person</span>مشرف</span>`
-      : role === "doctor"
-        ? `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-lg font-label-sm text-label-sm font-bold bg-primary/10 text-primary"><span class="material-symbols-outlined text-[14px]">stethoscope</span>طبيب</span>`
-        : `<span class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded-lg font-label-sm text-label-sm font-bold bg-surface-container-high text-on-surface-variant"><span class="material-symbols-outlined text-[14px]">person</span>مريض</span>`;
-    main.innerHTML = `
-      <div class="w-full px-margin-desktop py-space-xl">
-        <div class="flex flex-wrap items-center justify-between gap-space-md mb-space-lg">
-          <div class="flex items-center gap-space-sm text-secondary font-label-md text-label-md">
-            <span class="text-on-surface">بوابة الإدارة</span><span>/</span><span class="text-primary font-bold">الحسابات والأدوار</span>
-          </div>
-          <button data-back class="flex items-center gap-space-xs px-space-md py-2 rounded-lg border border-line font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">
-            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>رجوع للحجوزات
-          </button>
-        </div>
-        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-lg mb-space-xl">
-          <div>
-            <div class="mb-space-xs text-[12px] font-medium text-on-surface-variant">إدارة المستخدمين</div>
-            <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">الحسابات والأدوار
-            </h1>
-          </div>
-          <div class="flex items-center gap-space-sm bg-surface-container-low px-space-md py-space-xs rounded-lg">
-            <span class="material-symbols-outlined text-primary text-[20px]">group</span>
-            <span class="font-label-sm text-label-sm text-on-surface">إجمالي الحسابات <span class="tabular-nums font-bold">${rows.length}</span></span>
-          </div>
-        </div>
-        <div class="overflow-hidden rounded-xl border border-line bg-surface-container-lowest">
-          <div class="max-sm:hidden overflow-x-auto">
-            <table class="w-full font-body-md text-body-md">
-              <thead class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm"><tr>
-                <th class="px-space-lg py-space-md text-right font-semibold">الاسم</th>
-                <th class="px-space-lg py-space-md text-right font-semibold">البريد الإلكتروني</th>
-                <th class="px-space-lg py-space-md text-right font-semibold">الهاتف</th>
-                <th class="px-space-lg py-space-md text-right font-semibold">الدور</th>
-                <th class="px-space-lg py-space-md text-center font-semibold">تغيير الدور</th>
-              </tr></thead>
-              <tbody class="divide-y divide-line">${rows.map((p) => `
-                <tr class="hover:bg-surface-container-low/60 transition-colors">
-                  <td class="px-space-lg py-space-md font-semibold text-on-surface">${escapeHtml(p.full_name || "—")}</td>
-                  <td class="px-space-lg py-space-md tabular-nums text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.email || "")}</td>
-                  <td class="px-space-lg py-space-md tabular-nums text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.phone || "—")}</td>
-                  <td class="px-space-lg py-space-md">${rolePill(p.role)}</td>
-                  <td class="px-space-lg py-space-md text-center"><select data-role-for="${escapeHtml(p.user_id)}" class="px-space-md py-1.5 rounded-xl border border-line bg-surface text-label-sm text-on-surface"><option value="patient" ${p.role === "patient" ? "selected" : ""}>مريض</option><option value="doctor" ${p.role === "doctor" ? "selected" : ""}>طبيب</option><option value="admin" ${p.role === "admin" ? "selected" : ""}>مشرف</option></select></td>
-                </tr>`).join("")}</tbody>
-            </table>
-          </div>
-          <div class="sm:hidden flex flex-col gap-space-md p-space-md">${rows.map((p) => `
-            <div class="flex flex-col gap-2 rounded-xl border border-line bg-surface-container-low p-space-md">
-              <div class="flex items-center justify-between gap-2">
-                <span class="font-label-md text-label-md font-bold text-on-surface truncate">${escapeHtml(p.full_name || "—")}</span>
-                ${rolePill(p.role)}
-              </div>
-              <span class="tabular-nums text-label-sm text-on-surface-variant truncate" dir="ltr">${escapeHtml(p.email || "")}</span>
-              <span class="tabular-nums text-label-sm text-on-surface-variant" dir="ltr">${escapeHtml(p.phone || "—")}</span>
-              <label class="flex items-center gap-2 pt-1 border-t border-line">
-                <span class="font-label-sm text-label-sm text-secondary">تغيير الدور</span>
-                <select data-role-for="${escapeHtml(p.user_id)}" class="flex-1 px-space-md py-1.5 rounded-xl border border-line bg-surface text-label-sm text-on-surface"><option value="patient" ${p.role === "patient" ? "selected" : ""}>مريض</option><option value="doctor" ${p.role === "doctor" ? "selected" : ""}>طبيب</option><option value="admin" ${p.role === "admin" ? "selected" : ""}>مشرف</option></select>
-              </label>
-            </div>`).join("")}</div>
-        </div>
-      </div>`;
-    main.querySelector("[data-back]")?.addEventListener("click", goBack);
-    main.querySelectorAll<HTMLSelectElement>("[data-role-for]").forEach((sel) => sel.addEventListener("change", async () => {
-      const uid = sel.dataset.roleFor!; const prev = sel.value;
-      try { await assignUserRole(uid, sel.value); showToast("تم تحديث الدور", "success"); } catch (e) { showToast(translateAuthError(e), "error"); sel.value = prev; }
-    }));
-    return;
-  }
+/* Create/edit dialog for a doctor. The roster, the editor and the schedules
+   panel all share this one implementation. */
+type AdminHospitalOption = { id: string; name: string; city: string | null };
 
-  const fixture = mgFixture();
-  const docs = fixture
-    ? (fixtureDoctors as unknown as typeof state.adminDoctors)
-    : state.adminDoctorsCache.length ? state.adminDoctorsCache : await listDoctors();
-  if (!fixture) state.adminDoctorsCache = docs;
-  let hospitalOptions: { id: string; name: string; city: string | null }[] = [];
-  if (!fixture) { try { hospitalOptions = await listHospitals(); } catch { /* the editor still works without the list */ } }
+function openDoctorDialog(opts: {
+  id: string | null;
+  docs: DoctorAdminRow[];
+  hospitals: AdminHospitalOption[];
+  onSaved: () => void;
+}) {
+  const { id, docs, hospitals, onSaved } = opts;
+  document.getElementById("doctor-dialog")?.remove();
+  const doc = id ? docs.find((d) => d.id === id) || null : null;
   const specOptions = SPECIALTIES.map((s) => `<option value="${escapeHtml(s.label)}">${escapeHtml(s.label)}</option>`).join("");
-  if (fixture && mgOpenDoctor()) state.adminManagementDoctor = fixtureDoctors[0].id;
-  main.innerHTML = `
-    <div class="w-full px-margin-desktop py-space-xl">
-      <div class="flex flex-wrap items-center justify-between gap-space-md mb-space-lg">
-        <div class="flex items-center gap-space-sm text-secondary font-label-md text-label-md">
-          <span class="text-on-surface">بوابة الإدارة</span><span>/</span><span class="text-primary font-bold">الأطباء والمواعيد</span>
-        </div>
-        <button data-back class="flex items-center gap-space-xs px-space-md py-2 rounded-lg border border-line font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">
-          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>رجوع للحجوزات
-        </button>
-      </div>
-      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-lg mb-space-xl">
-        <div>
-          <div class="mb-space-xs text-[12px] font-medium text-on-surface-variant">إدارة مقدمي الرعاية</div>
-          <h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">الأطباء والمواعيد
-          </h1>
-        </div>
-        <button id="add-doctor" class="flex items-center gap-space-xs px-space-lg py-3 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg font-bold hover:bg-teal-hover transition-colors">
-          <span class="material-symbols-outlined text-[20px]">person_add</span>إضافة طبيب
-        </button>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-md">${docs.map((d) => `
-        <div class="flex flex-col gap-space-md rounded-xl border border-line bg-surface-container-lowest p-space-lg">
-          <div class="flex items-start gap-space-sm">
-            <span class="w-11 h-11 rounded-lg shrink-0 grid place-items-center bg-primary/10 text-primary">
-              <span class="material-symbols-outlined text-[22px]">stethoscope</span>
-            </span>
-            <div class="min-w-0">
-              <h3 class="font-label-lg text-label-lg font-bold text-on-surface truncate"><a href="#doctor/${escapeHtml(d.id)}" class="transition-colors hover:text-primary" title="صفحة الطبيب العامة">${escapeHtml(d.name)}</a></h3>
-              <p class="font-body-sm text-body-sm text-secondary truncate">${escapeHtml(d.specialization)} · <span class="tabular-nums">${escapeHtml(String(d.consultation_fee))}</span> ج.س</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 mt-auto">
-            <button data-manage="${escapeHtml(d.id)}" class="flex-1 flex items-center justify-center gap-1 px-space-sm py-2 rounded-lg bg-primary/10 text-primary font-label-sm text-label-sm font-bold hover:bg-primary/20 transition-colors">
-              <span class="material-symbols-outlined text-[16px]">calendar_month</span>المواعيد
-            </button>
-            <button data-edit="${escapeHtml(d.id)}" class="px-space-md py-2 rounded-lg border border-line font-label-sm text-label-sm text-on-surface hover:bg-surface-container transition-colors">تعديل</button>
-            <button data-del="${escapeHtml(d.id)}" class="px-space-md py-2 rounded-lg text-error font-label-sm text-label-sm font-bold hover:bg-error-container/40 transition-colors">حذف</button>
-          </div>
-        </div>`).join("")}</div>
-      <div id="schedules-root" class="${state.adminManagementDoctor ? "" : "hidden"} mt-space-xl"></div>
-    </div>
-    <dialog id="doctor-dialog" class="p-0 bg-transparent backdrop:bg-inverse-surface/50 backdrop:backdrop-blur-sm open:grid place-items-center min-h-dvh w-full max-w-none">
-      <div class="bg-surface-container-lowest rounded-xl shadow-[0_24px_60px_-20px_rgba(16,24,40,.4)] w-full max-w-[560px] p-space-xl mx-4 max-h-[88vh] overflow-y-auto">
+  const hospitalOptions = hospitals.map((h) => `<option value="${escapeHtml(h.id)}">${escapeHtml(h.name)}${h.city ? ` — ${escapeHtml(h.city)}` : ""}</option>`).join("");
+
+  const dlg = document.createElement("dialog");
+  dlg.id = "doctor-dialog";
+  dlg.className = "p-0 bg-transparent backdrop:bg-inverse-surface/50 backdrop:backdrop-blur-sm open:grid place-items-center min-h-dvh w-full max-w-none";
+  dlg.innerHTML = `
+      <div class="modal-enter bg-surface-container-lowest rounded-xl shadow-[0_24px_60px_-20px_rgba(16,24,40,.4)] w-full max-w-[560px] p-space-xl mx-4 max-h-[88vh] overflow-y-auto">
         <div class="flex items-center gap-space-sm mb-space-lg">
           <span class="w-11 h-11 rounded-lg grid place-items-center bg-primary/10 text-primary"><span class="material-symbols-outlined text-[22px]">stethoscope</span></span>
           <div class="min-w-0">
@@ -873,7 +871,7 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
           <label class="block text-[12px] text-on-surface-variant sm:col-span-2">المستشفى
             <select id="doc-hospital" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface">
               <option value="">بدون مستشفى</option>
-              ${hospitalOptions.map((h) => `<option value="${escapeHtml(h.id)}">${escapeHtml(h.name)}${h.city ? ` — ${escapeHtml(h.city)}` : ""}</option>`).join("")}
+              ${hospitalOptions}
             </select>
           </label>
           <label class="block text-[12px] text-on-surface-variant sm:col-span-2">نبذة عن الطبيب
@@ -886,77 +884,71 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
             <input id="doc-tele" type="checkbox" class="h-4 w-4 accent-primary" />الاستشارة عن بُعد متاحة
           </label>
           <label class="block text-[12px] text-on-surface-variant sm:col-span-2">حساب المستخدم
-            <select id="doc-user" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface"><option value="">بدون حساب</option>${(state.adminAccounts as { user_id: string; full_name: string; email: string }[]).map((p) => `<option value="${escapeHtml(p.user_id)}">${escapeHtml(p.full_name)} — ${escapeHtml(p.email)}</option>`).join("")}</select>
+            <select id="doc-user" class="mt-1 h-9 w-full rounded-lg border border-line bg-surface-container-lowest px-2 text-start text-[13px] text-on-surface"><option value="">بدون حساب</option></select>
           </label>
           <div class="col-span-full flex gap-2 pt-1">
-            <button type="button" data-close-doc class="flex-1 py-2.5 rounded-lg border border-line font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">إلغاء</button>
-            <button type="submit" class="flex-1 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors">حفظ</button>
+            <button type="button" data-close-doc class="press flex-1 py-2.5 rounded-lg border border-line font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">إلغاء</button>
+            <button type="submit" class="press inline-flex flex-1 items-center justify-center gap-1.5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-teal-hover transition-colors">حفظ</button>
           </div>
         </form>
-      </div>
-    </dialog>
-  `;
-  main.querySelector("[data-back]")?.addEventListener("click", goBack);
-  const docDlg = main.querySelector("#doctor-dialog") as HTMLDialogElement;
-  let editing: string | null = null;
-  const field = (sel: string) => main.querySelector(sel) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+      </div>`;
+  document.body.appendChild(dlg);
+
+  (dlg.querySelector("#doctor-dialog-title") as HTMLElement).textContent = doc ? "تعديل طبيب" : "إضافة طبيب";
+  const field = (sel: string) => dlg.querySelector(sel) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
   const setField = (sel: string, value: string) => { const el = field(sel); if (el) el.value = value; };
   const ensureSpec = (value: string) => {
     const sel = field("#doc-spec") as HTMLSelectElement | null;
     if (!sel || !value || [...sel.options].some((o) => o.value === value)) return;
     sel.append(new Option(value, value));
   };
-  const ensureHospital = (id: string, label: string) => {
+  const ensureHospital = (hospitalId: string, label: string) => {
     const sel = field("#doc-hospital") as HTMLSelectElement | null;
-    if (!sel || !id || [...sel.options].some((o) => o.value === id)) return;
-    sel.append(new Option(label, id));
+    if (!sel || !hospitalId || [...sel.options].some((o) => o.value === hospitalId)) return;
+    sel.append(new Option(label, hospitalId));
   };
-  const openDoc = async (id?: string) => {
-    editing = id || null;
-    (main.querySelector("#doctor-dialog-title") as HTMLElement).textContent = id ? "تعديل طبيب" : "إضافة طبيب";
-    (main.querySelector("#doctor-form") as HTMLFormElement).reset();
-    try { if (!state.adminAccounts.length) state.adminAccounts = await adminListProfiles(); } catch { /* ignore */ }
-    const userSel = field("#doc-user") as HTMLSelectElement | null;
-    if (userSel && state.adminAccounts.length) {
-      userSel.innerHTML = `<option value="">بدون حساب</option>` + (state.adminAccounts as { user_id: string; full_name: string; email: string }[])
-        .map((p) => `<option value="${escapeHtml(p.user_id)}">${escapeHtml(p.full_name)} — ${escapeHtml(p.email)}</option>`).join("");
-    }
-    if (id) {
-      const d = docs.find((x) => x.id === id)!;
-      setField("#doc-name", d.name);
-      setField("#doc-name-en", d.name_en || "");
-      setField("#doc-title", d.title || "");
-      ensureSpec(d.specialization);
-      setField("#doc-spec", d.specialization);
-      setField("#doc-city", d.city || "");
-      setField("#doc-gender", d.gender || "");
-      setField("#doc-exp", d.experience_years == null ? "" : String(d.experience_years));
-      setField("#doc-fee", String(d.consultation_fee));
-      setField("#doc-langs", (d.languages || []).join("، "));
-      const hospital = hospitalOptions.find((h) => h.id === d.hospital_id);
-      ensureHospital(d.hospital_id || "", hospital ? `${hospital.name}${hospital.city ? ` — ${hospital.city}` : ""}` : "المستشفى الحالي");
-      setField("#doc-hospital", d.hospital_id || "");
-      setField("#doc-about", d.about || "");
-      setField("#doc-photo", d.photo_url || "");
-      const tele = field("#doc-tele") as HTMLInputElement | null;
-      if (tele) tele.checked = !!d.telehealth;
-      setField("#doc-user", d.user_id || "");
-    }
-    docDlg.showModal();
+
+  if (doc) {
+    setField("#doc-name", doc.name);
+    setField("#doc-name-en", doc.name_en || "");
+    setField("#doc-title", doc.title || "");
+    ensureSpec(doc.specialization);
+    setField("#doc-spec", doc.specialization);
+    setField("#doc-city", doc.city || "");
+    setField("#doc-gender", doc.gender || "");
+    setField("#doc-exp", doc.experience_years == null ? "" : String(doc.experience_years));
+    setField("#doc-fee", String(doc.consultation_fee));
+    setField("#doc-langs", (doc.languages || []).join("، "));
+    const hospital = hospitals.find((h) => h.id === doc.hospital_id);
+    ensureHospital(doc.hospital_id || "", hospital ? `${hospital.name}${hospital.city ? ` — ${hospital.city}` : ""}` : "المستشفى الحالي");
+    setField("#doc-hospital", doc.hospital_id || "");
+    setField("#doc-about", doc.about || "");
+    setField("#doc-photo", doc.photo_url || "");
+    const tele = field("#doc-tele") as HTMLInputElement | null;
+    if (tele) tele.checked = !!doc.telehealth;
+  }
+
+  type AccountRow = { user_id: string; full_name: string; email: string };
+  const fillUsers = (rows: AccountRow[]) => {
+    const sel = field("#doc-user") as HTMLSelectElement | null;
+    if (!sel) return;
+    const keep = sel.value || doc?.user_id || "";
+    sel.innerHTML = `<option value="">بدون حساب</option>` + rows
+      .map((p) => `<option value="${escapeHtml(p.user_id)}">${escapeHtml(p.full_name)} — ${escapeHtml(p.email)}</option>`).join("");
+    sel.value = keep;
   };
-  main.querySelector("#add-doctor")?.addEventListener("click", () => void openDoc());
-  main.querySelectorAll<HTMLButtonElement>("[data-edit]").forEach((b) => b.addEventListener("click", () => void openDoc(b.dataset.edit!)));
-  main.querySelectorAll<HTMLButtonElement>("[data-del]").forEach((b) => b.addEventListener("click", async () => {
-    const doc = docs.find((x) => x.id === b.dataset.del);
-    const ok = await confirmSheet({ title: "حذف الطبيب؟", body: `سيتم حذف ${doc?.name || "الطبيب"} نهائياً.`, confirmLabel: "حذف", tone: "danger" });
-    if (!ok) return;
-    try { await deleteDoctor(b.dataset.del!); showToast("تم الحذف", "success"); state.adminDoctorsCache = await listDoctors(); void renderAdminManagement(main, "management", onBack); }
-    catch (e) { const m = String((e as { message?: string })?.message || ""); if (/23503|foreign key|appointments/i.test(m)) showToast("لا يمكن الحذف — توجد حجوزات", "error"); else showToast(translateAuthError(e), "error"); }
-  }));
-  main.querySelectorAll<HTMLButtonElement>("[data-manage]").forEach((b) => b.addEventListener("click", async () => { state.adminManagementDoctor = b.dataset.manage!; await renderSchedules(main.querySelector("#schedules-root") as HTMLElement, state.adminManagementDoctor); }));
-  main.querySelector("[data-close-doc]")?.addEventListener("click", () => docDlg.close());
-  docDlg.addEventListener("click", (e) => { if (e.target === docDlg) docDlg.close(); });
-  (main.querySelector("#doctor-form") as HTMLFormElement).addEventListener("submit", async (e) => {
+  fillUsers(state.adminAccounts as AccountRow[]);
+  if (!state.adminAccounts.length) {
+    void adminListProfiles().then((rows) => { state.adminAccounts = rows; fillUsers(rows as AccountRow[]); }).catch(() => { /* optional */ });
+  }
+
+  const close = () => { dlg.close(); dlg.remove(); };
+  dlg.querySelector("[data-close-doc]")?.addEventListener("click", close);
+  dlg.addEventListener("close", () => dlg.remove());
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) close(); });
+  dlg.showModal();
+
+  (dlg.querySelector("#doctor-form") as HTMLFormElement).addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = (field("#doc-name") as HTMLInputElement).value.trim();
     const nameEn = (field("#doc-name-en") as HTMLInputElement).value.trim();
@@ -973,16 +965,105 @@ async function renderAdminManagement(main: HTMLElement, tab: "management" | "acc
     const telehealth = (field("#doc-tele") as HTMLInputElement).checked;
     const userId = (field("#doc-user") as HTMLSelectElement).value || null;
     if (!name || !specialization) { showToast("اكتب الاسم والتخصص", "error"); return; }
+    const submit = dlg.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (submit) {
+      submit.disabled = true;
+      submit.innerHTML = `<span class="material-symbols-outlined animate-spin text-[16px]" aria-hidden="true">progress_activity</span>جارٍ الحفظ…`;
+    }
     try {
-      await saveDoctor({ id: editing || undefined, name, nameEn, title, specialization, consultationFee, userId, city, gender, experienceYears: expRaw === "" ? null : Number(expRaw), telehealth, about, languages, photoUrl, hospitalId });
+      await saveDoctor({ id: id || undefined, name, nameEn, title, specialization, consultationFee, userId, city, gender, experienceYears: expRaw === "" ? null : Number(expRaw), telehealth, about, languages, photoUrl, hospitalId });
       showToast("تم الحفظ", "success");
-      docDlg.close();
-      state.adminDoctorsCache = await listDoctors();
-      state.adminDoctors = state.adminDoctorsCache;
-      void renderAdminManagement(main, "management", onBack);
-    } catch (err) { showToast(translateAuthError(err), "error"); }
+      close();
+      if (!mgFixture()) {
+        try { state.adminDoctorsCache = await listDoctors(); state.adminDoctors = state.adminDoctorsCache; } catch { /* the roster reloads itself */ }
+      }
+      onSaved();
+    } catch (err) {
+      showToast(translateAuthError(err), "error");
+      if (submit) { submit.disabled = false; submit.textContent = "حفظ"; }
+    }
   });
-  if (state.adminManagementDoctor) await renderSchedules(main.querySelector("#schedules-root") as HTMLElement, state.adminManagementDoctor);
+}
+
+async function removeDoctor(doc: DoctorAdminRow): Promise<boolean> {
+  const ok = await confirmSheet({ title: "حذف الطبيب؟", body: `سيتم حذف ${doc.name || "الطبيب"} نهائياً.`, confirmLabel: "حذف", tone: "danger" });
+  if (!ok) return false;
+  try {
+    await deleteDoctor(doc.id);
+    showToast("تم الحذف", "success");
+    invalidateDoctorsDirectory();
+    return true;
+  } catch (e) {
+    const m = String((e as { message?: string })?.message || "");
+    if (/23503|foreign key|appointments/i.test(m)) showToast("لا يمكن الحذف — توجد حجوزات", "error");
+    else showToast(translateAuthError(e), "error");
+    return false;
+  }
+}
+
+async function renderAdminManagement(main: HTMLElement, tab: "management" | "accounts") {
+  // Doctors manage their own calendar from the schedule panel — this screen is admin-only.
+  if (state.currentUser?.profile?.role === "doctor") return;
+
+  // Accounts live in their own module (table, filters, dialogs); auth-level
+  // writes go through the `admin-users` Edge Function.
+  if (tab === "accounts") {
+    const isFixture = mgFixture();
+    // Start the RPC before importing the tab chunk: both are network work and
+    // the skeleton stays up for the slower of the two, not their sum.
+    const rosterTask = isFixture ? null : adminListProfiles();
+    const { renderAdminAccountsTab } = await import("./views/stitch/adminAccounts");
+    await renderAdminAccountsTab(main, {
+      meId: state.currentUser?.id || "",
+      readOnly: !!isFixture,
+      load: async () => {
+        const rows = rosterTask ? await rosterTask : (fixtureAccounts as unknown as AdminAccount[]);
+        state.adminAccounts = rows as typeof state.adminAccounts;
+        return rows;
+      },
+      create: async (input) => { await adminCreateAccount(input); },
+      update: async (account, patch) => { await adminUpdateAccountProfile(account.user_id, patch); },
+      setRole: async (account, role) => { await assignUserRole(account.user_id, role); },
+      resetPassword: async (account, password) => { await adminSetAccountPassword(account.user_id, password); },
+      remove: async (account) => {
+        const isDoctor = account.role === "doctor";
+        const ok = await confirmSheet({
+          title: "حذف الحساب؟",
+          body: isDoctor
+            ? `سيُحذف حساب ${account.full_name || account.email} فقط. يبقى ملف الطبيب وجدوله في المنصة.`
+            : `سيُحذف حساب ${account.full_name || account.email} نهائياً${account.role === "patient" ? " مع حجوزاته المرتبطة" : ""}.`,
+          confirmLabel: "حذف",
+          tone: "danger",
+        });
+        if (!ok) return false;
+        await adminDeleteAccount(account.user_id);
+        showToast("تم حذف الحساب", "success");
+        return true;
+      },
+    });
+    return;
+  }
+
+  // The dense doctors roster lives in its own module; CRUD stays here so the
+  // dialog and the delete guards have a single implementation.
+  const fixture = mgFixture();
+  // Roster and hospitals start before the chunk import lands — the doctors
+  // skeleton should cover the slower fetch, not the import plus the fetch.
+  const rosterTask = fixture ? null : listDoctors();
+  const hospitalsTask = fixture ? null : listHospitals().catch(() => []);
+  const { renderAdminDoctorsTab } = await import("./views/stitch/adminDoctors");
+  await renderAdminDoctorsTab(main, {
+    load: async () => {
+      const docs = rosterTask ? await rosterTask : (fixtureDoctors as unknown as DoctorAdminRow[]);
+      if (!fixture) { state.adminDoctorsCache = docs; state.adminDoctors = docs; }
+      return docs;
+    },
+    hospitals: async () => (hospitalsTask ? await hospitalsTask : []),
+    edit: (id, ctx, onSaved) => openDoctorDialog({ id, docs: ctx.docs, hospitals: ctx.hospitals, onSaved }),
+    remove: (doc) => removeDoctor(doc),
+    schedules: (el, doctorId, skeleton) => renderSchedules(el, doctorId, skeleton),
+    initialDoctorId: fixture && mgOpenDoctor() ? (fixtureDoctors[0]?.id ?? null) : null,
+  });
 }
 
 /* ------------------------------ working hours ------------------------------ */
@@ -1054,9 +1135,10 @@ const dayIssue = (d: DayDraft): string => {
   }
   return "";
 };
-async function renderSchedules(root: HTMLElement, doctorId: string) {
+async function renderSchedules(root: HTMLElement, doctorId: string, skeleton?: string) {
   root.classList.remove("hidden");
-  root.innerHTML = `<p class="py-space-lg text-center font-body-md text-body-md text-secondary">جاري تحميل الجدول…</p>`;
+  root.innerHTML = skeleton
+    || `<p class="py-space-lg text-center font-body-md text-body-md text-secondary">جاري تحميل الجدول…</p>`;
   type AvRule = { day_of_week: number; start_time: string; end_time: string; is_enabled: boolean; slot_minutes: number | null; break_start_1: string | null; break_end_1: string | null; break_start_2: string | null; break_end_2: string | null };
   type Blocked = { id: string; start_date: string; end_date: string; reason: string | null };
   const fixture = mgFixture();
@@ -1621,6 +1703,10 @@ async function runHousekeeping() {
   try { await purgeExpiredSlots(); } catch { /* ignore */ }
 }
 
+function hasStoredSession(): boolean {
+  try { return Object.keys(localStorage).some((k) => /^sb-.*-auth-token$/.test(k)); } catch { return false; }
+}
+
 async function init() {
   try {
     getSupabaseConfig();
@@ -1636,10 +1722,16 @@ async function init() {
   }
   registerStitchGlobals();
   // Cap the auth lookup so a stalled request can never hold the first paint.
-  state.currentUser = await Promise.race([
+  const authReady = Promise.race([
     getCurrentUser().catch(() => null),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
   ]);
+  // Returning visitors (staff, or a patient with a saved session) need the role
+  // before anything paints so they never see a flash of the wrong shell.
+  // Anonymous first visits paint immediately and re-render when auth resolves.
+  const awaitingRole = hasStoredSession();
+  if (awaitingRole) state.currentUser = await authReady;
+  else void authReady.then((user) => { if (user) { state.currentUser = user; render(); } });
   state.route = parseRoute();
   appEl.addEventListener("click", handleClick);
   window.addEventListener("hashchange", () => {
@@ -1652,7 +1744,7 @@ async function init() {
   try {
     onAuthChange(async (_e, session) => {
       if ((session as { user?: unknown })?.user) state.currentUser = await getCurrentUser();
-      else state.currentUser = null;
+      else { state.currentUser = null; rememberUserRole(null); }
       await refreshAll();
       void runHousekeeping();
       render();

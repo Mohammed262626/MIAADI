@@ -4,6 +4,7 @@ import { showToast } from "../../components/Toast";
 import { initials, money } from "../../components/ui";
 import { specialtyLabel } from "./specialtyContent";
 import { fixtureDoctors } from "../adminFixture";
+import { accountsSkeletonHtml, appointmentsSkeletonHtml, doctorsSkeletonHtml, overviewSkeletonHtml } from "./adminSkeletons";
 
 type Row = {
   appointment_id: string; patient_name: string; patient_phone: string; doctor_name: string;
@@ -16,11 +17,10 @@ type User = { id: string; email?: string; profile?: { full_name?: string; phone?
 
 /* Admin dashboard: one page, the sidebar swaps these panels in place and the
    URL never changes — exactly how the doctor dashboard behaves. */
-export type AdminView = "overview" | "appointments" | "doctors" | "schedules" | "accounts" | "account";
+export type AdminView = "overview" | "appointments" | "doctors" | "accounts" | "account";
 export type AdminDashboardHooks = {
   renderAppointments?: (host: HTMLElement) => Promise<void> | void;
   renderDoctors?: (host: HTMLElement, onBack: () => void) => Promise<void> | void;
-  renderSchedules?: (host: HTMLElement) => Promise<void> | void;
   renderAccounts?: (host: HTMLElement, onBack: () => void) => Promise<void> | void;
   onLogout?: () => Promise<void> | void;
   initialView?: AdminView;
@@ -114,7 +114,7 @@ export async function wireAdminDashboard(appEl: HTMLElement, user: User, hooks: 
   let busyGroups: BusyGroup[] = [];
 
   const VIEW_KEY = "myappo.admin.view";
-  const VIEWS: AdminView[] = ["overview", "appointments", "doctors", "schedules", "accounts", "account"];
+  const VIEWS: AdminView[] = ["overview", "appointments", "doctors", "accounts", "account"];
   const savedView = (): AdminView | null => {
     try {
       const v = sessionStorage.getItem(VIEW_KEY) as AdminView | null;
@@ -125,57 +125,29 @@ export async function wireAdminDashboard(appEl: HTMLElement, user: User, hooks: 
   let reviewPreview = preview;
 
   setText("#db-sync", "جاري التحديث…");
-  host.innerHTML = skeletonHtml("overview");
+  // Boot with the shape of the tab that is about to open, not the overview's.
+  host.innerHTML = skeletonHtml(currentView === "account" ? "overview" : currentView);
 
   const VIEW_HOSTS: Record<AdminView, string> = {
     overview: "#db-content",
     appointments: "#db-view-appointments",
     doctors: "#db-view-doctors",
-    schedules: "#db-view-schedules",
     accounts: "#db-view-accounts",
     account: "#db-view-account",
   };
   const NAV_ON = ["bg-surface-container-highest", "text-on-surface", "font-semibold"];
   const NAV_OFF = ["text-on-surface-variant", "hover:bg-surface-container-high", "hover:text-on-surface"];
 
+  /* Per-tab skeletons live in adminSkeletons.ts so the doctors/accounts tab
+     modules can paint the same shape while their own data loads. */
   function skeletonHtml(view: AdminView): string {
-    if (view === "account") return "";
-    const line = "rounded bg-surface-container-high";
-    const block = "rounded bg-surface-container";
-    const stat = () => `<div class="bg-surface-container-lowest p-4"><div class="h-3 w-20 ${block}"></div><div class="mt-3 h-6 w-12 ${line}"></div></div>`;
-    const statsGrid = (cols: string, n: number) => `<div class="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line ${cols}">${Array.from({ length: n }, stat).join("")}</div>`;
-    const row = () => `<div class="flex items-center gap-3 border-b border-line px-4 py-3 last:border-0"><div class="h-9 w-9 shrink-0 rounded-full ${block}"></div><div class="min-w-0 flex-1"><div class="h-3 w-32 ${line}"></div><div class="mt-2 h-2.5 w-24 ${block}"></div></div><div class="h-6 w-16 ${block}"></div></div>`;
-    const title = () => `<div class="min-w-0"><div class="h-6 w-44 ${line}"></div><div class="mt-2 h-3 w-72 max-w-full ${block}"></div></div>`;
-    const card = () => `<div class="h-32 rounded-xl border border-line bg-surface-container-lowest"></div>`;
-    const bodies: Record<Exclude<AdminView, "account">, string> = {
-      overview: `
-        <div class="flex flex-wrap items-end justify-between gap-4">${title()}<div class="h-9 w-28 ${block}"></div></div>
-        <div class="h-28 rounded-xl border border-line bg-surface-container-lowest"></div>
-        ${statsGrid("sm:grid-cols-3 lg:grid-cols-6", 6)}
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">${Array.from({ length: 6 }, card).join("")}</div>`,
-      appointments: `
-        ${title()}
-        ${statsGrid("sm:grid-cols-3 lg:grid-cols-6", 6)}
-        <div class="flex flex-wrap gap-2">${Array.from({ length: 4 }, () => `<div class="h-8 w-24 rounded-lg ${block}"></div>`).join("")}</div>
-        <div class="overflow-hidden rounded-xl border border-line bg-surface-container-lowest">${Array.from({ length: 6 }, row).join("")}</div>`,
-      doctors: `
-        ${title()}
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">${Array.from({ length: 6 }, card).join("")}</div>`,
-      schedules: `
-        ${title()}
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">${Array.from({ length: 6 }, () => `<div class="h-14 rounded-xl border border-line bg-surface-container-lowest"></div>`).join("")}</div>`,
-      accounts: `
-        ${title()}
-        <div class="overflow-hidden rounded-xl border border-line bg-surface-container-lowest">${Array.from({ length: 6 }, row).join("")}</div>`,
-    };
-    const labels: Record<Exclude<AdminView, "account">, string> = {
-      overview: "جارٍ تحميل لوحة الإدارة…",
-      appointments: "جارٍ تحميل المواعيد…",
-      doctors: "جارٍ تحميل الأطباء…",
-      schedules: "جارٍ تحميل الجدولة…",
-      accounts: "جارٍ تحميل الحسابات…",
-    };
-    return `<div class="animate-pulse" aria-busy="true"><div class="flex flex-col gap-4" aria-hidden="true">${bodies[view]}</div><span class="sr-only">${labels[view]}</span></div>`;
+    switch (view) {
+      case "account": return "";
+      case "overview": return overviewSkeletonHtml();
+      case "appointments": return appointmentsSkeletonHtml();
+      case "doctors": return doctorsSkeletonHtml();
+      default: return accountsSkeletonHtml();
+    }
   }
 
   const failureHtml = (e: unknown) => `<div class="flex flex-col items-center gap-2 rounded-xl border border-line bg-surface-container-lowest p-6 text-center text-[14px] text-on-surface-variant"><span class="material-symbols-outlined text-[36px]">cloud_off</span><span>تعذر تحميل هذا القسم — ${escapeHtml(translateAuthError(e))}</span></div>`;
@@ -436,13 +408,9 @@ export async function wireAdminDashboard(appEl: HTMLElement, user: User, hooks: 
           <div id="admin-busy" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
         </section>
 
-        <section class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <section class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <button type="button" data-jump="appointments" class="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface-container-lowest px-4 py-3 text-start transition-colors hover:bg-surface-container">
             <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">calendar_clock</span><span class="text-[13px] font-semibold text-on-surface">كل المواعيد</span></span>
-            <span class="material-symbols-outlined text-[18px] text-on-surface-variant" aria-hidden="true">chevron_left</span>
-          </button>
-          <button type="button" data-jump="schedules" class="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface-container-lowest px-4 py-3 text-start transition-colors hover:bg-surface-container">
-            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">calendar_month</span><span class="text-[13px] font-semibold text-on-surface">جدولة الأطباء</span></span>
             <span class="material-symbols-outlined text-[18px] text-on-surface-variant" aria-hidden="true">chevron_left</span>
           </button>
           <button type="button" data-jump="accounts" class="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface-container-lowest px-4 py-3 text-start transition-colors hover:bg-surface-container">
@@ -517,23 +485,36 @@ export async function wireAdminDashboard(appEl: HTMLElement, user: User, hooks: 
       if (view === "overview") {
         target.innerHTML = skeletonHtml("overview");
         await load();
-        return;
-      }
-      target.innerHTML = skeletonHtml(view);
-      if (view === "appointments") {
-        if (hooks.renderAppointments) await hooks.renderAppointments(target);
-        else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
-      } else if (view === "doctors") {
-        if (hooks.renderDoctors) await hooks.renderDoctors(target, () => { void showView("appointments"); });
-        else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
-      } else if (view === "schedules") {
-        if (hooks.renderSchedules) await hooks.renderSchedules(target);
-        else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
-      } else if (view === "accounts") {
-        if (hooks.renderAccounts) await hooks.renderAccounts(target, () => { void showView("appointments"); });
-        else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
       } else {
-        paintAccountPanel(target);
+        target.innerHTML = skeletonHtml(view);
+        if (view === "appointments") {
+          if (hooks.renderAppointments) await hooks.renderAppointments(target);
+          else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
+        } else if (view === "doctors") {
+          if (hooks.renderDoctors) await hooks.renderDoctors(target, () => { void showView("appointments"); });
+          else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
+        } else if (view === "accounts") {
+          if (hooks.renderAccounts) await hooks.renderAccounts(target, () => { void showView("appointments"); });
+          else target.innerHTML = failureHtml("هذا القسم غير متاح في هذه النسخة");
+        } else {
+          paintAccountPanel(target);
+        }
+      }
+      // Bridge the swap instead of teleporting a whole panel in. Restarting
+      // through the Web Animations API avoids the class toggle + offsetWidth
+      // read that forced a synchronous layout on every tab switch.
+      const content = target.firstElementChild as HTMLElement | null;
+      if (content) {
+        content.classList.remove("rise-in");
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        content.animate(
+          reduce
+            ? [{ opacity: 0 }, { opacity: 1 }]
+            : [{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }],
+          reduce
+            ? { duration: 150, easing: "ease" }
+            : { duration: 240, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
+        );
       }
     } catch (e) {
       target.innerHTML = failureHtml(e);

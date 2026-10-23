@@ -32,8 +32,8 @@ export function confirmSheet(opts: {
           </div>
         </div>
         <div class="flex gap-2 pt-1">
-          <button type="button" data-cancel class="flex-1 h-12 rounded-2xl border border-outline-variant font-bold text-sm">${escapeHtml(opts.cancelLabel || "تراجع")}</button>
-          <button type="button" data-ok class="flex-1 h-12 rounded-2xl font-bold text-sm ${
+          <button type="button" data-cancel class="press flex-1 h-12 rounded-2xl border border-outline-variant font-bold text-sm">${escapeHtml(opts.cancelLabel || "تراجع")}</button>
+          <button type="button" data-ok class="press flex-1 h-12 rounded-2xl font-bold text-sm ${
             tone === "danger" ? "bg-error text-on-error" : "bg-primary text-on-primary"
           }">${escapeHtml(opts.confirmLabel)}</button>
         </div>
