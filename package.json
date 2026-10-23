@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "واجهة أمامية متكاملة (بدون خطوة بناء - CDN) مرتبطة مباشرة بقاعدة بيانات **Supabase (PostgreSQL)**، مع مصادقة آمنة وحجز مباشر عبر دوال الـ **RPC** وحماية كاملة عبر **RLS**.",
   "scripts": {
-    "dev": "vite --host",
-    "build": "tsc --noEmit && vite build",
+    "dev": "vite dev --host",
+    "build": "svelte-kit sync && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json",
+    "prepare": "svelte-kit sync"
   },
   "keywords": [],
   "author": "",
@@ -18,9 +19,15 @@
     "qrcode-generator": "^2.0.4"
   },
   "devDependencies": {
+    "@sveltejs/adapter-node": "^6.0.0",
+    "@sveltejs/adapter-vercel": "^7.0.1",
+    "@sveltejs/kit": "^3.1.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tailwindcss/vite": "^4.3.3",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.7",
     "tailwindcss": "^4.3.3",
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.3",
     "vite": "^8.3.4"
   }
 }

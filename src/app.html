@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ar" dir="rtl" class="h-full">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#00685F" />
+  <meta name="description"
+    content="احجز موعدك من جدول العيادة نفسه: أطباء وتخصصات ومستشفيات في السودان، ومواعيد متاحة فعلاً." />
+  <link rel="preconnect" href="https://zneqnijqjwkpcjetgwfe.supabase.co" crossorigin />
+  <link rel="dns-prefetch" href="https://zneqnijqjwkpcjetgwfe.supabase.co" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/logo-192.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="preload" href="/fonts/material-symbols-subset.woff2?v=3" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="/fonts/fonts.css?v=3" />
+  <script>
+    try {
+      var t = localStorage.getItem("miaadi.theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+  %sveltekit.head%
+</head>
+
+<body class="bg-surface font-body-md text-on-surface antialiased" data-sveltekit-preload-data="hover">
+  <div style="display: contents">%sveltekit.body%</div>
+</body>
+
+</html>

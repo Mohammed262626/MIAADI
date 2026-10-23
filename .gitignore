@@ -27,6 +27,9 @@ Thumbs.db
 # Misc
 coverage/
 dist/
+build/
+.svelte-kit/
+.vercel/
 
 # Agent tooling (session-local)
 .agents/
